@@ -12,7 +12,7 @@ import re
 import statistics
 from dataclasses import dataclass, field
 
-STRATA = ["single-fact", "paraphrase", "identifier", "relation", "stale"]
+STRATA = ["single-fact", "paraphrase", "identifier", "relation", "stale", "intent"]
 FULL, PARTIAL, NONE = 2, 1, 0
 
 _JWS = re.compile(r"[ \t\n\x0b\f\r]+")  # Java's \s
@@ -100,11 +100,16 @@ class QResult:
 
 
 def rank_list(items: list, q: dict, hit_fn, passage_tokens, top1_score=None, pinned=0) -> QResult:
+    """Per expected element, the first rank that covers it. From golden set v2 an element is also
+    covered by a passage the blind audit accepted for it, or for the whole question (``accept``);
+    a partial hit on an accepted passage counts as partial only."""
     ranks, partials, stales = [], [], []
-    for addr in q["expected"]:
+    accept = q.get("accept") or []
+    for addr in q.get("expected") or []:
         f = p = None
+        stand_ins = [a["address"] for a in accept if a["for"] in ("question", addr)]
         for n, it in enumerate(items, 1):
-            h = hit_fn(addr, it)
+            h = max([hit_fn(addr, it)] + [hit_fn(a, it) for a in stand_ins])
             if h == FULL and f is None:
                 f = n
             if h != NONE and p is None:
@@ -121,7 +126,7 @@ def rank_list(items: list, q: dict, hit_fn, passage_tokens, top1_score=None, pin
                 break
         stales.append(s)
     ctx = sum(passage_tokens(it) for it in items[:4])
-    return QResult(q["id"], q["stratum"], list(q["expected"]), ranks, partials, stales,
+    return QResult(q["id"], q["stratum"], list(q.get("expected") or []), ranks, partials, stales,
                    [it.address for it in items[:10]], ctx, top1_score, pinned)
 
 

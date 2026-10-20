@@ -159,7 +159,8 @@ def main():
     if cp.commit not in commits:
         warn.append(f"spectastic is at {cp.commit}, the golden set was checked against {sorted(commits)}: a new baseline, not a comparison")
 
-    addrs = {a for q in golden for a in q["expected"] + (q.get("stale") or [])}
+    addrs = {a for q in golden for a in (q.get("expected") or []) + (q.get("stale") or [])
+             + [x["address"] for x in (q.get("accept") or [])]}
     etext = element_texts(root, addrs)
     chunks = naive_chunks(cp, enc) if enc is not None else None
     if chunks is None:
@@ -264,6 +265,8 @@ def main():
             gq = {q["id"]: q for q in golden}
             replay, mism = [], 0
             for r in rows:
+                if r["id"] not in gq:  # a question dropped from the golden set since Episode 3
+                    continue
                 its = []
                 for x in r["retrieved"]:
                     m = re.match(r"(.*), chunk (\d+) of (\d+)$", x["address"])
@@ -378,7 +381,7 @@ def report(args, cp, corp, chunks, emb, rr_msg, results, labels, kinds, skipped,
         w("Skipped: " + "; ".join(f"**{k}** ({v[0]}): {v[1]}" for k, v in skipped.items()) + "\n")
 
     w("## Per stratum: Hit@4 · all@4 · all@10\n")
-    w("| key | " + " | ".join(f"{s} ({n})" for s, n in zip(S.STRATA, (10, 10, 8, 8, 8))) + " | stale@4 |")
+    w("| key | " + " | ".join(f"{s} ({n})" for s, n in ((s, sum(1 for r in next(iter(results.values()), []) if r.stratum == s)) for s in S.STRATA)) + " | stale@4 |")
     w("|---|" + "---|" * (len(S.STRATA) + 1))
     for key in results:
         _, by = S.aggregate(results[key])
