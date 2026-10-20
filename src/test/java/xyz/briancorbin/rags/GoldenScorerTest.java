@@ -77,4 +77,60 @@ class GoldenScorerTest {
     assertNull(score.firstHit());
     assertEquals(0, score.reciprocalRank());
   }
+
+  private static final String TASKS = "specs/001-demo/tasks.html";
+
+  private Document element(String address) {
+    String file = address.substring(0, address.indexOf('#'));
+    return chunk(file, scorer.elementText(address).orElseThrow());
+  }
+
+  @Test
+  void allEvidenceWaitsForEveryExpectedElement() {
+    var expected = List.of(FILE + "#FR-001", FILE + "#FR-002");
+    var score = scorer.score(expected, List.of(element(FILE + "#FR-001"), element(FILE + "#FR-002")));
+    assertEquals(1, score.firstHit());
+    assertEquals(2, score.firstAll());
+    assertFalse(score.allAt(1));
+    assertTrue(score.allAt(4));
+  }
+
+  @Test
+  void anAcceptedPassageCountsAsAHitAndStandsInForItsElement() {
+    var expected = List.of(FILE + "#FR-001", FILE + "#FR-002");
+    var accept = List.of(new GoldenSet.Accept(TASKS + "#T-001", FILE + "#FR-002"));
+    var score = scorer.score(expected, accept, List.of(element(TASKS + "#T-001"), element(FILE + "#FR-001")));
+    assertEquals(1, score.firstHit());
+    assertEquals(2, score.firstAll());
+    // Without the audit, the task is a miss and FR-002 is never found.
+    var before = scorer.score(expected, List.of(element(TASKS + "#T-001"), element(FILE + "#FR-001")));
+    assertEquals(2, before.firstHit());
+    assertNull(before.firstAll());
+  }
+
+  @Test
+  void aPassageAcceptedForTheWholeQuestionCoversEveryElement() {
+    var expected = List.of(FILE + "#FR-001", FILE + "#FR-002");
+    var accept = List.of(new GoldenSet.Accept(TASKS + "#T-001", "question"));
+    var score = scorer.score(expected, accept, List.of(element(TASKS + "#T-001")));
+    assertEquals(1, score.firstHit());
+    assertEquals(1, score.firstAll());
+  }
+
+  @Test
+  void halfOfAnAcceptedPassageIsOnlyPartial() {
+    String task = scorer.elementText(TASKS + "#T-001").orElseThrow();
+    var accept = List.of(new GoldenSet.Accept(TASKS + "#T-001", "question"));
+    var score =
+        scorer.score(
+            List.of(FILE + "#FR-002"), accept, List.of(chunk(TASKS, task.substring(task.length() / 3))));
+    assertNull(score.firstHit());
+    assertEquals(1, score.firstPartial());
+    assertNull(score.firstAll());
+  }
+
+  @Test
+  void anUnanswerableQuestionHasNoAllEvidence() {
+    assertNull(scorer.score(List.of(), List.of(element(FILE + "#FR-001"))).firstAll());
+  }
 }

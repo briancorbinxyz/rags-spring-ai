@@ -99,7 +99,7 @@ public final class GoldenRun {
 
   Row row(Question q, Archive.Ruling ruling) {
     List<Document> top = ruling.retrieved().subList(0, Math.min(K, ruling.retrieved().size()));
-    Score score = scorer.score(q.expected(), top);
+    Score score = scorer.score(q, top);
     Double verified =
         ruling.mode() == Archive.Mode.DUO
             ? new QuoteResolver.Resolution(ruling.betaVerdicts(), ruling.quotes()).verifiedShare()
@@ -155,7 +155,7 @@ public final class GoldenRun {
   static List<String> csv(List<Row> rows, Setup setup) {
     var lines = new ArrayList<String>();
     lines.add(
-        "id,stratum,status,mode,hit_at_4,first_hit_rank,partial_at_4,first_partial_rank,"
+        "id,stratum,status,mode,hit_at_4,first_hit_rank,partial_at_4,first_partial_rank,all_at_4,"
             + "beta_quotes_traced,beta_verified_share,alpha_claims,supported,contradicted,"
             + "unsupported,unchecked,abstained,stale_retrieved,stale_cited,stale_as_current,"
             + "beta_prompt_tokens,alpha_prompt_tokens,millis,commit,chat_model,embedding_model,"
@@ -173,6 +173,7 @@ public final class GoldenRun {
               str(r.score().firstHit()),
               bit(r.score().partialAt(K)),
               str(r.score().firstPartial()),
+              bit(r.score().allAt(K)),
               String.valueOf(r.ruling().quotes().size()),
               r.betaVerified() == null ? "" : "%.2f".formatted(r.betaVerified()),
               String.valueOf(t.claims()),
@@ -206,6 +207,7 @@ public final class GoldenRun {
       m.put("question", r.question().question());
       m.put("stratum", r.question().stratum());
       m.put("expected", r.question().expected());
+      m.put("accept", r.question().accept());
       m.put(
           "retrieved",
           ruling.retrieved().stream()
@@ -245,8 +247,9 @@ public final class GoldenRun {
                 setup.corpus().chunks(),
                 setup.corpus().ingestMillis() / 60000.0,
                 setup.corpus().largestChunkTokens()));
-    out.append("| Stratum | Questions | Hit@4 | Partial@4 | MRR | Alpha abstained | Stale as current |\n");
-    out.append("|---|---|---|---|---|---|---|\n");
+    out.append(
+        "| Stratum | Questions | Hit@4 | All@4 | Partial@4 | MRR | Alpha abstained | Stale as current |\n");
+    out.append("|---|---|---|---|---|---|---|---|\n");
     for (var e : by.entrySet()) {
       if (!e.getValue().isEmpty()) {
         out.append(line(e.getKey(), e.getValue()));
@@ -282,6 +285,7 @@ public final class GoldenRun {
   private static String line(String name, List<Row> rows) {
     double hit = share(rows, r -> r.score().hitAt(K));
     double partial = share(rows, r -> r.score().partialAt(K));
+    double all = share(rows, r -> r.score().allAt(K));
     double mrr =
         rows.stream()
             .filter(r -> r.question().answerable())
@@ -289,11 +293,12 @@ public final class GoldenRun {
             .average()
             .orElse(0);
     boolean none = rows.stream().noneMatch(r -> r.question().answerable());
-    return "| %s | %d | %s | %s | %s | %d | %d |%n"
+    return "| %s | %d | %s | %s | %s | %s | %d | %d |%n"
         .formatted(
             name,
             rows.size(),
             none ? "n/a" : "%.0f%%".formatted(hit * 100),
+            none ? "n/a" : "%.0f%%".formatted(all * 100),
             none ? "n/a" : "%.0f%%".formatted(partial * 100),
             none ? "n/a" : "%.2f".formatted(mrr),
             count(rows, r -> r.ruling().abstained()),

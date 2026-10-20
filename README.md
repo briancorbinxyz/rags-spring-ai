@@ -49,7 +49,9 @@ git clone --depth 1 --branch v0.1.0-pre.28 https://github.com/spectastic/spectas
 The golden run writes three files to `build/`, named `episode-3-<model>-<mode>-k4`:
 
 - `.csv`: one row per question: whether a retrieved chunk held the expected element
-  whole (hit) or at least half of it (partial), the rank of the first of each, how
+  whole (hit) or at least half of it (partial), the rank of the first of each, whether
+  every expected element was found whole in the top 4 (all-evidence; from golden set v2,
+  a passage the audit accepted counts too, see the golden README), how
   many of Beta's quotations were traced word for word, Alpha's claims by verdict,
   whether Alpha abstained, whether a withdrawn or superseded record was presented as
   current, prompt tokens (which include any schema-validation retries) and time;

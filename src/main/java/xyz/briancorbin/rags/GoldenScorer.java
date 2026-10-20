@@ -24,6 +24,10 @@ import org.springframework.ai.document.Document;
  *
  * <p>The page text is read exactly as the archive read it, with jsoup's {@code body().text()}, so
  * a chunk's text is a slice of it and positions can be compared directly.
+ *
+ * <p>From golden set version 2 a question can also carry passages the blind audit accepted (see
+ * {@link GoldenSet.Accept}). An accepted passage found whole counts as a hit, and it covers the
+ * expected element it stands in for, or all of them when it answers the whole question.
  */
 public final class GoldenScorer {
 
@@ -35,9 +39,20 @@ public final class GoldenScorer {
 
   /**
    * Where the first full and first partial hits came in the results, counting from 1, or null when
-   * there was none. A full hit also counts as a partial one.
+   * there was none. A full hit also counts as a partial one. {@code firstAll} is the rank by which
+   * every expected element had been found whole (all-evidence), or null if that never happened.
    */
-  public record Score(Integer firstHit, Integer firstPartial) {
+  public record Score(Integer firstHit, Integer firstPartial, Integer firstAll) {
+
+    public Score(Integer firstHit, Integer firstPartial) {
+      this(firstHit, firstPartial, null);
+    }
+
+    /** Every expected element found whole in the first {@code k} results. */
+    public boolean allAt(int k) {
+      return firstAll != null && firstAll <= k;
+    }
+
 
     public boolean hitAt(int k) {
       return firstHit != null && firstHit <= k;
@@ -64,20 +79,58 @@ public final class GoldenScorer {
 
   /** Scores a ranked list of chunks against any of the expected addresses. */
   public Score score(List<String> expected, List<Document> retrieved) {
+    return score(expected, List.of(), retrieved);
+  }
+
+  /** Scores a question, counting the passages its audit accepted. */
+  public Score score(GoldenSet.Question q, List<Document> retrieved) {
+    return score(q.expected(), q.accept(), retrieved);
+  }
+
+  /**
+   * Scores a ranked list of chunks against the expected addresses and the accepted ones. A partial
+   * hit on an accepted passage counts as partial, never as a hit.
+   */
+  public Score score(List<String> expected, List<GoldenSet.Accept> accept, List<Document> retrieved) {
     Integer hit = null;
     Integer partial = null;
+    Integer all = null;
+    var covered = new java.util.HashSet<String>();
     for (int i = 0; i < retrieved.size(); i++) {
+      Document chunk = retrieved.get(i);
       for (String address : expected) {
-        Hit h = hit(address, retrieved.get(i));
-        if (h == Hit.FULL && hit == null) {
-          hit = i + 1;
+        Hit h = hit(address, chunk);
+        if (h == Hit.FULL) {
+          covered.add(address);
+          if (hit == null) {
+            hit = i + 1;
+          }
         }
         if (h != Hit.NONE && partial == null) {
           partial = i + 1;
         }
       }
+      for (GoldenSet.Accept a : accept) {
+        Hit h = hit(a.address(), chunk);
+        if (h == Hit.FULL) {
+          if (a.wholeQuestion()) {
+            covered.addAll(expected);
+          } else if (expected.contains(a.forTarget())) {
+            covered.add(a.forTarget());
+          }
+          if (hit == null) {
+            hit = i + 1;
+          }
+        }
+        if (h != Hit.NONE && partial == null) {
+          partial = i + 1;
+        }
+      }
+      if (all == null && !expected.isEmpty() && covered.containsAll(expected)) {
+        all = i + 1;
+      }
     }
-    return new Score(hit, partial);
+    return new Score(hit, partial, all);
   }
 
   /** How much of the element at {@code address} one chunk holds. */
