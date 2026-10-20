@@ -320,7 +320,9 @@ def report(args, cp, corp, chunks, emb, rr_msg, results, labels, kinds, skipped,
     w(f"- Context tokens: {T.how()}; counted over the text given to a reader (heading path + unit text, or the chunk)")
     gpath = Path(args.golden).resolve()
     gshow = gpath.relative_to(REPO) if gpath.is_relative_to(REPO) else gpath
-    w(f"- Golden set: {gshow} (answerable 44, unanswerable 6); run time {secs:.0f} s")
+    _all = next(iter(results.values()), [])
+    _un = sum(1 for r in _all if r.stratum == "unanswerable")
+    w(f"- Golden set: {gshow} (answerable {len(_all) - _un}, unanswerable {_un}); run time {secs:.0f} s")
     for x in warn:
         w(f"- **Warning:** {x}")
     if emb is not None and emb.name == "wordllama":
