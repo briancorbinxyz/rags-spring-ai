@@ -1,6 +1,7 @@
 package xyz.briancorbin.rags;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -23,7 +24,23 @@ public final class GoldenSet {
 
   /** The kinds of question, each testing one thing. */
   public static final List<String> STRATA =
-      List.of("single-fact", "paraphrase", "identifier", "relation", "stale", "unanswerable");
+      List.of(
+          "single-fact", "paraphrase", "identifier", "relation", "stale", "intent", "unanswerable");
+
+  /**
+   * A passage the blind audit accepted as answering a question too.
+   *
+   * @param address the accepted element address
+   * @param forTarget {@code question} when it answers the whole question, or the one expected
+   *     address it can stand in for
+   */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  public record Accept(String address, @JsonProperty("for") String forTarget) {
+
+    public boolean wholeQuestion() {
+      return "question".equals(forTarget);
+    }
+  }
 
   /**
    * One question.
@@ -33,6 +50,7 @@ public final class GoldenSet {
    * @param stratum which kind of question it is, one of {@link #STRATA}
    * @param expected the element addresses that answer it, {@code file#element-id}; empty for an
    *     unanswerable question
+   * @param accept passages the audit accepted as answering it too
    * @param stale for a stale question, the withdrawn or superseded elements that would answer it
    *     wrongly
    * @param answer a one-line reference answer
@@ -46,6 +64,7 @@ public final class GoldenSet {
       String question,
       String stratum,
       List<String> expected,
+      List<Accept> accept,
       List<String> stale,
       String answer,
       String commit,
@@ -53,6 +72,7 @@ public final class GoldenSet {
 
     public Question {
       expected = expected == null ? List.of() : List.copyOf(expected);
+      accept = accept == null ? List.of() : List.copyOf(accept);
       stale = stale == null ? List.of() : List.copyOf(stale);
       status = status == null ? "candidate" : status;
     }

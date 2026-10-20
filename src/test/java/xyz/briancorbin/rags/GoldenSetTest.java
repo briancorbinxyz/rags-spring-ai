@@ -15,6 +15,22 @@ import org.springframework.core.io.ClassPathResource;
 class GoldenSetTest {
 
   @Test
+  void readsAcceptedPassages() {
+    var questions =
+        GoldenSet.read(
+            new ByteArrayResource(
+                """
+                {"id":"G-001","question":"Q","stratum":"relation","expected":["a#1","b#2"],"accept":[{"address":"c#3","for":"b#2"},{"address":"d#4","for":"question"}]}
+                """
+                    .getBytes(StandardCharsets.UTF_8)));
+    var accept = questions.get(0).accept();
+    assertEquals(2, accept.size());
+    assertEquals("b#2", accept.get(0).forTarget());
+    assertFalse(accept.get(0).wholeQuestion());
+    assertTrue(accept.get(1).wholeQuestion());
+  }
+
+  @Test
   void readsOneQuestionPerLineAndSkipsCommentsAndBlanks() {
     String jsonl =
         """
@@ -42,6 +58,12 @@ class GoldenSetTest {
       if ("stale".equals(q.stratum())) {
         assertFalse(q.stale().isEmpty(), q.id() + " has no stale addresses");
       }
+      assertEquals("accepted", q.status(), q.id() + " is not signed off");
+      for (var a : q.accept()) {
+        assertTrue(
+            a.wholeQuestion() || q.expected().contains(a.forTarget()),
+            q.id() + ": accepted " + a.address() + " stands in for " + a.forTarget());
+      }
     }
   }
 
@@ -62,6 +84,9 @@ class GoldenSetTest {
       }
       for (String a : q.stale()) {
         assertTrue(scorer.elementText(a).isPresent(), q.id() + ": no element at " + a);
+      }
+      for (var a : q.accept()) {
+        assertTrue(scorer.elementText(a.address()).isPresent(), q.id() + ": no element at " + a);
       }
     }
   }
