@@ -48,6 +48,33 @@ measured version 1 (50 questions, unaudited); its numbers are not comparable wit
 top k. It is all-evidence at k when every expected element is covered: by itself, or by an
 accepted passage that stands in for it. A passage accepted `for: question` covers all of them.
 
+## As a TREC test collection
+
+`qrels.txt` is the same set in information retrieval's standard format, so a scorer we didn't
+write can check our numbers: one judgment per line, `question 0 passage relevance`. Relevance 1 is
+an expected passage or one the audit accepted; 0 is a stale record or an audit decision of "partly"
+or "doesn't answer it". Unanswerable questions have no lines. 291 judgments in all.
+
+A run file has one line per result, `question Q0 passage rank score run-name`, each passage once
+(`TrecFiles.run`; a split unit's later parts are dropped, or the scorer would keep the later rank).
+With the prototype's runs:
+
+```bash
+pip install ir-measures
+python3 tools/ratchet-proto/trec_check.py tools/ratchet-proto/results/run   # on the episode-4-prototype branch
+```
+
+| Ours | `ir_measures` |
+|---|---|
+| Hit@4 | `Success@4` |
+| MRR | `RR` |
+| (none) | `Judged@4`: the share of the top four that anyone has judged |
+| All-evidence@4 | no exact counterpart: a stand-in covers one expected element, which qrels can't say |
+
+`qrels.txt` is generated, never edited: `TrecFiles.qrels(questions, audit)` in Java, or
+`python3 -m ratchet.trec` in the prototype, which give byte-for-byte the same file.
+`TrecFilesTest` fails if the shipped file and the golden set disagree.
+
 ## Time set
 
 `questions-time.jsonl` asks about the past, so an answer is a version, not only an address. Each
