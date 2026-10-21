@@ -149,9 +149,9 @@ public final class ElementReader implements DocumentReader {
       if (el == page.body() || el.id().isEmpty()) {
         continue;
       }
-      String text = text(el, e -> !e.id().isEmpty());
+      String text = text(el, e -> !e.id().isEmpty()); // its own text: an element with an id is its own unit
       if (words(text) < MIN_WORDS) {
-        continue;
+        continue; // a heading on its own is a label, not a passage
       }
       String address = page.source() + "#" + el.id();
       if (units.containsKey(address)) {
@@ -161,18 +161,11 @@ public final class ElementReader implements DocumentReader {
       if (pageSuperseded && lifecycle == Lifecycle.CURRENT) {
         lifecycle = Lifecycle.SUPERSEDED;
       }
-      Element heading = first(el, e -> Set.of("h2", "h3", "h4").contains(e.normalName()));
-      units.put(
-          address,
-          new Unit(
-              page.source(),
-              el.id(),
-              page.source().split("/")[1],
-              title,
-              headingPath(title, el),
-              heading == null ? "" : strippedText(heading),
-              lifecycle,
-              parts(text)));
+      String spec = page.source().split("/")[1];
+      Element h = first(el, e -> Set.of("h2", "h3", "h4").contains(e.normalName()));
+      String heading = h == null ? "" : strippedText(h);
+      units.put(address, new Unit(page.source(), el.id(), spec, title,
+          headingPath(title, el), heading, lifecycle, parts(text)));
     }
     return units;
   }

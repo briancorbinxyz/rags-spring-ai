@@ -34,15 +34,15 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
     var out = new LinkedHashMap<String, Document>(); // by id, in order, each once
     for (Document doc : documents) {
       String address = ElementReader.address(doc);
-      String current = follow(query.text(), address);
+      String current = follow(query.text(), address); // superseded_by, up to three hops
       if (current.equals(address)) {
         out.putIfAbsent(doc.getId(), doc);
         continue;
       }
       Document successor = bestPart(query.text(), current);
-      out.putIfAbsent(successor.getId(), redirected(successor, address));
+      out.putIfAbsent(successor.getId(), redirected(successor, address)); // remembers where it came from
       if (ElementReader.lifecycle(doc) == Lifecycle.HISTORY) {
-        out.putIfAbsent(doc.getId(), doc);
+        out.putIfAbsent(doc.getId(), doc); // an applied change stays, right behind
       }
     }
     // An applied change kept behind its successor adds a result; the list stays at the search's depth.
