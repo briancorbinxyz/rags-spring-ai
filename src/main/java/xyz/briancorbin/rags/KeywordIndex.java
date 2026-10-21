@@ -88,7 +88,7 @@ public final class KeywordIndex implements AutoCloseable {
    */
   public List<Document> search(String question, int depth, boolean currentOnly) {
     String sql =
-        "select rowid, bm25(units, %s) as rank from units where units match ?%s order by rank, rowid limit ?"
+        "select rowid, bm25(units, %s) as score from units where units match ?%s order by score, rowid limit ?"
             .formatted(
                 weights(),
                 currentOnly ? " and lifecycle not in ('withdrawn', 'superseded', 'rejected')" : "");
@@ -99,7 +99,7 @@ public final class KeywordIndex implements AutoCloseable {
   public List<Document> rank(String question, Collection<Document> scope) {
     String ids = scope.stream().map(d -> rows.get(d.getId()).toString()).collect(Collectors.joining(",", "[", "]"));
     String sql =
-        "select rowid, bm25(units, %s) as rank from units where units match ? and rowid in (select value from json_each(?)) order by rank, rowid limit ?"
+        "select rowid, bm25(units, %s) as score from units where units match ? and rowid in (select value from json_each(?)) order by score, rowid limit ?"
             .formatted(weights());
     return query(sql, question, scope.size(), ids);
   }
