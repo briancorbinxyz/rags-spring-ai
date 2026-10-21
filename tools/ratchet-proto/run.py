@@ -35,6 +35,7 @@ from ratchet import rerank as R  # noqa: E402
 from ratchet import score as S  # noqa: E402
 from ratchet import splitter as SP  # noqa: E402
 from ratchet import tok as T  # noqa: E402
+from ratchet import trec  # noqa: E402
 from ratchet.pipeline import Config  # noqa: E402
 
 MAIN = ["S1", "S2", "S3", "S4", "S5", "E5-1", "E5-2"]
@@ -295,6 +296,16 @@ def main():
                     "first_hit": r.first, "stale_ranks": r.stale_ranks, "pinned": r.pinned,
                     "context_tokens_top4": r.context_tokens, "top1_score": r.top1_score, "top10": r.top,
                 }) + "\n")
+    # TREC run files, one per configuration, for trec_eval / ir_measures / ranx (see ratchet/trec.py).
+    # Unanswerable questions have no qrels, so they are left out; EP3 replays chunk addresses, not elements.
+    answerable = {q["id"] for q in golden if q["stratum"] != "unanswerable"}
+    for key, res in results.items():
+        if key in ("EP3",) or (res and "#" not in (res[0].top[:1] or ["#"])[0]):
+            continue
+        with open(outp.parent / f"{outp.name}.{key}.run", "w", encoding="utf-8", newline="\n") as f:
+            for r in res:
+                if r.qid in answerable:
+                    f.writelines(l + "\n" for l in trec.run_lines(r.qid, r.top, key))
     md = report(args, cp, corp, chunks, emb, rr_msg, results, labels, kinds, skipped, calib, warn, time.time() - t0)
     outp.with_suffix(".md").write_text(md, encoding="utf-8", newline="\n")
     print(f"wrote {outp.with_suffix('.md')} and {outp.with_suffix('.jsonl')}", file=sys.stderr)

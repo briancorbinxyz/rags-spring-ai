@@ -1,0 +1,226 @@
+{"id": "G-001", "candidate": "specs/040-run-budget/design.html#alternatives", "round": 2, "decision": "no"}
+{"id": "G-001", "candidate": "specs/040-run-budget/spec.html#assumptions", "round": 2, "decision": "whole", "note": "It's very close to equivalent. It's not the exact calculation since it misses the celing but close to equivalent."}
+{"id": "G-002", "candidate": "specs/000-spectastic/changes/archive/2026-06-30-req-git-contract/proposal.html#REQ-GIT-002", "round": 1, "decision": "no"}
+{"id": "G-002", "candidate": "specs/000-spectastic/changes/archive/2026-06-30-req-git-contract/proposal.html#REQ-GIT-003", "round": 1, "decision": "no"}
+{"id": "G-002", "candidate": "specs/027-git-trailers/design.html#alternatives", "round": 2, "decision": "no", "note": "Not clear from this entry at all."}
+{"id": "G-002", "candidate": "specs/027-git-trailers/design.html#project-structure", "round": 1, "decision": "no"}
+{"id": "G-002", "candidate": "specs/027-git-trailers/spec.html#SC-001", "round": 2, "decision": "partly", "note": "Doesn't say where the setting is placed or enumerable the footers explicitly."}
+{"id": "G-002", "candidate": "specs/027-git-trailers/verify.html#run", "round": 1, "decision": "partly", "note": "Not obvious as its surrounded with a lot of commands but the answer is extractable from this. It doesn't have enough to say yes or no, though."}
+{"id": "G-002", "candidate": "specs/092-git-automation/spec.html#REQ-GIT-002", "round": 1, "decision": "no"}
+{"id": "G-002", "candidate": "specs/092-git-automation/spec.html#REQ-GIT-003", "round": 1, "decision": "no"}
+{"id": "G-006", "candidate": "specs/004-npm-publish-workflow/spec.html#FR-001", "round": 1, "decision": "no"}
+{"id": "G-006", "candidate": "specs/004-npm-publish-workflow/tasks.html#T-1405", "round": 1, "decision": "no"}
+{"id": "G-006", "candidate": "specs/004-npm-publish-workflow/tasks.html#T-900", "round": 1, "decision": "no"}
+{"id": "G-006", "candidate": "specs/004-npm-publish-workflow/tasks.html#T-906", "round": 1, "decision": "no"}
+{"id": "G-007", "candidate": "specs/087-config-published-schema/design.html#complexity", "round": 2, "decision": "no"}
+{"id": "G-007", "candidate": "specs/087-config-published-schema/design.html#context", "round": 1, "decision": "no"}
+{"id": "G-007", "candidate": "specs/087-config-published-schema/design.html#grounding", "round": 1, "decision": "no", "note": "Strange one. Was this available in a earlier pinned versioned?"}
+{"id": "G-007", "candidate": "specs/087-config-published-schema/spec.html#FR-003", "round": 2, "decision": "no"}
+{"id": "G-007", "candidate": "specs/087-config-published-schema/spec.html#US3", "round": 1, "decision": "no"}
+{"id": "G-007", "candidate": "specs/087-config-published-schema/tasks.html#T-302", "round": 1, "decision": "no"}
+{"id": "G-007", "candidate": "specs/087-config-published-schema/tasks.html#changelog", "round": 2, "decision": "whole", "note": "Contains the complete answer (albeit amongst a lot more context than necessary)"}
+{"id": "G-008", "candidate": "specs/006-kernel-extraction/design.html#technical-context", "round": 2, "decision": "partly", "note": "Partially answered but it's just within 'today's baseline' that it mentioned which is insufficient if 'today;s baseline' is unknown."}
+{"id": "G-008", "candidate": "specs/006-kernel-extraction/spec.html#SC-002", "round": 2, "decision": "partly"}
+{"id": "G-008", "candidate": "specs/006-kernel-extraction/spec.html#changelog", "round": 2, "decision": "no"}
+{"id": "G-008", "candidate": "specs/006-kernel-extraction/tasks.html#T-114", "round": 2, "decision": "whole", "note": "Although this is a task it also spells out the requirement explicitly"}
+{"id": "G-009", "candidate": "specs/049-change-risk-score/design.html#approach", "round": 1, "decision": "no"}
+{"id": "G-009", "candidate": "specs/049-change-risk-score/spec.html#SC-001", "round": 1, "decision": "no"}
+{"id": "G-009", "candidate": "specs/049-change-risk-score/spec.html#scenarios", "round": 1, "decision": "no"}
+{"id": "G-009", "candidate": "specs/049-change-risk-score/tasks.html#T-100", "round": 1, "decision": "no"}
+{"id": "G-009", "candidate": "specs/049-change-risk-score/tasks.html#T-101", "round": 1, "decision": "no"}
+{"id": "G-009", "candidate": "specs/049-change-risk-score/tasks.html#T-106", "round": 1, "decision": "no", "note": "Speaks to what it should produce not what it did"}
+{"id": "G-010", "candidate": "specs/032-triage-fanout/design.html#grounding", "round": 2, "decision": "whole", "note": "Answered amongst a lot of extra context."}
+{"id": "G-010", "candidate": "specs/032-triage-fanout/design.html#questions", "round": 2, "decision": "no", "note": "Says what was chosen but doesn't say why"}
+{"id": "G-010", "candidate": "specs/032-triage-fanout/design.html#risks", "round": 2, "decision": "no"}
+{"id": "G-011", "candidate": "specs/000-spectastic/tasks.html#T-802", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/002-validate-cli/spec.html#SC-004", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/019-explain-course/triage-log.html#T-004", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/048-verify-slo-trace/design.html#D-001", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/072-contract-embedded-view/design.html#D-005", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/072-contract-embedded-view/design.html#approach", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/072-contract-embedded-view/spec.html#assumptions", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/099-visual-embedded-view/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/105-design-source-import/changes/archive/2026-08-13-read-more-land-less/proposal.html#scope", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/105-design-source-import/changes/archive/2026-08-18-what-the-design-tool-is/proposal.html#deltas", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/105-design-source-import/design.html#alternatives", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/105-design-source-import/design.html#questions", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/105-design-source-import/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/105-design-source-import/triage-log.html#T-001", "round": 1, "decision": "no"}
+{"id": "G-011", "candidate": "specs/106-visual-render/changes/archive/2026-08-23-render-accepts-what-import-accepts/proposal.html#risks", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/000-spectastic/changes/archive/2026-06-12-theme-pass/proposal.html#REQ-THEME-002", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/087-config-published-schema/spec.html#FR-003", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/087-config-published-schema/spec.html#FR-006", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/091-artifact-format/spec.html#REQ-THEME-002", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/changes/archive/2026-08-14-own-the-write/proposal.html#FR-016", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/changes/archive/2026-08-18-what-the-design-tool-is/proposal.html#deltas", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/changes/archive/2026-08-22-what-a-candidate-is-made-of/proposal.html#FR-016", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/spec.html#FR-016", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/spec.html#US2", "round": 1, "decision": "partly"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/spec.html#assumptions", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/spec.html#changelog", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/tasks.html#T-1501", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/tasks.html#T-1502", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/tasks.html#T-1505", "round": 1, "decision": "no"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/tasks.html#T-211", "round": 1, "decision": "whole"}
+{"id": "G-012", "candidate": "specs/105-design-source-import/tasks.html#phase-2026-08-18-what-the-design-tool-is", "round": 1, "decision": "no"}
+{"id": "G-013", "candidate": "specs/109-prose-theme/spec.html#FR-006", "round": 1, "decision": "no"}
+{"id": "G-013", "candidate": "specs/109-prose-theme/spec.html#FR-007", "round": 1, "decision": "partly"}
+{"id": "G-013", "candidate": "specs/109-prose-theme/spec.html#scenarios", "round": 1, "decision": "partly", "note": "It doesn't mention javascript or the mechanism specifically but. It does specify the behaviour when the browser lacks scroll-driven animation support."}
+{"id": "G-013", "candidate": "specs/109-prose-theme/tasks.html#T-212", "round": 2, "decision": "no"}
+{"id": "G-013", "candidate": "specs/109-prose-theme/verify.html#run", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/000-spectastic/tasks.html#T-1303", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/041-init-profiles/changes/archive/2026-07-18-profile-principle-catalog-next/proposal.html#deltas", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/041-init-profiles/design.html#D-003", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/051-knowledge-corpus/spec.html#FR-008", "round": 1, "decision": "no", "note": "Doesn't answer it. Points to where it might be answered."}
+{"id": "G-014", "candidate": "specs/051-knowledge-corpus/spec.html#FR-009", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/051-knowledge-corpus/spec.html#changelog", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/051-knowledge-corpus/spec.html#scenarios", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/059-corpus-retrieval-scale/spec.html#changelog", "round": 1, "decision": "partly", "note": "This is almost the answer but it fails to specifically call out the order despite the listed order matching and there being a reference to a ladder."}
+{"id": "G-014", "candidate": "specs/059-corpus-retrieval-scale/spec.html#context", "round": 1, "decision": "no", "note": "Answers when it makes sense to build one but not the specific ladder or phases to roll it out in."}
+{"id": "G-014", "candidate": "specs/061-corpus-ingester/spec.html#SC-001", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/062-corpus-identity-migration/triage-log.html#T-002", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/064-corpus-package-extraction/tasks.html#T-312", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/066-corpus-single-layer-retire/design.html#project-structure", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/089-lifecycle-contract/changes/archive/2026-08-18-steps-that-do-not-fire/proposal.html#REQ-LIFECYCLE-012", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/089-lifecycle-contract/spec.html#REQ-LIFECYCLE-012", "round": 1, "decision": "no"}
+{"id": "G-014", "candidate": "specs/102-motion-choreography/design.html#risks", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/017-brand-logo/spec.html#requirements", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/021-verify-view/spec.html#scenarios", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/042-profile-enforcement/spec.html#FR-013", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/051-knowledge-corpus/tasks.html#T-100", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/053-corpus-grounding-gates/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/053-corpus-grounding-gates/tasks.html#T-112", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/058-corpus-licensing/spec.html#context", "round": 1, "decision": "partly", "note": "It's very close to equivalent. Here, the surfacing of a restricted license is mentioned as well as the warning. What is not clear from this text alone is if the warning causes a block or not."}
+{"id": "G-015", "candidate": "specs/058-corpus-licensing/spec.html#scenarios", "round": 1, "decision": "partly", "note": "This mentions that it produces a warning and whilst it doesn't mention an error, or whether it might block a commit."}
+{"id": "G-015", "candidate": "specs/070-contract-sidecar-convention/design.html#complexity", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/075-spec-data-model-layering/spec.html#scenarios", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/078-federated-resource-uri/spec.html#FR-011", "round": 1, "decision": "no", "note": "Here it says \"The warning MUST NOT block\", but not \"A warning MUST NOT block\". It's also not addressing this particular issue."}
+{"id": "G-015", "candidate": "specs/078-federated-resource-uri/spec.html#SC-005", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/080-unit-edge-authoring/spec.html#FR-008", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/087-config-published-schema/spec.html#FR-004", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/094-visual-sidecar-convention/changes/archive/2026-08-14-narrow-the-prohibition/proposal.html#FR-005", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/094-visual-sidecar-convention/spec.html#FR-005", "round": 1, "decision": "no"}
+{"id": "G-015", "candidate": "specs/099-visual-embedded-view/spec.html#FR-009", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/100-screen-flows/tasks.html#T-211", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/100-screen-flows/tasks.html#phase-us2", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/102-motion-choreography/tasks.html#T-210", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/102-motion-choreography/tasks.html#phase-us2", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/103-content-budgets/spec.html#SC-004", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#FR-001", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#FR-004", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#FR-006", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#FR-007", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#FR-008", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#FR-012", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#US1", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/spec.html#scenarios", "round": 1, "decision": "partly", "note": "Doesn't answer this specifically for these thresholds."}
+{"id": "G-016", "candidate": "specs/108-success-criteria/tasks.html#T-101", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/tasks.html#T-103", "round": 1, "decision": "no"}
+{"id": "G-016", "candidate": "specs/108-success-criteria/tasks.html#T-105", "round": 1, "decision": "whole", "note": "Whilst the expected passage gives reasoning and carries 'MUST', the candidate is close, though it says 'reported' - alone that would not be enough to know if it was rejected but the assertion and refusal is."}
+{"id": "G-016", "candidate": "specs/108-success-criteria/tasks.html#T-106", "round": 1, "decision": "no"}
+{"id": "G-017", "candidate": "specs/099-visual-embedded-view/spec.html#assumptions", "round": 1, "decision": "no"}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/design.html#approach", "round": 1, "decision": "no", "note": "Partial mention of the check running acknowledging if the export is expensive."}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/design.html#grounding", "round": 1, "decision": "no"}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/design.html#project-structure", "round": 1, "decision": "no"}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/spec.html#SC-001", "round": 1, "decision": "no"}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/spec.html#questions", "round": 1, "decision": "no"}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/spec.html#requirements", "round": 1, "decision": "no"}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/spec.html#scenarios", "round": 1, "decision": "whole"}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/tasks.html#T-200", "round": 1, "decision": "whole", "note": "This actually also fully answers it - it doesn't explicitly mention calls that are not made unlike the reference, but it answers the question."}
+{"id": "G-017", "candidate": "specs/110-visual-one-step/triage-log.html#T-001", "round": 1, "decision": "no"}
+{"id": "G-018", "candidate": "specs/059-corpus-retrieval-scale/spec.html#NFR-001", "round": 1, "decision": "no"}
+{"id": "G-018", "candidate": "specs/077-event-schema-evolution/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-018", "candidate": "specs/085-verify-command-execution/spec.html#requirements", "round": 1, "decision": "no"}
+{"id": "G-018", "candidate": "specs/110-visual-one-step/spec.html#FR-006", "round": 1, "decision": "no"}
+{"id": "G-020", "candidate": "specs/019-explain-course/spec.html#FR-005", "round": 1, "decision": "no"}
+{"id": "G-020", "candidate": "specs/019-explain-course/spec.html#data", "round": 1, "decision": "no"}
+{"id": "G-020", "candidate": "specs/118-verdict-explain/spec.html#FR-001", "round": 1, "decision": "no"}
+{"id": "G-020", "candidate": "specs/118-verdict-explain/spec.html#FR-002", "round": 1, "decision": "no"}
+{"id": "G-026", "candidate": "specs/091-artifact-format/tasks.html#T-103", "round": 1, "decision": "no"}
+{"id": "G-026", "candidate": "specs/103-content-budgets/spec.html#requirements", "round": 1, "decision": "no", "note": "Says what's out of scope, not in scope."}
+{"id": "G-026", "candidate": "specs/103-content-budgets/tasks.html#T-011", "round": 1, "decision": "no"}
+{"id": "G-026", "candidate": "specs/103-content-budgets/tasks.html#T-111", "round": 1, "decision": "no"}
+{"id": "G-028", "candidate": "specs/034-effort-auto/verify.html#trace", "round": 1, "decision": "no"}
+{"id": "G-028", "candidate": "specs/039-verb-decision-taxonomy/verify.html#trace", "round": 1, "decision": "no"}
+{"id": "G-028", "candidate": "specs/108-success-criteria/tasks.html#T-100", "round": 1, "decision": "no"}
+{"id": "G-028", "candidate": "specs/117-guardrail-shifu/verify.html#trace", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/016-theme-support/changes/archive/2026-08-19-amend-theme-contract-for-prose/proposal.html#scope", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/016-theme-support/design.html#changelog", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/016-theme-support/spec.html#SC-003", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/016-theme-support/spec.html#SC-004", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/016-theme-support/spec.html#SC-006", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/016-theme-support/tasks.html#T-1002", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/016-theme-support/tasks.html#T-1004", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/016-theme-support/tasks.html#changelog", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/109-prose-theme/spec.html#FR-008", "round": 1, "decision": "no", "note": "Mentions the keyboard reader but doesn't part answer the question."}
+{"id": "G-029", "candidate": "specs/109-prose-theme/spec.html#scenarios", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/109-prose-theme/spec.html#success", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/109-prose-theme/tasks.html#T-300", "round": 1, "decision": "no"}
+{"id": "G-029", "candidate": "specs/109-prose-theme/tasks.html#T-301", "round": 1, "decision": "partly", "note": "It answers a small part of SC-003"}
+{"id": "G-030", "candidate": "specs/095-visual-element-vocabulary/verify.html#trace", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/108-success-criteria/design.html#D-002", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/108-success-criteria/spec.html#FR-007", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/108-success-criteria/spec.html#SC-002", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/108-success-criteria/spec.html#changelog", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/108-success-criteria/tasks.html#T-104", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/108-success-criteria/tasks.html#T-110", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/110-visual-one-step/spec.html#FR-008", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/110-visual-one-step/spec.html#SC-002", "round": 1, "decision": "partly", "note": "Doesn't call out the functional requirements by ID (lost provenance)"}
+{"id": "G-030", "candidate": "specs/110-visual-one-step/spec.html#SC-005", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/110-visual-one-step/spec.html#success", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/110-visual-one-step/tasks.html#T-1000", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/110-visual-one-step/triage-log.html#T-001", "round": 1, "decision": "no"}
+{"id": "G-030", "candidate": "specs/110-visual-one-step/verify.html#trace", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/051-knowledge-corpus/design.html#D-003", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/056-corpus-adapter/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/056-corpus-adapter/spec.html#requirements", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/design.html#D-002", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/design.html#approach", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/design.html#complexity", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/design.html#grounding", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/spec.html#FR-001", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/spec.html#NFR-001", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/spec.html#changelog", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/spec.html#data", "round": 1, "decision": "no"}
+{"id": "G-031", "candidate": "specs/058-corpus-licensing/tasks.html#T-200", "round": 1, "decision": "no"}
+{"id": "G-032", "candidate": "specs/051-knowledge-corpus/spec.html#context", "round": 1, "decision": "no", "note": "This older spec introduces the concepts of the kb being injected into the spec but doesn't define it as part of the requirements."}
+{"id": "G-032", "candidate": "specs/051-knowledge-corpus/spec.html#requirements", "round": 1, "decision": "no", "note": "Explicitly says that the requirement is out of scope for this slice - interestingly with the punctuation changes the text processing does it makes it less obvious which parts are listed as \"out of scope\""}
+{"id": "G-032", "candidate": "specs/054-corpus-in-prompt/design.html#complexity", "round": 1, "decision": "no"}
+{"id": "G-032", "candidate": "specs/054-corpus-in-prompt/spec.html#changelog", "round": 1, "decision": "whole", "note": "Secondary /derived reference since it's the changelog but it is accurate."}
+{"id": "G-032", "candidate": "specs/054-corpus-in-prompt/spec.html#requirements", "round": 1, "decision": "no"}
+{"id": "G-032", "candidate": "specs/055-corpus-in-review/design.html#approach", "round": 1, "decision": "no"}
+{"id": "G-032", "candidate": "specs/055-corpus-in-review/design.html#technical-context", "round": 1, "decision": "no"}
+{"id": "G-032", "candidate": "specs/055-corpus-in-review/spec.html#FR-001", "round": 1, "decision": "partly", "note": "Partially answered for a sub-process that occurs for the propose verb - the adverserial critic stage."}
+{"id": "G-032", "candidate": "specs/055-corpus-in-review/spec.html#changelog", "round": 1, "decision": "no"}
+{"id": "G-032", "candidate": "specs/055-corpus-in-review/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-033", "candidate": "specs/023-explore-graduation/spec.html#FR-006", "round": 1, "decision": "no"}
+{"id": "G-033", "candidate": "specs/023-explore-graduation/spec.html#scenarios", "round": 1, "decision": "no"}
+{"id": "G-033", "candidate": "specs/023-explore-graduation/tasks.html#phase-us2", "round": 1, "decision": "no"}
+{"id": "G-033", "candidate": "specs/024-explore-restore/spec.html#context", "round": 1, "decision": "standin", "for": "specs/023-explore-graduation/design.html#D-006", "note": "An interesting one. This is absolutely the answer showing up in the context (and not yet the requirements) of the implementing slice. This also accepts that the restore task is implemented here. Where it fails in its imprecise answer to \"how it is invoked now\" where it just says 'a mode of the existing /spectastic.tasks' but doesn't say which mode, unlike FR-001"}
+{"id": "G-033", "candidate": "specs/024-explore-restore/spec.html#requirements", "round": 1, "decision": "partly"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/design.html#grounding", "round": 1, "decision": "no"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/spec.html#FR-004", "round": 1, "decision": "no"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/spec.html#FR-008", "round": 1, "decision": "no"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/spec.html#US1", "round": 1, "decision": "no"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/spec.html#assumptions", "round": 1, "decision": "no"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/spec.html#context", "round": 1, "decision": "no"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/spec.html#scenarios", "round": 1, "decision": "no"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/tasks.html#T-112", "round": 1, "decision": "standin", "for": "specs/071-contract-promotion/design.html#D-002"}
+{"id": "G-036", "candidate": "specs/071-contract-promotion/triage-log.html#T-001", "round": 1, "decision": "partly", "note": "This is an interesting one since it recognizes that apply is not enough for promotion in the first instance. Is it still open as of the pinned version or did it get fixed? If it was fixed then that would suggest that it is also available at the spec stage (or some other non-propose stage) for promotion. Check this as if true would suggest our reference answer is wrong or stale."}
+{"id": "G-036", "candidate": "specs/076-contract-export-handover/design.html#approach", "round": 1, "decision": "no"}
+{"id": "G-036", "candidate": "specs/076-contract-export-handover/design.html#grounding", "round": 1, "decision": "partly"}
+{"id": "G-036", "candidate": "specs/076-contract-export-handover/design.html#project-structure", "round": 1, "decision": "partly"}
+{"id": "G-036", "candidate": "specs/076-contract-export-handover/tasks.html#T-211", "round": 1, "decision": "no"}
+{"id": "G-037", "candidate": "specs/004-npm-publish-workflow/design.html#approach", "round": 1, "decision": "whole"}
+{"id": "G-037", "candidate": "specs/004-npm-publish-workflow/spec.html#FR-006", "round": 1, "decision": "partly"}
+{"id": "G-037", "candidate": "specs/004-npm-publish-workflow/tasks.html#T-1000", "round": 1, "decision": "whole", "note": "Not as detailed but answers"}
+{"id": "G-037", "candidate": "specs/004-npm-publish-workflow/tasks.html#T-1002", "round": 1, "decision": "no"}
+{"id": "G-037", "candidate": "specs/004-npm-publish-workflow/tasks.html#T-110", "round": 1, "decision": "no"}
+{"id": "G-037", "candidate": "specs/004-npm-publish-workflow/tasks.html#T-1403", "round": 1, "decision": "partly"}
+{"id": "G-044", "candidate": "specs/021-verify-view/changes/archive/2026-07-09-verify-trace-path-fallback/proposal.html#FR-003", "round": 1, "decision": "whole", "note": "This does answer the question, athough rightly the spec itself is the preferred source. The change proposal was applied prior to archiving."}
+{"id": "G-044", "candidate": "specs/021-verify-view/changes/archive/2026-07-09-verify-trace-path-fallback/proposal.html#changelog", "round": 1, "decision": "no"}
+{"id": "G-044", "candidate": "specs/021-verify-view/changes/archive/2026-07-09-verify-trace-path-fallback/proposal.html#deltas", "round": 1, "decision": "no"}
+{"id": "G-044", "candidate": "specs/021-verify-view/changes/archive/2026-07-09-verify-trace-path-fallback/proposal.html#risks", "round": 1, "decision": "no", "note": "Adds some useful detail but doesn't directly answer the question"}

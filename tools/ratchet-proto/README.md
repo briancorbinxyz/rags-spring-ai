@@ -271,6 +271,29 @@ as far as they go.
 The jsoup and Spring AI comparisons were made once, against jsoup 1.21.2 and jtokkit
 compiled from source. The tests keep a few of those reference outputs.
 
+## Checking the numbers with a standard scorer
+
+The golden set also ships as a TREC test collection, so anyone can check our numbers with
+information retrieval's own tools instead of trusting ours:
+
+- `src/main/resources/golden/qrels.txt`: one judgment per line, `question 0 passage relevance`.
+  1 is an expected passage or one the blind audit accepted; 0 is a stale record or an audit
+  decision of "partly" or "doesn't answer it". Regenerate it after any change to the golden set:
+  `python3 -m ratchet.trec ../../src/main/resources/golden/questions.jsonl ../../results/episode-4/golden-audit-2026-10.jsonl ../../src/main/resources/golden/qrels.txt` (from `tools/ratchet-proto`).
+- `run.py` writes `<out>.<config>.run` for every element-unit configuration: `question Q0 passage rank score run-name`,
+  the top 10, each passage once (a split unit's later parts are dropped, or the scorer would keep the later rank).
+  Naive-chunk configurations (A, B, EP3) are left out: their passages are chunks, which the qrels don't judge.
+
+```bash
+pip install ir-measures
+python3 tools/ratchet-proto/trec_check.py tools/ratchet-proto/results/run
+```
+
+`trec_check.py` scores each run with `ir_measures` (Success@4, RR@10, R@4, Judged@4) and fails if
+Success@4 differs from our Hit@4. Our Hit@4 is `Success@4`, our MRR is `RR`; `Judged@4` is the share
+of the top four anyone has judged. All-evidence@4 has no exact counterpart, because a stand-in
+passage covers one expected element and qrels can't say which.
+
 ## The configurations
 
 All configurations use the same 50 questions; the 6 unanswerable ones are reported
