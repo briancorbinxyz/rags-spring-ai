@@ -9,6 +9,7 @@ describes and compare one episode with the next.
 | [1](https://briancorbinxyz.medium.com/rags-to-riches-with-spring-ai-episode-1-44d4f604b565) | [`episode-1`](../../tree/episode-1) | A commentator persona for over-engineered tic-tac-toe | Spring AI 1.0.2, Spring Boot 3.5.6 |
 | 2 | [`episode-2`](../../tree/episode-2) | Alpha calls every move and Beta adds colour on quiet moves: a memory per commentator per game, structured output, and model-free fact checks of Alpha's claims and Beta's quotations. [Incident report](../episode-2/docs/episode-2-incident-report.md): seven rounds of measuring them | Spring AI 2.0.1, Spring Boot 4.1.1, Java 25 |
 | 3 | [`episode-3`](../../tree/episode-3) (draft) | Alpha and Beta move from tic-tac-toe to spectastic's specifications, about a million words: a deliberately naive RAG baseline with Spring AI's defaults, every quotation traced back to its file and chunk in code, and a 50-question golden set that later episodes are measured against | Spring AI 2.0.1, Spring Boot 4.1.1, Java 25 |
+| 4 | [`episode-4`](../../tree/episode-4) (draft) | The golden set blind-audited and frozen (v2, also a TREC test collection), and a better Beta, kept step by step only if it passes the ratchet: one passage per element, keyword search (BM25 in SQLite FTS5), identifier lookup, a lifecycle filter, and a redirect from superseded records to their successors | Spring AI 2.0.1, Spring Boot 4.1.1, Java 25, SQLite |
 
 Compare any two episodes on GitHub with
 [`episode-1...episode-2`](../../compare/episode-1...episode-2).
@@ -20,6 +21,51 @@ artifact and adds the AI. From Episode 3 the game is no longer needed.
 
 Everything runs locally on [Ollama](https://ollama.com); no API keys.
 Episodes 1 and 2 use `mistral`; from Episode 3 the chat model is `qwen3:8b`.
+
+## Run Episode 4
+
+Episode 4's search needs no model. With spectastic checked out next to this repository
+at the pinned tag (see below), one test runs the golden set through each step and
+holds it to the ratchet:
+
+```bash
+git checkout episode-4
+git clone --depth 1 --branch v0.1.0-pre.28 https://github.com/spectastic/spectastic.git ../spectastic
+./gradlew test --tests RatchetTest
+```
+
+Each step's results go to `build/episode-4/`: `step-<n>.run`, in TREC's run format, and
+`step-<n>.jsonl`, each question's top ten and where its expected passages came. Score a
+run file with a scorer we didn't write:
+
+```bash
+pip install ir-measures
+ir_measures src/main/resources/golden/qrels.txt build/episode-4/step-4.run Success@4 RR@10 R@4 Judged@4
+```
+
+| Step | Hit@4 | All-evidence@4 | Stale in top four |
+|---|---|---|---|
+| 1. Element units + BM25 | 30/47 | 24 | 3 |
+| 2. + identifier lookup | 32/47 | 26 | 3 |
+| 3. + lifecycle filter | 32/47 | 26 | 1 |
+| 4. + supersession redirect | 32/47 | 26 | 0 |
+
+These match the Python prototype on the `episode-4-prototype` branch exactly: the same
+10,540 units, and the same 50 results, in the same order, for every question and step.
+
+## Episode 4: what is where
+
+| File | What it does |
+|---|---|
+| `ElementReader` | A `DocumentReader`: one `Document` per element with an id, its own text, its heading path, its lifecycle and, if something replaced it, its successor, in the metadata. Long units are split into parts |
+| `Lifecycle` | Current, history (an applied change), withdrawn, superseded or rejected, read from the folder and the status |
+| `Supersession` | The paper trail: which current element replaced an out-of-date one, from `spec-delta` targets, status marks and "superseded by" links |
+| `KeywordIndex` | BM25 over the units in an in-memory SQLite FTS5 table, the lifecycle filter inside the query |
+| `IdentifierLookup` | Finds the id and spec a question names (`FR-001 in spec 045`) |
+| `ElementRetriever` | A `DocumentRetriever`: named units pinned first, then the keyword results |
+| `SupersessionRedirect` | A `DocumentPostProcessor`: a superseded result gives its place to its successor |
+| `RetrievalRun`, `Ratchet` | The golden set through a step with no model, scored by address, and the four rules a step must pass |
+| `TrecFiles` | The golden set as qrels, and a run as a TREC run file |
 
 ## Run Episode 3
 

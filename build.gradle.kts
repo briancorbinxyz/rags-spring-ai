@@ -29,6 +29,9 @@ dependencies {
     // Load and retrieve: SimpleVectorStore, and the advisor that searches it on every call.
     implementation("org.springframework.ai:spring-ai-vector-store")
     implementation("org.springframework.ai:spring-ai-vector-store-advisor")
+    // Episode 4: Spring AI's retriever and post-processor interfaces, and keyword search in SQLite.
+    implementation("org.springframework.ai:spring-ai-rag")
+    implementation("org.xerial:sqlite-jdbc:3.53.2.1")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -41,6 +44,8 @@ dependencyManagement {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // sqlite-jdbc loads its native library; say so, rather than be warned about it.
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
 // Lets `--args='--archive.run=ask'` read follow-up questions from the terminal.

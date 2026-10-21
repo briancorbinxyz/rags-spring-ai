@@ -133,6 +133,44 @@ public final class GoldenScorer {
     return new Score(hit, partial, all);
   }
 
+  /**
+   * Scores a ranked list of element addresses. With element units a result <em>is</em> an element,
+   * so a hit is an address that matches: an expected one, or one the audit accepted for the whole
+   * question or for one of the expected passages. There are no partial hits.
+   */
+  public static Score byAddress(GoldenSet.Question q, List<String> ranked) {
+    Integer hit = null;
+    Integer all = null;
+    var covered = new java.util.HashSet<String>();
+    for (int i = 0; i < ranked.size(); i++) {
+      String address = ranked.get(i);
+      boolean found = false;
+      if (q.expected().contains(address)) {
+        covered.add(address);
+        found = true;
+      }
+      for (GoldenSet.Accept a : q.accept()) {
+        if (!a.address().equals(address)) {
+          continue;
+        }
+        if (a.wholeQuestion()) {
+          covered.addAll(q.expected());
+          found = true;
+        } else if (q.expected().contains(a.forTarget())) {
+          covered.add(a.forTarget());
+          found = true;
+        }
+      }
+      if (found && hit == null) {
+        hit = i + 1;
+      }
+      if (all == null && !q.expected().isEmpty() && covered.containsAll(q.expected())) {
+        all = i + 1;
+      }
+    }
+    return new Score(hit, hit, all);
+  }
+
   /** How much of the element at {@code address} one chunk holds. */
   public Hit hit(String address, Document chunk) {
     String file = address.contains("#") ? address.substring(0, address.indexOf('#')) : address;

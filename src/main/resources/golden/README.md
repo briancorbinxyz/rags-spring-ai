@@ -57,12 +57,15 @@ or "doesn't answer it". Unanswerable questions have no lines. 291 judgments in a
 
 A run file has one line per result, `question Q0 passage rank score run-name`, each passage once
 (`TrecFiles.run`; a split unit's later parts are dropped, or the scorer would keep the later rank).
-With the prototype's runs:
+`./gradlew test --tests RatchetTest` writes one for each of Episode 4's steps to `build/episode-4/`:
 
 ```bash
 pip install ir-measures
-python3 tools/ratchet-proto/trec_check.py tools/ratchet-proto/results/run   # on the episode-4-prototype branch
+ir_measures src/main/resources/golden/qrels.txt build/episode-4/step-4.run Success@4 RR@10 R@4 Judged@4
 ```
+
+The prototype's runs, on the `episode-4-prototype` branch, give the same numbers:
+`python3 tools/ratchet-proto/trec_check.py tools/ratchet-proto/results/run`.
 
 | Ours | `ir_measures` |
 |---|---|
