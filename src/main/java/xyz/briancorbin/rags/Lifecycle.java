@@ -1,7 +1,10 @@
 package xyz.briancorbin.rags;
 
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.jsoup.nodes.Element;
 
 /**
@@ -22,7 +25,24 @@ public enum Lifecycle {
   SUPERSEDED,
   REJECTED;
 
+  /** A search filter: every unit. */
+  public static final Set<Lifecycle> ALL = Collections.unmodifiableSet(EnumSet.allOf(Lifecycle.class));
+
+  /**
+   * A search filter: leaves out withdrawn, superseded and rejected units (Step 3). Applied history
+   * stays, because it is the change that made the current text what it is.
+   */
+  public static final Set<Lifecycle> CURRENT_ONLY = Collections.unmodifiableSet(EnumSet.of(CURRENT, HISTORY));
+
   private static final Set<String> EXCLUDED = Set.of("withdrawn", "superseded", "rejected");
+
+  /** The filter as SQL: {@code lifecycle in ('current', 'history')}, or nothing for {@link #ALL}. */
+  static String sql(Set<Lifecycle> filter) {
+    if (filter.containsAll(ALL)) {
+      return "";
+    }
+    return filter.stream().map(l -> "'" + l.value() + "'").collect(Collectors.joining(", ", "lifecycle in (", ")"));
+  }
 
   /** Withdrawn, superseded or rejected: the search leaves these out. */
   public boolean excluded() {

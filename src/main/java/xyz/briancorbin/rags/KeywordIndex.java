@@ -26,8 +26,8 @@ import org.springframework.ai.document.Document;
  * keeps them together. The question becomes every word that isn't a stop word, each quoted, OR-ed:
  * a unit needs only one of them to be a candidate, and BM25 ranks the candidates.
  *
- * <p>The lifecycle is a fourth column, unindexed, so the filter runs inside the query, before the
- * results are cut to a depth, as a vector store's metadata filter does.
+ * <p>The lifecycle is a fourth column, unindexed, so a {@link Lifecycle} filter runs inside the
+ * query, before the results are cut to a depth, as a vector store's metadata filter does.
  */
 public final class KeywordIndex implements AutoCloseable {
 
@@ -83,15 +83,14 @@ public final class KeywordIndex implements AutoCloseable {
 
   /**
    * The {@code depth} best units for a question, best first, each with its BM25 score (higher is
-   * better). With {@code currentOnly}, withdrawn, superseded and rejected units are filtered out
-   * before the cut.
+   * better). Only units whose lifecycle is in {@code filter} come back; the filter runs before the
+   * cut, so a filtered search still returns {@code depth} units when it can.
    */
-  public List<Document> search(String question, int depth, boolean currentOnly) {
+  public List<Document> search(String question, int depth, Set<Lifecycle> filter) {
+    String where = Lifecycle.sql(filter);
     String sql =
         "select rowid, bm25(units, %s) as score from units where units match ?%s order by score, rowid limit ?"
-            .formatted(
-                weights(),
-                currentOnly ? " and lifecycle not in ('withdrawn', 'superseded', 'rejected')" : "");
+            .formatted(weights(), where.isEmpty() ? "" : " and " + where);
     return query(sql, question, depth, null);
   }
 

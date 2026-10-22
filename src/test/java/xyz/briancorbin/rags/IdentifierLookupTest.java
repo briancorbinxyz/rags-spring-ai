@@ -42,7 +42,12 @@ class IdentifierLookupTest {
   @Test
   void aNamedUnitIsPinnedAboveTheSearch(@TempDir Path dir) throws Exception {
     try (var index = new KeywordIndex(new ElementReader(Archives.tiny(dir)).get())) {
-      var retriever = ElementRetriever.keywords(index).withIdentifiers(new IdentifierLookup(index)).currentOnly();
+      var retriever =
+          ElementRetriever.builder()
+              .index(index)
+              .identifiers(new IdentifierLookup(index))
+              .filter(Lifecycle.CURRENT_ONLY)
+              .build();
       var found = retriever.retrieve(new Query("Does the other service in spec 002 log requests, per FR-001?"));
       assertEquals("specs/002-other/spec.html#FR-001", ElementReader.address(found.getFirst()));
       assertEquals(null, found.getFirst().getScore()); // pinned, not scored
