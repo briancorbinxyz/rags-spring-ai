@@ -39,7 +39,7 @@ class KeywordIndexTest {
   @Test
   void aSearchIsADocumentRetriever(@TempDir Path dir) throws Exception {
     try (var index = new KeywordIndex(new ElementReader(Archives.tiny(dir)).get())) {
-      var retriever = new ElementRetriever(index, null, true);
+      var retriever = ElementRetriever.keywords(index).currentOnly();
       var found = retriever.retrieve(new Query("Which service must answer within a second?"));
       assertEquals("specs/002-other/spec.html#FR-001", ElementReader.address(found.getFirst()));
     }

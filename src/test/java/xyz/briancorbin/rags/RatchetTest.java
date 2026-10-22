@@ -34,13 +34,15 @@ class RatchetTest {
     var questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));
     try (var index = new KeywordIndex(new ElementReader(checkout).get())) {
       assertEquals(10_540, index.addresses().size());
-      var ids = new IdentifierLookup(index);
+      var step1 = ElementRetriever.keywords(index);
+      var step2 = step1.withIdentifiers(new IdentifierLookup(index));
+      var step3 = step2.currentOnly();
       var steps =
           List.of(
-              new Step("step-1", "element units + BM25", new ElementRetriever(index, null, false), null),
-              new Step("step-2", "+ identifier lookup", new ElementRetriever(index, ids, false), null),
-              new Step("step-3", "+ lifecycle filter", new ElementRetriever(index, ids, true), null),
-              new Step("step-4", "+ supersession redirect", new ElementRetriever(index, ids, true), new SupersessionRedirect(index)));
+              new Step("step-1", "element units + BM25", step1, null),
+              new Step("step-2", "+ identifier lookup", step2, null),
+              new Step("step-3", "+ lifecycle filter", step3, null),
+              new Step("step-4", "+ supersession redirect", step3, new SupersessionRedirect(index)));
 
       var tallies = new ArrayList<Tally>();
       for (Step step : steps) {
