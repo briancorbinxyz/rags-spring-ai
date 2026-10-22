@@ -22,12 +22,12 @@ import org.springframework.ai.embedding.EmbeddingRequest;
  * the results is never the index's fault. The lifecycle filter is applied during the scan, before
  * the depth cut, the way a vector store applies a metadata filter.
  */
-public final class UnitVectors {
+public final class VectorSearch {
 
   /** What Ollama's embedding endpoint is sent at once. */
   static final int BATCH = 32;
 
-  private final List<Document> units;
+  private final ElementUnits units;
   private final float[][] vectors; // aligned with units, each of length one
   private final Lifecycle[] lifecycles;
   private final EmbeddingModel model;
@@ -35,7 +35,7 @@ public final class UnitVectors {
   private final EmbeddingPrefix prefix;
   private final VectorCache cache;
 
-  private UnitVectors(List<Document> units, float[][] vectors, Lifecycle[] lifecycles,
+  private VectorSearch(ElementUnits units, float[][] vectors, Lifecycle[] lifecycles,
       EmbeddingModel model, String modelId, EmbeddingPrefix prefix, VectorCache cache) {
     this.units = units;
     this.vectors = vectors;
@@ -51,9 +51,9 @@ public final class UnitVectors {
    *
    * @param modelId what the cache is keyed by: the model and its digest, never just its name
    */
-  public static UnitVectors of(List<Document> units, EmbeddingModel model, String modelId,
+  public static VectorSearch of(ElementUnits units, EmbeddingModel model, String modelId,
       EmbeddingPrefix prefix, VectorCache cache) {
-    var texts = units.stream().map(u -> prefix.document(ElementReader.passage(u))).toList();
+    var texts = units.all().stream().map(u -> prefix.document(ElementReader.passage(u))).toList();
     var vectors = new float[units.size()][];
     var missing = new ArrayList<Integer>();
     for (int i = 0; i < texts.size(); i++) {
@@ -75,8 +75,8 @@ public final class UnitVectors {
       }
       cache.commit();
     }
-    var lifecycles = units.stream().map(ElementReader::lifecycle).toArray(Lifecycle[]::new);
-    return new UnitVectors(List.copyOf(units), vectors, lifecycles, model, modelId, prefix, cache);
+    var lifecycles = units.all().stream().map(ElementReader::lifecycle).toArray(Lifecycle[]::new);
+    return new VectorSearch(units, vectors, lifecycles, model, modelId, prefix, cache);
   }
 
   /**
@@ -104,7 +104,7 @@ public final class UnitVectors {
     var out = new ArrayList<Document>(Math.min(depth, allowed.size()));
     for (int i = 0; i < Math.min(depth, allowed.size()); i++) {
       int row = allowed.get(i);
-      out.add(KeywordIndex.withScore(units.get(row), similarity[row]));
+      out.add(ElementUnits.scored(units.all().get(row), similarity[row]));
     }
     return out;
   }

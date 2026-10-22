@@ -23,10 +23,10 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
 
   static final int HOPS = 3;
 
-  private final KeywordIndex index;
+  private final KeywordSearch keywords;
 
-  public SupersessionRedirect(KeywordIndex index) {
-    this.index = index;
+  public SupersessionRedirect(KeywordSearch keywords) {
+    this.keywords = keywords;
   }
 
   @Override
@@ -53,14 +53,14 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
   private String follow(String question, String address) {
     String at = address;
     for (int hop = 0; hop < HOPS; hop++) {
-      Map<String, Object> m = index.parts(at).getFirst().getMetadata();
+      Map<String, Object> m = keywords.units().parts(at).getFirst().getMetadata();
       Object next = m.get(ElementReader.SUPERSEDED_BY);
       Object page = m.get(ElementReader.PAGE_SUPERSEDED_BY);
       if (next != null) {
         at = next.toString();
       } else if (page != null) {
         String sameId = page + "#" + m.get(ElementReader.ANCHOR);
-        if (!index.parts(sameId).isEmpty()) {
+        if (!keywords.units().parts(sameId).isEmpty()) {
           at = sameId;
         } else {
           Optional<Document> best = bestOnPage(question, page.toString());
@@ -78,26 +78,26 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
 
   /** The part of a split unit that best matches the question; the unit itself if it has one part. */
   private Document bestPart(String question, String address) {
-    List<Document> parts = index.parts(address);
+    List<Document> parts = keywords.units().parts(address);
     if (parts.size() == 1) {
       return parts.getFirst();
     }
-    List<Document> ranked = index.rank(question, parts);
+    List<Document> ranked = keywords.rank(question, parts);
     return ranked.isEmpty() ? parts.getFirst() : ranked.getFirst();
   }
 
   private Optional<Document> bestOnPage(String question, String source) {
     List<Document> live =
-        index.units().stream()
+        keywords.units().all().stream()
             .filter(u -> source.equals(u.getMetadata().get(ElementReader.SOURCE)))
             .filter(u -> !ElementReader.lifecycle(u).excluded())
             .toList();
-    return live.isEmpty() ? Optional.empty() : index.rank(question, live).stream().findFirst();
+    return live.isEmpty() ? Optional.empty() : keywords.rank(question, live).stream().findFirst();
   }
 
   /** The successor, saying which result it replaced: provenance for the redirect itself. */
   private static Document redirected(Document successor, String from) {
-    Document copy = KeywordIndex.withScore(successor, successor.getScore());
+    Document copy = ElementUnits.scored(successor, successor.getScore());
     copy.getMetadata().put("redirected_from", from);
     return copy;
   }

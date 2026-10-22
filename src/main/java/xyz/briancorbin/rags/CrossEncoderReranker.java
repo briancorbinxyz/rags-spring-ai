@@ -24,7 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>An embedding model turns a question and a passage into vectors separately, and never sees them
  * side by side. A cross-encoder does the opposite: one pass over the pair, which is why it scores
  * better and why it costs so much more. So it is used as a second pass over the first
- * {@value FusedRetriever#RERANK_TOP} results, not as a search.
+ * {@value ElementRetriever#DEPTH} results, not as a search.
  *
  * <p>It reads exactly what a reader would be given, {@link ElementReader#passage}: the heading path,
  * then the unit's text. Pinned units are never reranked — they were looked up by name, and a model's
@@ -54,9 +54,9 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
     var pinned = new ArrayList<Document>();
     var rest = new ArrayList<Document>();
     for (Document doc : documents) {
-      (FusedRetriever.isPinned(doc) ? pinned : rest).add(doc);
+      (ElementRetriever.isPinned(doc) ? pinned : rest).add(doc);
     }
-    int top = Math.min(FusedRetriever.RERANK_TOP, rest.size());
+    int top = Math.min(ElementRetriever.DEPTH, rest.size()); // every candidate the retriever kept
     List<Document> head = rest.subList(0, top);
     if (head.isEmpty()) {
       return documents;
@@ -73,7 +73,7 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
     var out = new ArrayList<Document>(documents.size());
     out.addAll(pinned);
     for (int i : order) {
-      out.add(KeywordIndex.withScore(head.get(i), scores.get(i)));
+      out.add(ElementUnits.scored(head.get(i), scores.get(i)));
     }
     out.addAll(rest.subList(top, rest.size()));
     return List.copyOf(out);

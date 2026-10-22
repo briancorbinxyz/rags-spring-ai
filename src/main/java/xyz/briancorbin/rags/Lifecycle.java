@@ -17,6 +17,14 @@ import org.jsoup.nodes.Element;
  *   <li>{@link #WITHDRAWN}, {@link #SUPERSEDED}, {@link #REJECTED}: out of date, and kept out of
  *       the search (Step 3).
  * </ul>
+ *
+ * <p>{@link #OUT_OF_DATE} is the one list of which those are, and {@link #IN_FORCE} is its
+ * complement, so adding a sixth lifecycle puts it on one side only, and never on both or neither.
+ *
+ * <p>{@code IN_FORCE} is not the same idea as the {@code stale@4} the ratchet counts. That one is
+ * per question: the golden set names the records that would mislead a particular question, and four
+ * of the nine it names are current or applied history. A record can be in force and still be the
+ * wrong thing to hand a reader.
  */
 public enum Lifecycle {
   CURRENT,
@@ -25,28 +33,39 @@ public enum Lifecycle {
   SUPERSEDED,
   REJECTED;
 
-  /** A search filter: every unit. */
-  public static final Set<Lifecycle> ALL = Collections.unmodifiableSet(EnumSet.allOf(Lifecycle.class));
+  /** Replaced, withdrawn or never accepted: the search leaves these out (Step 3). */
+  public static final Set<Lifecycle> OUT_OF_DATE =
+      Collections.unmodifiableSet(EnumSet.of(WITHDRAWN, SUPERSEDED, REJECTED));
 
   /**
-   * A search filter: leaves out withdrawn, superseded and rejected units (Step 3). Applied history
-   * stays, because it is the change that made the current text what it is.
+   * A search filter: everything {@link #OUT_OF_DATE} is not. Applied history stays, because it is
+   * the change that made the current text what it is.
    */
-  public static final Set<Lifecycle> CURRENT_ONLY = Collections.unmodifiableSet(EnumSet.of(CURRENT, HISTORY));
+  public static final Set<Lifecycle> IN_FORCE =
+      Collections.unmodifiableSet(EnumSet.complementOf(EnumSet.copyOf(OUT_OF_DATE)));
+
+  /** A search filter: every unit, whatever state it is in. */
+  public static final Set<Lifecycle> ALL = Collections.unmodifiableSet(EnumSet.allOf(Lifecycle.class));
 
   private static final Set<String> EXCLUDED = Set.of("withdrawn", "superseded", "rejected");
 
-  /** The filter as SQL: {@code lifecycle in ('current', 'history')}, or nothing for {@link #ALL}. */
+  /**
+   * The filter as SQL: {@code lifecycle in ('current', 'history')}, nothing at all for {@link #ALL},
+   * and a condition that matches nothing for a filter that allows nothing.
+   */
   static String sql(Set<Lifecycle> filter) {
     if (filter.containsAll(ALL)) {
       return "";
+    }
+    if (filter.isEmpty()) {
+      return "1 = 0"; // asked for no lifecycle at all: match nothing, rather than write "in ()"
     }
     return filter.stream().map(l -> "'" + l.value() + "'").collect(Collectors.joining(", ", "lifecycle in (", ")"));
   }
 
   /** Withdrawn, superseded or rejected: the search leaves these out. */
   public boolean excluded() {
-    return this == WITHDRAWN || this == SUPERSEDED || this == REJECTED;
+    return OUT_OF_DATE.contains(this);
   }
 
   /** The value stored in a {@code Document}'s metadata. */

@@ -16,14 +16,14 @@ class SupersessionRedirectTest {
   @Test
   void aSupersededResultGivesItsPlaceToItsSuccessorAndAnAppliedChangeStaysBehindIt(@TempDir Path dir)
       throws Exception {
-    try (var index = new KeywordIndex(new ElementReader(Archives.tiny(dir)).get())) {
-      var redirect = new SupersessionRedirect(index);
+    try (var keywords = KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
+      var redirect = new SupersessionRedirect(keywords);
       var in =
           List.of(
-              index.parts(SPEC + "#FR-002").getFirst(),
-              index.parts(CHANGE + "#FR-003").getFirst(),
-              index.parts(SPEC + "#FR-001").getFirst(),
-              index.parts(SPEC + "#D-001").getFirst());
+              keywords.units().parts(SPEC + "#FR-002").getFirst(),
+              keywords.units().parts(CHANGE + "#FR-003").getFirst(),
+              keywords.units().parts(SPEC + "#FR-001").getFirst(),
+              keywords.units().parts(SPEC + "#D-001").getFirst());
       var out = redirect.process(new Query("Where does the service log?"), in);
       assertEquals(
           List.of(SPEC + "#FR-003", CHANGE + "#FR-003", SPEC + "#FR-001", SPEC + "#D-002"),

@@ -39,14 +39,14 @@ public final class IdentifierLookup {
           "\\b(?:spec|specs|slice)\\s+(\\d{3})\\b|(?<![\\w-])(\\d{3})-[a-z]",
           Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
 
-  private final KeywordIndex index;
+  private final ElementUnits units;
   private final Set<String> anchors;
   private final Map<String, List<String>> byAnchor = new LinkedHashMap<>(); // id -> addresses
 
-  public IdentifierLookup(KeywordIndex index) {
-    this.index = index;
-    this.anchors = index.anchors();
-    for (String address : index.addresses()) {
+  public IdentifierLookup(ElementUnits units) {
+    this.units = units;
+    this.anchors = units.anchors();
+    for (String address : units.addresses()) {
       byAnchor.computeIfAbsent(address.substring(address.indexOf('#') + 1), a -> new ArrayList<>()).add(address);
     }
   }
@@ -89,12 +89,12 @@ public final class IdentifierLookup {
     out.sort(
         Comparator.<String>comparingInt(a -> rank(ElementReader.lifecycle(first(a))))
             .thenComparing(a -> a.contains("/changes/"))
-            .thenComparingInt(a -> index.row(first(a))));
+            .thenComparingInt(a -> units.row(first(a))));
     return out;
   }
 
   private Document first(String address) {
-    return index.parts(address).getFirst();
+    return units.parts(address).getFirst();
   }
 
   private static int rank(Lifecycle lifecycle) {

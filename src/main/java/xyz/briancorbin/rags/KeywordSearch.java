@@ -6,8 +6,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -29,7 +27,7 @@ import org.springframework.ai.document.Document;
  * <p>The lifecycle is a fourth column, unindexed, so a {@link Lifecycle} filter runs inside the
  * query, before the results are cut to a depth, as a vector store's metadata filter does.
  */
-public final class KeywordIndex implements AutoCloseable {
+public final class KeywordSearch implements AutoCloseable {
 
   /** The heading path, the id, the text. */
   static final double[] WEIGHTS = {5.0, 10.0, 1.0};
@@ -43,13 +41,16 @@ public final class KeywordIndex implements AutoCloseable {
 
   private static final Pattern WORD = Pattern.compile("[A-Za-z0-9][A-Za-z0-9\\-]*");
 
-  private final List<Document> units;
-  private final Map<String, Integer> rows = new HashMap<>(); // document id -> row
-  private final Map<String, List<Document>> parts = new LinkedHashMap<>(); // address -> its parts
+  private final ElementUnits units;
   private final Connection db;
 
-  public KeywordIndex(List<Document> units) {
-    this.units = List.copyOf(units);
+  /** A keyword index over these units. Built once; it owns a SQLite connection, so close it. */
+  public static KeywordSearch of(ElementUnits units) {
+    return new KeywordSearch(units);
+  }
+
+  private KeywordSearch(ElementUnits units) {
+    this.units = units;
     try {
       db = DriverManager.getConnection("jdbc:sqlite::memory:");
       try (var create = db.createStatement()) {
@@ -60,8 +61,9 @@ public final class KeywordIndex implements AutoCloseable {
       try (var insert =
           db.prepareStatement(
               "insert into units(rowid, heading_path, anchor, body, lifecycle) values (?, ?, ?, ?, ?)")) {
-        for (int row = 0; row < this.units.size(); row++) {
-          Document unit = this.units.get(row);
+        List<Document> all = units.all();
+        for (int row = 0; row < all.size(); row++) {
+          Document unit = all.get(row);
           Map<String, Object> m = unit.getMetadata();
           String path = String.valueOf(m.get(ElementReader.HEADING_PATH));
           insert.setInt(1, row);
@@ -70,8 +72,6 @@ public final class KeywordIndex implements AutoCloseable {
           insert.setString(4, unit.getText());
           insert.setString(5, String.valueOf(m.get(ElementReader.LIFECYCLE)));
           insert.addBatch();
-          rows.put(unit.getId(), row);
-          parts.computeIfAbsent(ElementReader.address(unit), a -> new ArrayList<>()).add(unit);
         }
         insert.executeBatch();
       }
@@ -79,6 +79,11 @@ public final class KeywordIndex implements AutoCloseable {
     } catch (SQLException e) {
       throw new IllegalStateException("Cannot build the keyword index", e);
     }
+  }
+
+  /** The units this searches. */
+  public ElementUnits units() {
+    return units;
   }
 
   /**
@@ -96,36 +101,11 @@ public final class KeywordIndex implements AutoCloseable {
 
   /** Ranks the given units, and only them, for a question; units with no matching word are left out. */
   public List<Document> rank(String question, Collection<Document> scope) {
-    String ids = scope.stream().map(d -> rows.get(d.getId()).toString()).collect(Collectors.joining(",", "[", "]"));
+    String ids = scope.stream().map(d -> String.valueOf(units.row(d))).collect(Collectors.joining(",", "[", "]"));
     String sql =
         "select rowid, bm25(units, %s) as score from units where units match ? and rowid in (select value from json_each(?)) order by score, rowid limit ?"
             .formatted(weights());
     return query(sql, question, scope.size(), ids);
-  }
-
-  /** Every part of the unit at {@code address}, in order; empty if there is no such unit. */
-  public List<Document> parts(String address) {
-    return parts.getOrDefault(address, List.of());
-  }
-
-  /** Every unit, in archive order. */
-  public List<Document> units() {
-    return units;
-  }
-
-  /** The units' element ids, for the identifier lookup. */
-  Set<String> anchors() {
-    return units.stream().map(d -> String.valueOf(d.getMetadata().get(ElementReader.ANCHOR))).collect(Collectors.toSet());
-  }
-
-  /** Addresses in archive order, each once. */
-  Collection<String> addresses() {
-    return parts.keySet();
-  }
-
-  /** A unit's position in the archive. */
-  int row(Document unit) {
-    return rows.get(unit.getId());
   }
 
   /** The question as an FTS5 query: each word that isn't a stop word, quoted, OR-ed. */
@@ -155,23 +135,13 @@ public final class KeywordIndex implements AutoCloseable {
       var out = new ArrayList<Document>();
       try (var rs = select.executeQuery()) {
         while (rs.next()) {
-          out.add(withScore(units.get(rs.getInt(1)), -rs.getDouble(2)));
+          out.add(ElementUnits.scored(units.all().get(rs.getInt(1)), -rs.getDouble(2)));
         }
       }
       return out;
     } catch (SQLException e) {
       throw new IllegalStateException("Keyword search failed for: " + question, e);
     }
-  }
-
-  /** A copy of a unit carrying a score; the stored unit is left alone. */
-  static Document withScore(Document unit, Double score) {
-    return Document.builder()
-        .id(unit.getId())
-        .text(unit.getText())
-        .metadata(new HashMap<>(unit.getMetadata()))
-        .score(score)
-        .build();
   }
 
   private static String weights() {

@@ -69,33 +69,33 @@ class Episode5RatchetTest {
     String modelId = OllamaModel.id(MODEL, digest.get());
     Path out = Path.of("build/episode-5");
 
-    try (var index = new KeywordIndex(new ElementReader(checkout).get());
+    try (var keywords = KeywordSearch.of(new ElementUnits(new ElementReader(checkout).get()));
         var cache = new VectorCache(VECTORS.resolve(OllamaModel.cacheFile(modelId)))) {
-      assertEquals(10_540, index.addresses().size());
-      var ids = new IdentifierLookup(index);
+      assertEquals(10_540, keywords.units().addresses().size());
+      var ids = new IdentifierLookup(keywords.units());
       var vectors =
-          UnitVectors.of(index.units(), embedding, modelId, EmbeddingPrefix.of(MODEL), cache);
+          VectorSearch.of(keywords.units(), embedding, modelId, EmbeddingPrefix.of(MODEL), cache);
       assertEquals(768, vectors.dimensions());
 
       var step4 =
           new Step("step-4", "+ supersession redirect", ElementRetriever.builder()
-              .index(index)
+              .keywords(keywords)
               .identifiers(ids)
-              .filter(Lifecycle.CURRENT_ONLY)
-              .build(), new SupersessionRedirect(index));
+              .filter(Lifecycle.IN_FORCE)
+              .build(), new SupersessionRedirect(keywords));
 
       var fused =
-          FusedRetriever.builder()
-              .index(index)
+          ElementRetriever.builder()
+              .keywords(keywords)
               .vectors(vectors)
               .identifiers(ids)
-              .filter(Lifecycle.CURRENT_ONLY)
+              .filter(Lifecycle.IN_FORCE)
               .build();
-      var cut = new TopDocuments(FusedRetriever.DEPTH);
-      var redirect = new SupersessionRedirect(index);
+      var cut = new TopDocuments(ElementRetriever.DEPTH);
+      var redirect = new SupersessionRedirect(keywords);
 
       var step5 = new Step("step-5", "+ dense search, fused", fused,
-          PostProcessors.of(cut, redirect, cut));
+          PostProcessors.of(cut, redirect));
 
       Tally four = tally(step4, questions, out);
       Tally five = tally(step5, questions, out);
@@ -113,7 +113,7 @@ class Episode5RatchetTest {
           "no reranker at " + rerankUrl + ": start tools/rerank-service/serve.py for step 6");
       assertEquals("cross-encoder/ms-marco-MiniLM-L-6-v2", reranker.get());
       var step6 = new Step("step-6", "+ cross-encoder reranking", fused,
-          PostProcessors.of(new CrossEncoderReranker(rerankUrl), cut, redirect, cut));
+          PostProcessors.of(new CrossEncoderReranker(rerankUrl), cut, redirect));
 
       Tally six = tally(step6, questions, out);
       assertEquals(32, six.hits());

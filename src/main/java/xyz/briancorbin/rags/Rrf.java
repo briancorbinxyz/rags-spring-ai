@@ -53,7 +53,7 @@ public final class Rrf {
             .thenComparingLong(id -> first.get(id)[1]));
     var out = new ArrayList<Document>(ids.size());
     for (String id : ids) {
-      out.add(KeywordIndex.withScore(unit.get(id), score.get(id)));
+      out.add(ElementUnits.scored(unit.get(id), score.get(id)));
     }
     return out;
   }

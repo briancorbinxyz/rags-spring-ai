@@ -32,28 +32,31 @@ class RatchetTest {
     assumeTrue(SpecCorpus.commitOf(checkout).equals(COMMIT), "the golden set is frozen at " + COMMIT);
 
     var questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));
-    try (var index = new KeywordIndex(new ElementReader(checkout).get())) {
-      assertEquals(10_540, index.addresses().size());
-      var ids = new IdentifierLookup(index);
+    try (var keywords = KeywordSearch.of(new ElementUnits(new ElementReader(checkout).get()))) {
+      assertEquals(10_540, keywords.units().addresses().size());
+      var ids = new IdentifierLookup(keywords.units());
+      // The retriever hands on everything a top 50 could need; cutting to 50 is a step of its own,
+      // so Episode 5 can rerank before the cut rather than after it.
+      var cut = new TopDocuments(ElementRetriever.DEPTH);
       var steps =
           List.of(
               new Step("step-1", "element units + BM25", ElementRetriever.builder()
-                  .index(index)
-                  .build(), null),
+                  .keywords(keywords)
+                  .build(), cut),
               new Step("step-2", "+ identifier lookup", ElementRetriever.builder()
-                  .index(index)
+                  .keywords(keywords)
                   .identifiers(ids)
-                  .build(), null),
+                  .build(), cut),
               new Step("step-3", "+ lifecycle filter", ElementRetriever.builder()
-                  .index(index)
+                  .keywords(keywords)
                   .identifiers(ids)
-                  .filter(Lifecycle.CURRENT_ONLY)
-                  .build(), null),
+                  .filter(Lifecycle.IN_FORCE)
+                  .build(), cut),
               new Step("step-4", "+ supersession redirect", ElementRetriever.builder()
-                  .index(index)
+                  .keywords(keywords)
                   .identifiers(ids)
-                  .filter(Lifecycle.CURRENT_ONLY)
-                  .build(), new SupersessionRedirect(index)));
+                  .filter(Lifecycle.IN_FORCE)
+                  .build(), PostProcessors.of(cut, new SupersessionRedirect(keywords))));
 
       var tallies = new ArrayList<Tally>();
       for (Step step : steps) {
