@@ -69,22 +69,33 @@ python3 -c 'import ensurepip' 2>/dev/null \
 
 # --- the venv: numpy and tiktoken only (the reranker runs in llama-server) -----------------------
 VENV="$HERE/.venv"
-if [[ ! -x "$VENV/bin/python" ]]; then
-  # A half-made venv from an earlier failure has no bin/python and would never be retried.
-  [[ -d "$VENV" ]] && { log "removing an incomplete venv at $VENV"; rm -rf "$VENV"; }
-  log "creating venv in $VENV"
-  if ! python3 -m venv "$VENV"; then
-    die "could not create the venv. On Ubuntu this is nearly always the missing package:
-    sudo apt update && sudo apt install -y python${PYVER}-venv
-  then run this script again."
-  fi
-fi
 PY="$VENV/bin/python"
-[[ -x "$PY" ]] || die "the venv exists but has no python at $PY. Delete it and run again: rm -rf '$VENV'"
-"$PY" -m pip --version >/dev/null 2>&1 \
-  || die "the venv has no pip. Install the venv package and remake it:
-    sudo apt install -y python${PYVER}-venv && rm -rf '$VENV'"
+
+make_venv() {           # a venv with a working pip, or non-zero
+  if [[ ! -x "$PY" ]]; then
+    [[ -d "$VENV" ]] && { log "removing an incomplete venv at $VENV"; rm -rf "$VENV"; }
+    log "creating venv in $VENV"
+    python3 -m venv "$VENV" || return 1
+  fi
+  [[ -x "$PY" ]] || return 1
+  "$PY" -m pip --version >/dev/null 2>&1 && return 0
+  # A venv without pip: Debian keeps ensurepip's wheels in python3-pip-whl, and a venv built
+  # before that package was installed stays broken however many times it is reused.
+  log "the venv has no pip; repairing it with ensurepip"
+  "$PY" -m ensurepip --upgrade >/dev/null 2>&1 || return 1
+  "$PY" -m pip --version >/dev/null 2>&1
+}
+
+if ! make_venv; then
+  log "that venv is not usable; rebuilding it from scratch"
+  rm -rf "$VENV"
+  make_venv || die "could not build a venv with a working pip. On Ubuntu:
+    sudo apt update && sudo apt install -y python${PYVER}-venv python3-pip-whl
+  then run this script again. (python3-pip-whl is the one that carries the wheels
+  ensurepip installs; without it a venv is created but has no pip.)"
+fi
 log "venv: $("$PY" -V), pip $("$PY" -m pip --version | awk '{print $2}')"
+
 # Errors are shown, not swallowed: a failure here is the thing you need to read.
 "$PY" -m pip install --quiet --upgrade pip || log "WARNING: could not upgrade pip, continuing"
 "$PY" -m pip install --quiet numpy tiktoken || die "pip install numpy tiktoken failed (see the output above)"
