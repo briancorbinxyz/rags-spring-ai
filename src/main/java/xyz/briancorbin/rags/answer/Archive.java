@@ -46,38 +46,104 @@ public final class Archive {
       Integer promptTokens,
       long millis) {}
 
+  /** What one model call cost: what it was charged for, and how long it took. */
+  public record Cost(Integer promptTokens, long millis) {
+
+    static Cost none() {
+      return new Cost(null, 0);
+    }
+  }
+
+  /**
+   * What one role did on one question: what it said, the verdicts on what it said, and what the
+   * call cost. The two roles are measured the same way, so they are the same shape.
+   */
+  public record Turn(Optional<Commentary> said, List<Verdict> verdicts, Cost cost) {
+
+    static Turn silent() {
+      return new Turn(Optional.empty(), List.of(), Cost.none());
+    }
+  }
+
   /**
    * Everything that happened for one question, so it can be checked and written down.
    *
-   * @param retrieved the chunks the search returned, best first; in duo mode Quoter's, in solo mode
-   *     Answerer's
-   * @param quoter Quoter's reply, empty in solo mode or if Quoter could not be reached
-   * @param quoterVerdicts the resolver's verdict on each of Quoter's claims (Answerer's in solo
-   *     mode)
-   * @param quotes the quotations traced to a chunk, as Answerer was shown them
-   * @param answerer Answerer's reply, empty if Answerer could not be reached
-   * @param answererVerdicts the citation check of each of Answerer's claims (the resolver's, in
-   *     solo)
-   * @param abstained Answerer said the answer is not in the archive and cited nothing
+   * @param retrieved the chunks the search returned, best first; whichever role did the searching
+   * @param quoter what the quoter said and what it cost; silent in direct mode
+   * @param answerer what the answerer said and what it cost
+   * @param quotes the quotations traced to a chunk, as the answerer was shown them
+   * @param abstained the answerer said the answer is not in the archive and cited nothing
+   * @param answererPrompt the prompt the answerer was given, kept so a run can be read back
    */
   public record Ruling(
       String question,
       Mode mode,
       List<Document> retrieved,
-      Optional<Commentary> quoter,
-      List<Verdict> quoterVerdicts,
+      Turn quoter,
+      Turn answerer,
       List<Quote> quotes,
-      Optional<Commentary> answerer,
-      List<Verdict> answererVerdicts,
       boolean abstained,
-      Integer quoterPromptTokens,
-      Integer answererPromptTokens,
-      long quoterMillis,
-      long answererMillis,
       String answererPrompt) {
 
     public long millis() {
-      return quoterMillis + answererMillis;
+      return quoter.cost().millis() + answerer.cost().millis();
+    }
+
+    /** Named rather than positional: eight components in a row is a mistake waiting to happen. */
+    public static Builder of(String question, Mode mode) {
+      return new Builder(question, mode);
+    }
+
+    public static final class Builder {
+
+      private final String question;
+      private final Mode mode;
+      private List<Document> retrieved = List.of();
+      private Turn quoter = Turn.silent();
+      private Turn answerer = Turn.silent();
+      private List<Quote> quotes = List.of();
+      private boolean abstained;
+      private String answererPrompt = "";
+
+      private Builder(String question, Mode mode) {
+        this.question = question;
+        this.mode = mode;
+      }
+
+      public Builder retrieved(List<Document> retrieved) {
+        this.retrieved = retrieved;
+        return this;
+      }
+
+      public Builder quoter(Turn quoter) {
+        this.quoter = quoter;
+        return this;
+      }
+
+      public Builder answerer(Turn answerer) {
+        this.answerer = answerer;
+        return this;
+      }
+
+      public Builder quotes(List<Quote> quotes) {
+        this.quotes = quotes;
+        return this;
+      }
+
+      public Builder abstained(boolean abstained) {
+        this.abstained = abstained;
+        return this;
+      }
+
+      public Builder answererPrompt(String answererPrompt) {
+        this.answererPrompt = answererPrompt;
+        return this;
+      }
+
+      public Ruling build() {
+        return new Ruling(
+            question, mode, retrieved, quoter, answerer, quotes, abstained, answererPrompt);
+      }
     }
   }
 
@@ -141,22 +207,16 @@ public final class Archive {
     say("Alpha", answererSaid);
     var answererVerdicts = citations.checkAll(answererSaid, resolution.quotes());
 
-    return new Ruling(
-        question,
-        Mode.QUOTED,
-        retrieved,
-        quoterReply.commentary(),
-        resolution.verdicts(),
-        resolution.quotes(),
-        answererReply.commentary(),
-        answererVerdicts,
-        answererReply.commentary().isPresent()
-            && citations.abstained(answererSaid, resolution.quotes()),
-        quoterReply.promptTokens(),
-        answererReply.promptTokens(),
-        quoterReply.millis(),
-        answererReply.millis(),
-        prompt);
+    return Ruling.of(question, Mode.QUOTED)
+        .retrieved(retrieved)
+        .quoter(new Turn(quoterReply.commentary(), resolution.verdicts(), cost(quoterReply)))
+        .answerer(new Turn(answererReply.commentary(), answererVerdicts, cost(answererReply)))
+        .quotes(resolution.quotes())
+        .abstained(
+            answererReply.commentary().isPresent()
+                && citations.abstained(answererSaid, resolution.quotes()))
+        .answererPrompt(prompt)
+        .build();
   }
 
   private Ruling direct(String question, String conversationId) {
@@ -171,21 +231,15 @@ public final class Archive {
         answererReply.commentary().isPresent()
             && answererSaid.claims().stream().anyMatch(CitationChecker::abstains)
             && resolution.quotes().isEmpty();
-    return new Ruling(
-        question,
-        Mode.DIRECT,
-        retrieved,
-        Optional.empty(),
-        resolution.verdicts(),
-        resolution.quotes(),
-        answererReply.commentary(),
-        resolution.verdicts(),
-        abstained,
-        null,
-        answererReply.promptTokens(),
-        0,
-        answererReply.millis(),
-        question);
+    // In direct mode the answerer did its own searching, so the quoter has no turn and the
+    // resolver's verdicts are on the answerer's own quotations.
+    return Ruling.of(question, Mode.DIRECT)
+        .retrieved(retrieved)
+        .answerer(new Turn(answererReply.commentary(), resolution.verdicts(), cost(answererReply)))
+        .quotes(resolution.quotes())
+        .abstained(abstained)
+        .answererPrompt(question)
+        .build();
   }
 
   /** What Answerer is given: the question, and each traced quotation with its label and address. */
@@ -206,6 +260,10 @@ public final class Archive {
    * The retrieved chunks come back in the response metadata, where {@link QuestionAnswerAdvisor}
    * puts them under {@code qa_retrieved_documents}.
    */
+  private static Cost cost(Reply reply) {
+    return new Cost(reply.promptTokens(), reply.millis());
+  }
+
   private Reply call(ChatClient client, String conversationId, String user) {
     long start = System.nanoTime();
     try {

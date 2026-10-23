@@ -149,7 +149,7 @@ final class RunSummary {
 
   /** Every verdict on every claim Answerer made, across the run. */
   private static List<FactChecker.Verdict> allAnswererVerdicts(List<Row> rows) {
-    return rows.stream().flatMap(row -> row.ruling().answererVerdicts().stream()).toList();
+    return rows.stream().flatMap(row -> row.ruling().answerer().verdicts().stream()).toList();
   }
 
   /** Mean reciprocal rank over the answerable questions; 0 if there are none. */

@@ -45,9 +45,12 @@ final class RunCsv {
           column("stale_retrieved", (row, setup) -> bit(row.staleRetrieved())),
           column("stale_cited", (row, setup) -> bit(row.staleCited())),
           column("stale_as_current", (row, setup) -> bit(row.staleAsCurrent())),
-          column("quoter_prompt_tokens", (row, setup) -> str(row.ruling().quoterPromptTokens())),
           column(
-              "answerer_prompt_tokens", (row, setup) -> str(row.ruling().answererPromptTokens())),
+              "quoter_prompt_tokens",
+              (row, setup) -> str(row.ruling().quoter().cost().promptTokens())),
+          column(
+              "answerer_prompt_tokens",
+              (row, setup) -> str(row.ruling().answerer().cost().promptTokens())),
           column("millis", (row, setup) -> String.valueOf(row.ruling().millis())),
           column("commit", (row, setup) -> setup.corpus().commit().substring(0, 7)),
           column("chat_model", (row, setup) -> setup.chatModel()),

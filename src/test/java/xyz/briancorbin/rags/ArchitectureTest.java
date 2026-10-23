@@ -1,12 +1,18 @@
 package xyz.briancorbin.rags;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.constructors;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaConstructor;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchCondition;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import org.junit.jupiter.api.Test;
+import xyz.briancorbin.rags.eval.GoldenSet;
 
 /**
  * The seams, asserted.
@@ -95,5 +101,42 @@ class ArchitectureTest {
         .beFreeOfCycles()
         .because("a cycle means the boundary is decorative")
         .check(CLASSES);
+  }
+
+  /** At most this many constructor parameters before the call site stops being readable. */
+  private static final int MANY = 8;
+
+  /**
+   * More than a handful of things handed to a constructor is a builder waiting to be written, and a
+   * record's canonical constructor takes every component — which is why this lives here rather than
+   * in Checkstyle, whose {@code ParameterNumber} refuses {@code RECORD_DEF} and so cannot see a
+   * record at all. ArchUnit reads bytecode, where a record is a class with a constructor.
+   */
+  @Test
+  void nothingTakesMoreThanAHandfulOfThingsAtOnce() {
+    constructors()
+        .that()
+        // A question's components are the keys of a frozen file on disk, so their number is the
+        // golden set's to decide and not ours. Grouping them would change the file.
+        .areNotDeclaredIn(GoldenSet.Question.class)
+        .should(takeAtMost(MANY))
+        .because(
+            "a row of positional arguments is a mistake waiting to happen: group them, or give it"
+                + " a builder and let the call site say which is which")
+        .check(CLASSES);
+  }
+
+  private static ArchCondition<JavaConstructor> takeAtMost(int many) {
+    return new ArchCondition<>("take at most " + many + " parameters") {
+      @Override
+      public void check(JavaConstructor constructor, ConditionEvents events) {
+        int taken = constructor.getRawParameterTypes().size();
+        events.add(
+            new SimpleConditionEvent(
+                constructor,
+                taken <= many,
+                "%s takes %d".formatted(constructor.getOwner().getSimpleName(), taken)));
+      }
+    };
   }
 }

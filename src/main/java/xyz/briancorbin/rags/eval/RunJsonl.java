@@ -38,12 +38,12 @@ final class RunJsonl {
     line.put("accept", row.question().accept());
     line.put("retrieved", retrieved(ruling));
     line.put("score", row.score());
-    line.put("quoter", ruling.quoter().orElse(null));
-    line.put("quoter_verdicts", ruling.quoterVerdicts());
+    line.put("quoter", ruling.quoter().said().orElse(null));
+    line.put("quoter_verdicts", ruling.quoter().verdicts());
     line.put("quotes", ruling.quotes());
     line.put("answerer_prompt", ruling.answererPrompt());
-    line.put("answerer", ruling.answerer().orElse(null));
-    line.put("answerer_verdicts", ruling.answererVerdicts());
+    line.put("answerer", ruling.answerer().said().orElse(null));
+    line.put("answerer_verdicts", ruling.answerer().verdicts());
     line.put("abstained", ruling.abstained());
     line.put("stale_cited", row.staleCited());
     line.put("stale_flagged", row.staleFlagged());

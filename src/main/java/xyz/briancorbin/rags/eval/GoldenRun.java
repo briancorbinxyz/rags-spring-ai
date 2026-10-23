@@ -77,7 +77,8 @@ public final class GoldenRun {
     }
 
     int tokens() {
-      return value(ruling.quoterPromptTokens()) + value(ruling.answererPromptTokens());
+      return value(ruling.quoter().cost().promptTokens())
+          + value(ruling.answerer().cost().promptTokens());
     }
   }
 
@@ -115,7 +116,8 @@ public final class GoldenRun {
     }
     return ruling
         .answerer()
-        .map(reply -> citations.cited(reply, ruling.quotes()))
+        .said()
+        .map(said -> citations.cited(said, ruling.quotes()))
         .orElseGet(LinkedHashSet::new);
   }
 
@@ -148,19 +150,24 @@ public final class GoldenRun {
     Score score = scorer.score(question, top);
     Double verified =
         ruling.mode() == Archive.Mode.QUOTED
-            ? new QuoteResolver.Resolution(ruling.quoterVerdicts(), ruling.quotes()).verifiedShare()
+            ? new QuoteResolver.Resolution(ruling.quoter().verdicts(), ruling.quotes())
+                .verifiedShare()
             : null;
     boolean staleRetrieved = anyStaleAmong(question, top);
     var cited = citedBy(ruling);
     boolean staleCited = anyStaleQuotedIn(question, cited);
     boolean staleFlagged =
-        ruling.answerer().map(reply -> FLAGS_STALE.matcher(reply.answer()).find()).orElse(false);
+        ruling
+            .answerer()
+            .said()
+            .map(reply -> FLAGS_STALE.matcher(reply.answer()).find())
+            .orElse(false);
     return new Row(
         question,
         ruling,
         score,
         verified,
-        Tally.of(ruling.answererVerdicts()),
+        Tally.of(ruling.answerer().verdicts()),
         staleRetrieved,
         staleCited,
         staleFlagged);

@@ -116,7 +116,8 @@ class RunConfiguration {
       log.info("  {} {} (rank {})", q.label(), q.address(), q.rank());
     }
     ruling
-        .answererVerdicts()
+        .answerer()
+        .verdicts()
         .forEach(verdict -> log.info("  [{}] {}", verdict.status(), verdict.reason()));
   }
 

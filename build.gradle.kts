@@ -8,6 +8,7 @@ plugins {
     // the code is quoted in the articles, so an unformatted excerpt is a published defect.
     id("com.diffplug.spotless") version "8.8.0"
     id("net.ltgt.errorprone") version "4.1.0"
+    checkstyle
 }
 
 group = "xyz.briancorbin"
@@ -64,6 +65,15 @@ tasks.withType<JavaCompile>().configureEach {
         // Error Prone's defaults, plus three it ships switched off that match how this code is read.
         enable("ImmutableSetForContains", "ConstantPatternCompile", "IdentifierName")
     }
+}
+
+checkstyle {
+    toolVersion = "14.3.0"
+    // Reporting only, deliberately. Layout belongs to the formatter and Error Prone owns
+    // correctness; this counts the two things neither can see -- how long a method is and how many
+    // things it is handed. It joins the gate when both counts reach zero, not before, because a
+    // threshold set to whatever happens to pass today teaches nobody anything.
+    isIgnoreFailures = true
 }
 
 spotless {
