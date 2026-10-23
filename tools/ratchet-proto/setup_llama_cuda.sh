@@ -164,9 +164,28 @@ if command -v llama-server >/dev/null && [[ "$(command -v llama-server)" == "$BI
   note "llama-server already resolves to the build"
 else
   LINE="export PATH=\"$LLAMA_DIR/build/bin:\$PATH\""
+  # A declaratively-managed rc file is a symlink into the store and is meant to be read-only.
+  # Appending to it is both impossible and the wrong idea: the change belongs in the config.
+  MANAGED=0
+  if [[ -n "$RC" && -L "$RC" ]] && readlink -f "$RC" 2>/dev/null | grep -q '^/nix/store'; then MANAGED=nix; fi
+  if [[ -n "$RC" && -e "$RC" && ! -w "$RC" && "$MANAGED" == 0 ]]; then MANAGED=readonly; fi
+
   if [[ -z "$RC" ]]; then
     note "your shell is $(basename "$SHELL"); add this yourself, in its own syntax:"
     note "  set -gx PATH $LLAMA_DIR/build/bin \$PATH      # fish"
+  elif [[ "$MANAGED" == nix ]]; then
+    note "$RC is managed by Nix (a symlink into /nix/store), so it is not mine to edit."
+    note "Declare it instead, then 'home-manager switch':"
+    note ""
+    note "    home.sessionPath = ["
+    note "      \"$LLAMA_DIR/build/bin\""
+    note "      \"/usr/local/cuda/bin\""
+    note "    ];"
+    note ""
+    note "For right now, in this shell:  export PATH=\"$LLAMA_DIR/build/bin:\$PATH\""
+  elif [[ "$MANAGED" == readonly ]]; then
+    note "$RC is not writable, so it is left alone. Add by hand:"
+    note "    $LINE"
   elif grep -qF "$LLAMA_DIR/build/bin" "$RC" 2>/dev/null; then
     note "$RC already has it; open a new shell (or: source $RC)"
   else
