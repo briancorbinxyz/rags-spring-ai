@@ -58,7 +58,8 @@ class TrecFilesTest {
 
   @Test
   void runLinesKeepTheFirstOccurrenceOfASplitPassage() {
-    var lines = TrecFiles.run("G-044", List.of("p#1", "p#2", "p#1", "p#3"), "S1", 50);
+    var lines =
+        TrecFiles.run("G-044", List.of("p#1", "p#2", "p#1", "p#3"), new TrecFiles.Run("S1", 50));
     assertEquals(
         List.of(
             "G-044 Q0 p#1 1 1.000000 S1",
@@ -70,7 +71,7 @@ class TrecFilesTest {
   @Test
   void runLinesStopAtDepth() {
     var ranked = java.util.stream.IntStream.range(0, 100).mapToObj(i -> "p#" + i).toList();
-    assertEquals(50, TrecFiles.run("q", ranked, "x", 50).size());
+    assertEquals(50, TrecFiles.run("q", ranked, new TrecFiles.Run("x", 50)).size());
   }
 
   /**

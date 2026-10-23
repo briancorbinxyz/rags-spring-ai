@@ -61,19 +61,24 @@ public final class SpecCorpus {
   private final String expectedCommit;
   private final Path storeDir;
 
-  public SpecCorpus(
-      Path checkout,
-      SimpleVectorStore store,
-      PrefixedEmbeddingModel embedder,
-      String embeddingModel,
-      String expectedCommit,
-      Path storeDir) {
-    this.checkout = checkout;
+  /**
+   * Where the archive is and where its store goes.
+   *
+   * @param expectedCommit the commit the published numbers were measured at, so a different one is
+   *     warned about rather than quietly compared
+   */
+  public record Checkout(Path checkout, String expectedCommit, Path storeDir) {}
+
+  /** The embedding model, and the name the store file is keyed by so a swap is a new store. */
+  public record Embedding(PrefixedEmbeddingModel embedder, String model) {}
+
+  public SpecCorpus(Checkout where, Embedding embedding, SimpleVectorStore store) {
+    this.checkout = where.checkout();
     this.store = store;
-    this.embedder = embedder;
-    this.embeddingModel = embeddingModel;
-    this.expectedCommit = expectedCommit;
-    this.storeDir = storeDir;
+    this.embedder = embedding.embedder();
+    this.embeddingModel = embedding.model();
+    this.expectedCommit = where.expectedCommit();
+    this.storeDir = where.storeDir();
   }
 
   public Path checkout() {

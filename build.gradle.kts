@@ -69,11 +69,10 @@ tasks.withType<JavaCompile>().configureEach {
 
 checkstyle {
     toolVersion = "14.3.0"
-    // Reporting only, deliberately. Layout belongs to the formatter and Error Prone owns
-    // correctness; this counts the two things neither can see -- how long a method is and how many
-    // things it is handed. It joins the gate when both counts reach zero, not before, because a
-    // threshold set to whatever happens to pass today teaches nobody anything.
-    isIgnoreFailures = true
+    // Layout belongs to the formatter and Error Prone owns correctness; this counts the two things
+    // neither can see: how long a method is and how many things it is handed. Both reached zero
+    // before it was allowed to fail the build, so the limit is where the code is, not the reverse.
+    maxWarnings = 0
 }
 
 spotless {

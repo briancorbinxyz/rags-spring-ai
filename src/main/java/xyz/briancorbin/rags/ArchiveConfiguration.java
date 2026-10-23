@@ -52,7 +52,9 @@ class ArchiveConfiguration {
       @Value("${spectastic.commit:}") String commit,
       @Value("${spring.ai.ollama.embedding.model}") String model) {
     return new SpecCorpus(
-        checkout, store, embeddingModel, model, commit, Path.of("build", "archive"));
+        new SpecCorpus.Checkout(checkout, commit, Path.of("build", "archive")),
+        new SpecCorpus.Embedding(embeddingModel, model),
+        store);
   }
 
   /**
@@ -129,12 +131,12 @@ class ArchiveConfiguration {
       CitationChecker citations,
       @Value("${archive.mode:quoted}") String mode) {
     return new Archive(
-        quoter,
-        answerer,
-        soloAnswerer,
-        store,
-        resolver,
-        citations,
-        Archive.Mode.valueOf(mode.strip().toUpperCase(Locale.ROOT)));
+        new Archive.Roles(
+            Archive.Mode.valueOf(mode.strip().toUpperCase(Locale.ROOT)),
+            quoter,
+            answerer,
+            soloAnswerer),
+        new Archive.Checks(resolver, citations),
+        store);
   }
 }

@@ -6,4 +6,13 @@
   <!-- A @Bean method's parameters are its dependencies, and Spring decides how many there are.
        A builder cannot help: there is no call site to make readable. -->
   <suppress files=".*Configuration\.java$" checks="ParameterNumber"/>
+
+  <!-- A test that walks four pipeline steps and asserts each one is clearer as one readable
+       sequence than split across helpers that hide the arrangement, and a fixture is mostly the
+       data it fixes. Parameter counts still apply to tests; length does not. -->
+  <suppress files="[\\/]src[\\/]test[\\/]" checks="MethodLength"/>
+
+  <!-- Builds a GoldenSet.Question, whose components are the keys of a frozen file: the same
+       exemption the record itself has in ArchitectureTest. -->
+  <suppress files="TrecFilesTest\.java$" checks="ParameterNumber"/>
 </suppressions>

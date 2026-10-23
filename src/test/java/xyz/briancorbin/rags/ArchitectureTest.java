@@ -1,11 +1,13 @@
 package xyz.briancorbin.rags;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.constructors;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaConstructor;
+import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -136,6 +138,41 @@ class ArchitectureTest {
                 constructor,
                 taken <= many,
                 "%s takes %d".formatted(constructor.getOwner().getSimpleName(), taken)));
+      }
+    };
+  }
+
+  /** At most this many parameters on anything a caller outside the class can see. */
+  private static final int FEW = 3;
+
+  /**
+   * Three for the visible surface. Checkstyle counts four for everything, because it cannot tell a
+   * private helper from public API — its xpath filter will not suppress by check id — and ArchUnit
+   * reads the modifiers, so the tighter half of the rule lives here.
+   */
+  @Test
+  void whatIsVisibleOutsideAClassTakesFewThings() {
+    methods()
+        .that()
+        .arePublic()
+        .and()
+        .areNotDeclaredIn(GoldenSet.Question.class)
+        .should(takeAtMostArguments(FEW))
+        .because("past three, group the arguments or give it a builder")
+        .check(CLASSES);
+  }
+
+  private static ArchCondition<JavaMethod> takeAtMostArguments(int few) {
+    return new ArchCondition<>("take at most " + few + " parameters") {
+      @Override
+      public void check(JavaMethod method, ConditionEvents events) {
+        int taken = method.getRawParameterTypes().size();
+        events.add(
+            new SimpleConditionEvent(
+                method,
+                taken <= few,
+                "%s.%s takes %d"
+                    .formatted(method.getOwner().getSimpleName(), method.getName(), taken)));
       }
     };
   }

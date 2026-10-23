@@ -32,41 +32,45 @@ public final class Rrf {
 
   /** The lists fused, best first, each unit once, carrying its fused score. */
   public static List<Document> fuse(List<List<Document>> lists) {
-    var score = new LinkedHashMap<String, Double>();
-    var first = new LinkedHashMap<String, long[]>(); // id -> {list, rank}: where it first appeared
-    var unit = new LinkedHashMap<String, Document>();
+    var fused = new Fused();
     for (int list = 0; list < lists.size(); list++) {
-      add(lists.get(list), list, score, first, unit);
+      fused.add(lists.get(list), list);
     }
-    return score.keySet().stream()
-        .sorted(byScoreThenFirstAppearance(score, first))
-        .map(id -> ElementUnits.scored(unit.get(id), score.get(id)))
-        .toList();
+    return fused.ranked();
   }
 
-  /** One ranking's contribution: 1/(K + rank) for each unit, and where each was first seen. */
-  private static void add(
-      List<Document> ranking,
-      int list,
-      Map<String, Double> score,
-      Map<String, long[]> first,
-      Map<String, Document> unit) {
-    for (int i = 0; i < ranking.size(); i++) {
-      Document doc = ranking.get(i);
-      int rank = i + 1;
-      score.merge(doc.getId(), 1.0 / (K + rank), Double::sum);
-      if (first.putIfAbsent(doc.getId(), new long[] {list, rank}) == null) {
-        unit.put(doc.getId(), doc);
+  /**
+   * What a fusion accumulates: each unit's running score, where it was first seen, and the unit
+   * itself. Three maps that are only ever used together, so they travel together.
+   */
+  private static final class Fused {
+
+    private final Map<String, Double> score = new LinkedHashMap<>();
+    private final Map<String, long[]> first = new LinkedHashMap<>(); // id -> {list, rank}
+    private final Map<String, Document> unit = new LinkedHashMap<>();
+
+    /** One ranking's contribution: 1/(K + rank) for each unit it names. */
+    void add(List<Document> ranking, int list) {
+      for (int i = 0; i < ranking.size(); i++) {
+        Document doc = ranking.get(i);
+        int rank = i + 1;
+        score.merge(doc.getId(), 1.0 / (K + rank), Double::sum);
+        if (first.putIfAbsent(doc.getId(), new long[] {list, rank}) == null) {
+          unit.put(doc.getId(), doc);
+        }
       }
     }
-  }
 
-  /** Best score first; a tie goes to whichever list saw it first, then to its rank there. */
-  private static Comparator<String> byScoreThenFirstAppearance(
-      Map<String, Double> score, Map<String, long[]> first) {
-    return Comparator.comparingDouble((String id) -> -score.get(id))
-        .thenComparingLong(id -> first.get(id)[0])
-        .thenComparingLong(id -> first.get(id)[1]);
+    /** Best score first; a tie goes to whichever list saw it first, then to its rank there. */
+    List<Document> ranked() {
+      return score.keySet().stream()
+          .sorted(
+              Comparator.comparingDouble((String id) -> -score.get(id))
+                  .thenComparingLong(id -> first.get(id)[0])
+                  .thenComparingLong(id -> first.get(id)[1]))
+          .map(id -> ElementUnits.scored(unit.get(id), score.get(id)))
+          .toList();
+    }
   }
 
   /** The fused score of each unit, for a test or a report. */

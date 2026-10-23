@@ -89,16 +89,18 @@ public final class TrecFiles {
     return judged;
   }
 
+  /** The run being written: what it is called, and how deep a TREC run file goes. */
+  public record Run(String name, int depth) {}
+
   /**
    * One line per passage, first occurrence only, ranks from 1. The score is 1/rank, because the
    * scorers sort by score and this keeps our order.
    */
-  public static List<String> run(
-      String questionId, List<String> ranked, String runName, int depth) {
+  public static List<String> run(String questionId, List<String> ranked, Run run) {
     var lines = new ArrayList<String>();
     var seen = new HashSet<String>();
     for (String passage : ranked) {
-      if (lines.size() == depth) {
+      if (lines.size() == run.depth()) {
         break;
       }
       if (seen.add(passage)) {
@@ -110,7 +112,7 @@ public final class TrecFiles {
                     passage,
                     rank,
                     String.format(Locale.ROOT, "%.6f", 1.0 / rank),
-                    runName));
+                    run.name()));
       }
     }
     return lines;

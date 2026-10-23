@@ -155,21 +155,23 @@ public final class Archive {
   private final CitationChecker citations;
   private final Mode mode;
 
-  public Archive(
-      ChatClient quoter,
-      ChatClient answerer,
-      ChatClient soloAnswerer,
-      VectorStore store,
-      QuoteResolver resolver,
-      CitationChecker citations,
-      Mode mode) {
-    this.quoter = quoter;
-    this.answerer = answerer;
-    this.soloAnswerer = soloAnswerer;
+  /**
+   * The models that play each part, and which arrangement of them to use. {@code soloAnswerer} is
+   * the answerer with a retriever of its own, for {@link Mode#DIRECT}.
+   */
+  public record Roles(Mode mode, ChatClient quoter, ChatClient answerer, ChatClient soloAnswerer) {}
+
+  /** What the program checks for itself, rather than taking a model's word for it. */
+  public record Checks(QuoteResolver quotations, CitationChecker citations) {}
+
+  public Archive(Roles roles, Checks checks, VectorStore store) {
+    this.quoter = roles.quoter();
+    this.answerer = roles.answerer();
+    this.soloAnswerer = roles.soloAnswerer();
     this.store = store;
-    this.resolver = resolver;
-    this.citations = citations;
-    this.mode = mode;
+    this.resolver = checks.quotations();
+    this.citations = checks.citations();
+    this.mode = roles.mode();
   }
 
   public Mode mode() {

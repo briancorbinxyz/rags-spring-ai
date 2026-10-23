@@ -85,7 +85,9 @@ public final class RetrievalRun {
     for (Result result : results) {
       trec.addAll(
           TrecFiles.run(
-              result.question().id(), result.ranked(), step.name(), ElementRetriever.DEPTH));
+              result.question().id(),
+              result.ranked(),
+              new TrecFiles.Run(step.name(), ElementRetriever.DEPTH)));
       json.add(JsonMapper.shared().writeValueAsString(line(step, result)));
     }
     try {
