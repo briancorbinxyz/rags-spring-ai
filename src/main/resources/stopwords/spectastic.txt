@@ -1,0 +1,4 @@
+# Words this archive says so often they carry nothing: every question here is about a spec.
+# Unioned with a language list, never used on its own.
+spec
+spectastic

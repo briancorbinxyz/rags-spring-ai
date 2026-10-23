@@ -83,7 +83,10 @@ class Episode5RatchetTest {
     String modelId = OllamaModel.id(MODEL, digest.get());
     Path out = Path.of("build/episode-5");
 
-    try (var keywords = KeywordSearch.of(new ElementUnits(new SpectasticReader(checkout).get()));
+    try (var keywords =
+            KeywordSearch.of(
+                new ElementUnits(new SpectasticReader(checkout).get()),
+                StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"));
         var cache = new VectorCache(VECTORS.resolve(OllamaModel.cacheFile(modelId)))) {
       assertEquals(10_540, keywords.units().addresses().size());
       var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());

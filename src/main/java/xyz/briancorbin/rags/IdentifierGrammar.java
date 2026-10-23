@@ -5,13 +5,11 @@ import java.util.SequencedSet;
 /**
  * How an archive writes the names of things, so a question that names one can be recognised.
  *
- * <p>The idea of an identifier is not spectastic's: most archives give their parts names and most
- * questions use them. Which shapes count is very much spectastic's — {@code FR-012}, {@code
- * REQ-TOOL-001}, "spec 045", {@code 045-run-budget} — and so is how an address says which part of
- * the archive it belongs to.
+ * <p>Most archives give their parts names, and most questions use them. Which shapes count as a
+ * name, and how an address says which part of the archive it belongs to, are the archive's own.
  *
  * <p>This says only what a question looks like it names. Whether any of it exists is {@link
- * IdentifierLookup}'s question, because that is the one holding the archive.
+ * IdentifierLookup}'s question, because that is the one holding the units.
  */
 public interface IdentifierGrammar {
 

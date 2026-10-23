@@ -7,7 +7,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -30,37 +29,20 @@ public final class KeywordSearch implements AutoCloseable {
   /** The heading path, the id, the text. */
   static final double[] WEIGHTS = {5.0, 10.0, 1.0};
 
-  /** One space: declared above STOP_WORDS, which splits on it while the class initialises. */
-  private static final Pattern SPACE = Pattern.compile(" ", Pattern.LITERAL);
-
-  /** English a question can spare. */
-  private static final String COMMON =
-      "a an the of in on for to and or is are was were be by with what which how does do did "
-          + "that this it its as at from when who whom why where after before into than then "
-          + "there their they them should must can could would will say says about";
-
-  /**
-   * Words this archive says so often they carry nothing: every question is about a spec. The one
-   * piece of the corpus's vocabulary still sitting in the search — a second archive would hand its
-   * own in, and this would be a parameter.
-   */
-  private static final String OF_THE_ARCHIVE = "spec spectastic";
-
-  private static final Set<String> STOP_WORDS =
-      Set.of(SPACE.split(COMMON + " " + OF_THE_ARCHIVE, -1));
-
   private static final Pattern WORD = Pattern.compile("[A-Za-z0-9][A-Za-z0-9\\-]*");
 
   private final ElementUnits units;
   private final Connection db;
+  private final StopWords stopWords;
 
   /** A keyword index over these units. Built once; it owns a SQLite connection, so close it. */
-  public static KeywordSearch of(ElementUnits units) {
-    return new KeywordSearch(units);
+  public static KeywordSearch of(ElementUnits units, StopWords stopWords) {
+    return new KeywordSearch(units, stopWords);
   }
 
-  private KeywordSearch(ElementUnits units) {
+  private KeywordSearch(ElementUnits units, StopWords stopWords) {
     this.units = units;
+    this.stopWords = stopWords;
     try {
       db = DriverManager.getConnection("jdbc:sqlite::memory:");
       create();
@@ -162,12 +144,12 @@ public final class KeywordSearch implements AutoCloseable {
   }
 
   /** The question as an FTS5 query: each word that isn't a stop word, quoted, OR-ed. */
-  static String matchQuery(String question) {
+  static String matchQuery(String question, StopWords stopWords) {
     var words = new ArrayList<String>();
     var matchingWords = WORD.matcher(question);
     while (matchingWords.find()) {
       String word = matchingWords.group();
-      if (!STOP_WORDS.contains(word.toLowerCase(Locale.ROOT))) {
+      if (!stopWords.contains(word)) {
         words.add('"' + word.replace("\"", "\"\"") + '"');
       }
     }
@@ -175,7 +157,7 @@ public final class KeywordSearch implements AutoCloseable {
   }
 
   private List<Document> query(String sql, String question, int depth, String scope) {
-    String match = matchQuery(question);
+    String match = matchQuery(question, stopWords);
     if (match.isEmpty() || depth <= 0) {
       return List.of();
     }

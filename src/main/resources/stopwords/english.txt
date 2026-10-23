@@ -1,0 +1,11 @@
+# Words an English question can spare before it reaches the keyword index. One per line;
+# blank lines and lines starting with # are ignored. Nothing here is particular to an archive.
+a an the of in on for to and or
+is are was were be by with
+what which how does do did that this
+it its as at from
+when who whom why where
+after before into than then
+there their they them
+should must can could would will
+say says about

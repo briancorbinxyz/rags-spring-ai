@@ -13,7 +13,9 @@ class IdentifierLookupTest {
   @Test
   void anIdWithASpecNamesThatIdInThatSpec(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(
+            new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       assertEquals(
           List.of("specs/002-other/spec.html#FR-001"),
@@ -28,7 +30,9 @@ class IdentifierLookupTest {
   @Test
   void anIdInMoreThanOneSpecNamesNothingWithoutASpec(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(
+            new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       assertEquals(
           List.of(),
           new IdentifierLookup(keywords.units(), new SpecGrammar())
@@ -39,7 +43,9 @@ class IdentifierLookupTest {
   @Test
   void anIdInOneSpecNamesEveryPageOfItCurrentFirst(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(
+            new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       assertEquals(
           List.of(
               "specs/001-demo/spec.html#FR-003",
@@ -62,7 +68,8 @@ class IdentifierLookupTest {
   void aSpecNumberedPastNineNinetyNineIsStillOneSpec(@TempDir Path dir) throws Exception {
     try (var keywords =
         KeywordSearch.of(
-            new ElementUnits(new SpectasticReader(Archives.pastNineNinetyNine(dir)).get()))) {
+            new ElementUnits(new SpectasticReader(Archives.pastNineNinetyNine(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       assertEquals(
           List.of("specs/1000-alpha/spec.html#FR-009"),
@@ -78,7 +85,9 @@ class IdentifierLookupTest {
   @Test
   void aNamedUnitIsPinnedAboveTheSearch(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(
+            new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       var retriever =
           ElementRetriever.builder()
               .keywords(keywords)

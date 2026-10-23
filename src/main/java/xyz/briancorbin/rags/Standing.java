@@ -5,13 +5,12 @@ package xyz.briancorbin.rags;
  *
  * <p>The search needs three things of it and nothing else — a label to store, whether to leave the
  * record out, and which of two records answering the same question to prefer. What the standings
- * *are*, and how they are read off a page, belong to the archive: spectastic expresses standing as
- * a {@link Lifecycle} of five states. Another corpus would have its own, and nothing in the search
- * would change.
+ * *are*, and how they are read off a record, belong to the archive. An archive with no notion of
+ * being out of date answers {@code false} and {@code 0} to everything here.
  */
 public interface Standing {
 
-  /** The value stored in a unit's metadata and in the keyword table's {@code lifecycle} column. */
+  /** The value stored on a unit, and matched against when a search filters on standing. */
   String label();
 
   /** Replaced, withdrawn or never accepted: the search leaves these out. */

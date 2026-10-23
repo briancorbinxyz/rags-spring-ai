@@ -8,10 +8,9 @@ import java.util.Optional;
  * <p>Two questions, because an archive can replace a record or a whole page: which record now says
  * what this one used to, and which page now stands where this one did.
  *
- * <p>How that is discovered is the archive's business and nobody else's. Spectastic says it three
- * ways — "superseded by" in prose before a link, a change proposal's {@code spec-delta target}, and
- * an in-place {@code spec-status} with a link after it — and {@link Supersession} reads all three.
- * The redirect that uses this never learns which way any of it was said.
+ * <p>How that is discovered is the archive's business and nobody else's. An archive may say it in
+ * markup, in prose, in a side table or not at all; whatever it does, the redirect that reads this
+ * never learns which.
  */
 public interface Successors {
 

@@ -14,14 +14,21 @@ class KeywordSearchTest {
   void theQueryIsEveryWordThatIsntAStopWordQuotedAndOred() {
     assertEquals(
         "\"FR-012\" OR \"p-map\"",
-        KeywordSearch.matchQuery("What does FR-012 say about the p-map?"));
-    assertEquals("", KeywordSearch.matchQuery("What is it?"));
+        KeywordSearch.matchQuery(
+            "What does FR-012 say about the p-map?",
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt")));
+    assertEquals(
+        "",
+        KeywordSearch.matchQuery(
+            "What is it?", StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt")));
   }
 
   @Test
   void theIdColumnOutweighsTheText(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(
+            new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       var top = keywords.search("FR-002", 10, Lifecycle.ALL);
       assertEquals("specs/001-demo/spec.html#FR-002", Units.address(top.getFirst()));
       assertTrue(top.getFirst().getScore() > 0);
@@ -31,7 +38,9 @@ class KeywordSearchTest {
   @Test
   void theLifecycleFilterRunsBeforeTheCut(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(
+            new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       var all = keywords.search("log to a file", 1, Lifecycle.ALL);
       var current = keywords.search("log to a file", 1, Lifecycle.IN_FORCE);
       assertEquals("specs/001-demo/spec.html#FR-002", Units.address(all.getFirst()));
@@ -43,7 +52,9 @@ class KeywordSearchTest {
   @Test
   void aSearchIsADocumentRetriever(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(
+            new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       var retriever =
           ElementRetriever.builder().keywords(keywords).filter(Lifecycle.IN_FORCE).build();
       var found = retriever.retrieve(new Query("Which service must answer within a second?"));

@@ -18,7 +18,9 @@ class SupersessionRedirectTest {
   void aSupersededResultGivesItsPlaceToItsSuccessorAndIsItselfDropped(@TempDir Path dir)
       throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(
+            new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()),
+            StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       var redirect = new SupersessionRedirect(keywords);
       var in =
           List.of(
