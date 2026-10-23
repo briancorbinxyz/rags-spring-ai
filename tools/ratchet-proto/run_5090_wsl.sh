@@ -59,15 +59,35 @@ python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,11) else 1)' \
 python3 -c 'import sqlite3; sqlite3.connect(":memory:").execute("create virtual table t using fts5(x)")' \
   2>/dev/null || die "this python's sqlite has no FTS5 (sudo apt install python3 libsqlite3-dev)"
 
+# Debian and Ubuntu ship venv and pip as separate packages, so a bare WSL Ubuntu has neither.
+# Find that out here, with the version-correct package name, rather than part way through.
+PYVER="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+python3 -c 'import ensurepip' 2>/dev/null \
+  || die "python3 has no ensurepip, so 'python3 -m venv' cannot work. On Ubuntu:
+    sudo apt update && sudo apt install -y python${PYVER}-venv
+  (python3-venv also works; the versioned name is the one apt will actually name in its error.)"
+
 # --- the venv: numpy and tiktoken only (the reranker runs in llama-server) -----------------------
 VENV="$HERE/.venv"
 if [[ ! -x "$VENV/bin/python" ]]; then
+  # A half-made venv from an earlier failure has no bin/python and would never be retried.
+  [[ -d "$VENV" ]] && { log "removing an incomplete venv at $VENV"; rm -rf "$VENV"; }
   log "creating venv in $VENV"
-  python3 -m venv "$VENV" || die "could not create the venv (sudo apt install python3-venv)"
+  if ! python3 -m venv "$VENV"; then
+    die "could not create the venv. On Ubuntu this is nearly always the missing package:
+    sudo apt update && sudo apt install -y python${PYVER}-venv
+  then run this script again."
+  fi
 fi
 PY="$VENV/bin/python"
-"$PY" -m pip install -q --upgrade pip
-"$PY" -m pip install -q numpy tiktoken || die "pip install numpy tiktoken failed"
+[[ -x "$PY" ]] || die "the venv exists but has no python at $PY. Delete it and run again: rm -rf '$VENV'"
+"$PY" -m pip --version >/dev/null 2>&1 \
+  || die "the venv has no pip. Install the venv package and remake it:
+    sudo apt install -y python${PYVER}-venv && rm -rf '$VENV'"
+log "venv: $("$PY" -V), pip $("$PY" -m pip --version | awk '{print $2}')"
+# Errors are shown, not swallowed: a failure here is the thing you need to read.
+"$PY" -m pip install --quiet --upgrade pip || log "WARNING: could not upgrade pip, continuing"
+"$PY" -m pip install --quiet numpy tiktoken || die "pip install numpy tiktoken failed (see the output above)"
 
 # --- the lineup, straight from ratchet/llamacpp.py so there is one model table -------------------
 PLAN_ARGS=(--embed-port "$EMBED_PORT" --rerank-port "$RERANK_PORT")
