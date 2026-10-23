@@ -14,7 +14,7 @@ class IdentifierLookupTest {
   void anIdWithASpecNamesThatIdInThatSpec(@TempDir Path dir) throws Exception {
     try (var keywords =
         KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
-      var ids = new IdentifierLookup(keywords.units());
+      var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       assertEquals(
           List.of("specs/002-other/spec.html#FR-001"),
           ids.lookup("What does FR-001 in spec 002 require?"));
@@ -30,7 +30,9 @@ class IdentifierLookupTest {
     try (var keywords =
         KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
       assertEquals(
-          List.of(), new IdentifierLookup(keywords.units()).lookup("What does FR-001 require?"));
+          List.of(),
+          new IdentifierLookup(keywords.units(), new SpecGrammar())
+              .lookup("What does FR-001 require?"));
     }
   }
 
@@ -42,9 +44,12 @@ class IdentifierLookupTest {
           List.of(
               "specs/001-demo/spec.html#FR-003",
               "specs/001-demo/changes/archive/2026-01-01-log-to-stdout/proposal.html#FR-003"),
-          new IdentifierLookup(keywords.units()).lookup("What does FR-003 require?"));
+          new IdentifierLookup(keywords.units(), new SpecGrammar())
+              .lookup("What does FR-003 require?"));
       assertEquals(
-          List.of(), new IdentifierLookup(keywords.units()).lookup("what does fr-003 require?"));
+          List.of(),
+          new IdentifierLookup(keywords.units(), new SpecGrammar())
+              .lookup("what does fr-003 require?"));
     }
   }
 
@@ -58,7 +63,7 @@ class IdentifierLookupTest {
     try (var keywords =
         KeywordSearch.of(
             new ElementUnits(new ElementReader(Archives.pastNineNinetyNine(dir)).get()))) {
-      var ids = new IdentifierLookup(keywords.units());
+      var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       assertEquals(
           List.of("specs/1000-alpha/spec.html#FR-009"),
           ids.lookup("What does FR-009 in spec 1000 require?"));
@@ -77,7 +82,7 @@ class IdentifierLookupTest {
       var retriever =
           ElementRetriever.builder()
               .keywords(keywords)
-              .identifiers(new IdentifierLookup(keywords.units()))
+              .identifiers(new IdentifierLookup(keywords.units(), new SpecGrammar()))
               .filter(Lifecycle.IN_FORCE)
               .build();
       var found =

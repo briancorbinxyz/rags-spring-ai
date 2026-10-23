@@ -37,7 +37,7 @@ class RatchetTest {
     var questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));
     try (var keywords = KeywordSearch.of(new ElementUnits(new ElementReader(checkout).get()))) {
       assertEquals(10_540, keywords.units().addresses().size());
-      var ids = new IdentifierLookup(keywords.units());
+      var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       // The retriever hands on everything a top 50 could need; cutting to 50 is a step of its own,
       // so Episode 5 can rerank before the cut rather than after it.
       var cut = new TopDocuments(ElementRetriever.DEPTH);

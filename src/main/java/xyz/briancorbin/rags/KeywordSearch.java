@@ -114,8 +114,8 @@ public final class KeywordSearch implements AutoCloseable {
    * better). Only units whose lifecycle is in {@code filter} come back; the filter runs before the
    * cut, so a filtered search still returns {@code depth} units when it can.
    */
-  public List<Document> search(String question, int depth, Set<Lifecycle> filter) {
-    String where = Lifecycle.sql(filter);
+  public List<Document> search(String question, int depth, Set<? extends Standing> filter) {
+    String where = where(filter);
     String sql =
         "select rowid, bm25(units, %s) as score from units where units match ?%s order by score, rowid limit ?"
             .formatted(weights(), where.isEmpty() ? "" : " and " + where);
@@ -134,6 +134,25 @@ public final class KeywordSearch implements AutoCloseable {
         "select rowid, bm25(units, %s) as score from units where units match ? and rowid in (select value from json_each(?)) order by score, rowid limit ?"
             .formatted(weights());
     return query(sql, question, scope.size(), ids);
+  }
+
+  /**
+   * A standing filter as SQL: {@code lifecycle in ('current', 'history')}, nothing at all when
+   * every standing is allowed, and a condition that matches nothing when none is.
+   *
+   * <p>This lives here rather than on {@link Standing} because it is SQL — the shape of the filter
+   * is the archive's, and expressing it in FTS5 is this adapter's.
+   */
+  private String where(Set<? extends Standing> filter) {
+    if (filter.containsAll(Lifecycle.ALL)) {
+      return "";
+    }
+    if (filter.isEmpty()) {
+      return "1 = 0"; // asked for no standing at all: match nothing, rather than write "in ()"
+    }
+    return filter.stream()
+        .map(standing -> "'" + standing.label() + "'")
+        .collect(Collectors.joining(", ", "lifecycle in (", ")"));
   }
 
   /** The question as an FTS5 query: each word that isn't a stop word, quoted, OR-ed. */

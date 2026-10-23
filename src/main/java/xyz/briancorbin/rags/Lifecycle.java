@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Set;
-import java.util.stream.Collectors;
 import org.jsoup.nodes.Element;
 
 /**
@@ -26,7 +25,7 @@ import org.jsoup.nodes.Element;
  * of the nine it names are current or applied history. A record can be in force and still be the
  * wrong thing to hand a reader.
  */
-public enum Lifecycle {
+public enum Lifecycle implements Standing {
   CURRENT,
   HISTORY,
   WITHDRAWN,
@@ -50,30 +49,24 @@ public enum Lifecycle {
 
   private static final Set<String> EXCLUDED = Set.of("withdrawn", "superseded", "rejected");
 
-  /**
-   * The filter as SQL: {@code lifecycle in ('current', 'history')}, nothing at all for {@link
-   * #ALL}, and a condition that matches nothing for a filter that allows nothing.
-   */
-  static String sql(Set<Lifecycle> filter) {
-    if (filter.containsAll(ALL)) {
-      return "";
-    }
-    if (filter.isEmpty()) {
-      return "1 = 0"; // asked for no lifecycle at all: match nothing, rather than write "in ()"
-    }
-    return filter.stream()
-        .map(lifecycle -> "'" + lifecycle.value() + "'")
-        .collect(Collectors.joining(", ", "lifecycle in (", ")"));
-  }
-
-  /** Withdrawn, superseded or rejected: the search leaves these out. */
-  public boolean excluded() {
+  @Override
+  public boolean outOfDate() {
     return OUT_OF_DATE.contains(this);
   }
 
-  /** The value stored in a {@code Document}'s metadata. */
-  public String value() {
+  @Override
+  public String label() {
     return name().toLowerCase(Locale.ROOT);
+  }
+
+  /** Current first, then the applied change that produced it, then everything out of date. */
+  @Override
+  public int precedence() {
+    return switch (this) {
+      case CURRENT -> 0;
+      case HISTORY -> 1;
+      default -> 2;
+    };
   }
 
   public static Lifecycle of(Object value) {

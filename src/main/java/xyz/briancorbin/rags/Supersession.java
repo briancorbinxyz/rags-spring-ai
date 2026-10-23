@@ -30,7 +30,7 @@ import xyz.briancorbin.rags.ElementReader.Unit;
  * "superseded by" a link to the new page); then {@link #pageSuccessor} names the new page. The
  * first link found for an element wins, read page by page in path order.
  */
-public final class Supersession {
+public final class Supersession implements Successors {
 
   private static final Pattern LIST = Pattern.compile("[\\s,]+", Pattern.UNICODE_CHARACTER_CLASS);
 
@@ -39,12 +39,12 @@ public final class Supersession {
 
   private Supersession() {}
 
-  /** The current element that replaced the one at {@code address}, if one did. */
+  @Override
   public Optional<String> successor(String address) {
     return Optional.ofNullable(successors.get(address));
   }
 
-  /** The page that replaced the page {@code source}, if one did. */
+  @Override
   public Optional<String> pageSuccessor(String source) {
     return Optional.ofNullable(pageSuccessors.get(source))
         .filter(replacement -> !replacement.equals(source));

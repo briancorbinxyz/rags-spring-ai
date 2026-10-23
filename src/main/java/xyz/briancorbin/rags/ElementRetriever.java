@@ -19,7 +19,7 @@ import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
  * ElementRetriever.builder()
  *     .keywords(keywords)                 // BM25 over the element units
  *     .vectors(vectors)                   // the same units as vectors; omit for keyword-only
- *     .identifiers(new IdentifierLookup(units))
+ *     .identifiers(new IdentifierLookup(units, new SpecGrammar()))
  *     .filter(Lifecycle.IN_FORCE)
  *     .build();
  * }</pre>
@@ -51,7 +51,7 @@ public final class ElementRetriever implements DocumentRetriever {
   private final KeywordSearch keywords;
   private final VectorSearch vectors; // null: keyword search only
   private final IdentifierLookup identifiers; // null: none
-  private final Set<Lifecycle> filter;
+  private final Set<? extends Standing> filter;
 
   private ElementRetriever(Builder b) {
     this.keywords = Objects.requireNonNull(b.keywords, "keywords");
@@ -124,7 +124,7 @@ public final class ElementRetriever implements DocumentRetriever {
     private KeywordSearch keywords;
     private VectorSearch vectors;
     private IdentifierLookup identifiers;
-    private Set<Lifecycle> filter = Lifecycle.ALL;
+    private Set<? extends Standing> filter = Lifecycle.ALL;
 
     private Builder() {}
 
@@ -147,9 +147,9 @@ public final class ElementRetriever implements DocumentRetriever {
     }
 
     /**
-     * Which lifecycles may come back, named or searched; {@link Lifecycle#ALL} by default (Step 3).
+     * Which standings may come back, named or searched; {@link Lifecycle#ALL} by default (Step 3).
      */
-    public Builder filter(Set<Lifecycle> filter) {
+    public Builder filter(Set<? extends Standing> filter) {
       this.filter = Set.copyOf(filter);
       return this;
     }

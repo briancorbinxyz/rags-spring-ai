@@ -85,27 +85,27 @@ public final class ElementReader implements DocumentReader {
     List<Page> pages = pages();
     var units = new LinkedHashMap<String, Unit>(); // address -> unit, in archive order
     pages.forEach(page -> units.putAll(units(page)));
-    var supersession = Supersession.read(pages, units);
+    Successors successors = Supersession.read(pages, units);
     var documents = new ArrayList<Document>();
     for (Unit unit : units.values()) {
       for (int part = 0; part < unit.parts().size(); part++) {
-        documents.add(document(unit, part, supersession));
+        documents.add(document(unit, part, successors));
       }
     }
     return documents;
   }
 
   /** One part of one unit, as the search and the reader will see it. */
-  private static Document document(Unit unit, int part, Supersession supersession) {
+  private static Document document(Unit unit, int part, Successors successors) {
     return Document.builder()
         .id(unit.parts().size() == 1 ? unit.address() : unit.address() + "@" + (part + 1))
         .text(unit.parts().get(part))
-        .metadata(metadata(unit, part, supersession))
+        .metadata(metadata(unit, part, successors))
         .build();
   }
 
   /** Everything the search filters, pins, redirects or shows a reader, read once here. */
-  private static Map<String, Object> metadata(Unit unit, int part, Supersession supersession) {
+  private static Map<String, Object> metadata(Unit unit, int part, Successors successors) {
     var metadata = new LinkedHashMap<String, Object>();
     metadata.put(SOURCE, unit.source());
     metadata.put(ANCHOR, unit.anchor());
@@ -113,11 +113,11 @@ public final class ElementReader implements DocumentReader {
     metadata.put(TITLE, unit.title());
     metadata.put(HEADING_PATH, unit.headingPath());
     metadata.put(HEADING, unit.heading());
-    metadata.put(LIFECYCLE, unit.lifecycle().value());
+    metadata.put(LIFECYCLE, unit.lifecycle().label());
     metadata.put(PART, part + 1);
     metadata.put(PARTS, unit.parts().size());
-    supersession.successor(unit.address()).ifPresent(to -> metadata.put(SUPERSEDED_BY, to));
-    supersession.pageSuccessor(unit.source()).ifPresent(to -> metadata.put(PAGE_SUPERSEDED_BY, to));
+    successors.successor(unit.address()).ifPresent(to -> metadata.put(SUPERSEDED_BY, to));
+    successors.pageSuccessor(unit.source()).ifPresent(to -> metadata.put(PAGE_SUPERSEDED_BY, to));
     return metadata;
   }
 

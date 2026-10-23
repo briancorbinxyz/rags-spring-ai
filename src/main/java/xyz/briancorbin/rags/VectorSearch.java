@@ -53,7 +53,7 @@ public final class VectorSearch {
    * units whose lifecycle is in {@code filter} are considered, so the cut keeps {@code depth} of
    * the units the filter allows.
    */
-  public List<Document> search(String question, int depth, Set<Lifecycle> filter) {
+  public List<Document> search(String question, int depth, Set<? extends Standing> filter) {
     if (depth <= 0) {
       return List.of();
     }

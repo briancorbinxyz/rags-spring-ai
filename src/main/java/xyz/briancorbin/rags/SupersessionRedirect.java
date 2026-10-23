@@ -95,7 +95,7 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
   private List<Document> liveUnitsOn(String source) {
     return keywords.units().all().stream()
         .filter(unit -> source.equals(unit.getMetadata().get(ElementReader.SOURCE)))
-        .filter(unit -> !ElementReader.lifecycle(unit).excluded())
+        .filter(unit -> !ElementReader.lifecycle(unit).outOfDate())
         .toList();
   }
 

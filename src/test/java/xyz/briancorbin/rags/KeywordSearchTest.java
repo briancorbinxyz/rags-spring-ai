@@ -36,7 +36,7 @@ class KeywordSearchTest {
       var current = keywords.search("log to a file", 1, Lifecycle.IN_FORCE);
       assertEquals("specs/001-demo/spec.html#FR-002", ElementReader.address(all.getFirst()));
       assertEquals(1, current.size());
-      assertTrue(current.stream().noneMatch(d -> ElementReader.lifecycle(d).excluded()));
+      assertTrue(current.stream().noneMatch(d -> ElementReader.lifecycle(d).outOfDate()));
     }
   }
 
