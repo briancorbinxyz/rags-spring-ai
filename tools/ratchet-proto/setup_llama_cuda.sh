@@ -12,7 +12,7 @@
 #           separate wsl-ubuntu repo, which deliberately ships no kernel driver.
 #   native  the driver and the toolkit both live here, from the ubuntuXXXX repo.
 #
-# Everything after that — libcurl, cmake, the build flags, the binary — is identical.
+# Everything after that — cmake, the build flags, the binary — is identical.
 set -euo pipefail
 
 DRY=0; YES=0; LLAMA_DIR="${LLAMA_DIR:-$HOME/llama.cpp}"; JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
@@ -69,7 +69,7 @@ fi
 
 # --- build dependencies, and the two python packages the runner needs -----------------------------
 say "build dependencies"
-PKGS=(build-essential cmake git libcurl4-openssl-dev pkg-config)
+PKGS=(build-essential cmake git pkg-config)
 PYVER="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo 3)"
 PKGS+=("python${PYVER}-venv" python3-pip-whl)       # venv and the wheels ensurepip needs
 MISSING=()
@@ -133,25 +133,20 @@ else
   run "git clone https://github.com/ggml-org/llama.cpp '$LLAMA_DIR'"
 fi
 
-# cmake caches a failed find_package(CURL), so a stale build dir keeps a curl-less binary forever
-if [[ -f "$LLAMA_DIR/build/CMakeCache.txt" ]] && grep -q 'CURL_LIBRARY:FILEPATH=CURL_LIBRARY-NOTFOUND' "$LLAMA_DIR/build/CMakeCache.txt" 2>/dev/null; then
-  note "the existing build dir remembers CURL-NOTFOUND; removing it so the lookup runs again"
-  run "rm -rf '$LLAMA_DIR/build'"
-fi
-
 say "configure and build (this takes a while)"
-run "cmake -S '$LLAMA_DIR' -B '$LLAMA_DIR/build' -DGGML_CUDA=ON -DLLAMA_CURL=ON -DCMAKE_BUILD_TYPE=Release"
+run "cmake -S '$LLAMA_DIR' -B '$LLAMA_DIR/build' -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release"
 run "cmake --build '$LLAMA_DIR/build' --config Release -j${JOBS}"
 
 # --- verify, and say so in terms of what the runner needs -----------------------------------------
 say "verify"
 BIN="$LLAMA_DIR/build/bin/llama-server"
-if (( DRY )); then note "would check $BIN for CUDA and libcurl"; else
+if (( DRY )); then note "would check $BIN for CUDA and -hf support"; else
   [[ -x "$BIN" ]] || die "no llama-server at $BIN — the build did not produce one"
-  ldd "$BIN" | grep -qi libcurl \
-    && note "libcurl: linked (so -hf can fetch models)" \
-    || die "built, but without libcurl: -hf will not work.
-  sudo apt install -y libcurl4-openssl-dev && rm -rf '$LLAMA_DIR/build' && run this again"
+  # llama.cpp dropped libcurl: -hf now downloads through its own vendored cpp-httplib,
+  # so there is no linkage to check. Ask the binary whether it still takes -hf instead.
+  "$BIN" --help 2>&1 | grep -q '\-hf' \
+    && note "-hf: supported (models fetch from Hugging Face)" \
+    || note "WARNING: this llama-server does not list -hf; the lineup fetches models that way"
   ldd "$BIN" | grep -qiE 'libcudart|libcuda' \
     && note "CUDA: linked" \
     || note "WARNING: no CUDA in the linkage; -ngl 99 will fall back to CPU"

@@ -114,33 +114,20 @@ log "GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | hea
 
 if ! command -v llama-server >/dev/null; then
   die "llama-server is not on PATH. Build it with CUDA inside WSL:
-    sudo apt update && sudo apt install -y build-essential cmake libcurl4-openssl-dev
+    sudo apt update && sudo apt install -y build-essential cmake
     # CUDA toolkit for WSL (nvcc), if you do not have it:
     #   https://developer.nvidia.com/cuda-downloads  ->  Linux / x86_64 / WSL-Ubuntu
     git clone https://github.com/ggml-org/llama.cpp ~/llama.cpp
-    rm -rf ~/llama.cpp/build   # if you have configured before: cmake caches a failed CURL lookup
-    cmake -S ~/llama.cpp -B ~/llama.cpp/build -DGGML_CUDA=ON -DLLAMA_CURL=ON
+    cmake -S ~/llama.cpp -B ~/llama.cpp/build -DGGML_CUDA=ON
     cmake --build ~/llama.cpp/build --config Release -j\$(nproc)
     echo 'export PATH=\$HOME/llama.cpp/build/bin:\$PATH' >> ~/.zshrc   # or ~/.bashrc; then open a new shell
-  -DLLAMA_CURL=ON matters: the lineup fetches models with -hf."
+  (-DLLAMA_CURL is deprecated and ignored now; -hf downloads through llama.cpp's own http client.)"
 fi
 CACHE_DIR="${LLAMA_CACHE:-$HOME/.cache/huggingface/hub}"
 log "llama-server: $(command -v llama-server)"
 log "model cache: $CACHE_DIR$([[ -d "$CACHE_DIR" ]] && echo "  ($(du -sh "$CACHE_DIR" 2>/dev/null | cut -f1) already there)" || echo "  (empty, so the lineup downloads)")"
 llama-server --version 2>&1 | head -2 | while read -r l; do log "  $l"; done
 
-# A build without libcurl looks fine until -hf tries to fetch a model, which is after the first
-# server start and a long way into the run. Catch it here instead.
-if command -v ldd >/dev/null 2>&1 \
-   && ! ldd "$(command -v llama-server)" 2>/dev/null | grep -qi 'libcurl'; then
-  die "llama-server appears to be built without libcurl, so -hf cannot fetch the models.
-  Install the headers and build again — and delete the build directory first, because cmake
-  caches the failed CURL lookup and will keep using it:
-    sudo apt update && sudo apt install -y libcurl4-openssl-dev
-    rm -rf ~/llama.cpp/build
-    cmake -S ~/llama.cpp -B ~/llama.cpp/build -DGGML_CUDA=ON -DLLAMA_CURL=ON
-    cmake --build ~/llama.cpp/build --config Release -j\$(nproc)"
-fi
 
 # --- the corpus, pinned ------------------------------------------------------------------------
 if [[ ! -d "$SPECTASTIC/specs" ]]; then
