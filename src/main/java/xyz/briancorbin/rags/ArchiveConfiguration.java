@@ -87,11 +87,11 @@ class ArchiveConfiguration {
 
   /// The answerer alone, for `archive.mode=direct`: it searches and answers in one call.
   @Bean
-  ChatClient soloAnswererChatClient(
+  ChatClient directAnswererChatClient(
       ChatClient.Builder builder,
       ChatMemory chatMemory,
       SimpleVectorStore store,
-      @Value("classpath:persona/answerer-solo.md") Resource persona) {
+      @Value("classpath:persona/answerer-direct.md") Resource persona) {
     return builder
         .defaultSystem(persona)
         .defaultOptions(ChatOptions.builder().temperature(0.3))
@@ -117,7 +117,7 @@ class ArchiveConfiguration {
   Archive archive(
       @Qualifier("quoterChatClient") ChatClient quoter,
       @Qualifier("answererChatClient") ChatClient answerer,
-      @Qualifier("soloAnswererChatClient") ChatClient soloAnswerer,
+      @Qualifier("directAnswererChatClient") ChatClient directAnswerer,
       SimpleVectorStore store,
       QuoteResolver resolver,
       CitationChecker citations,
@@ -127,7 +127,7 @@ class ArchiveConfiguration {
             Archive.Mode.valueOf(mode.strip().toUpperCase(Locale.ROOT)),
             quoter,
             answerer,
-            soloAnswerer),
+            directAnswerer),
         new Archive.Checks(resolver, citations),
         store);
   }

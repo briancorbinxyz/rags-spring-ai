@@ -58,7 +58,7 @@ class RunConfiguration {
       @Value("${spring.ai.ollama.embedding.model}") String embeddingModel,
       @Value("classpath:persona/answerer.md") Resource answererPersona,
       @Value("classpath:persona/quoter.md") Resource quoterPersona,
-      @Value("classpath:persona/answerer-solo.md") Resource soloPersona,
+      @Value("classpath:persona/answerer-direct.md") Resource directPersona,
       SpecCorpus corpus,
       Archive archive,
       CitationChecker citations,
@@ -78,7 +78,7 @@ class RunConfiguration {
                 embeddingModel,
                 digests(ollama),
                 GoldenRun.hash(
-                    List.of(text(answererPersona), text(quoterPersona), text(soloPersona))));
+                    List.of(text(answererPersona), text(quoterPersona), text(directPersona))));
         default -> throw new IllegalArgumentException("Unknown archive.run: " + run);
       }
     };

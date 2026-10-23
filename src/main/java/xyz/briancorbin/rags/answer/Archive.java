@@ -143,15 +143,16 @@ public final class Archive {
 
   private final ChatClient quoter;
   private final ChatClient answerer;
-  private final ChatClient soloAnswerer;
+  private final ChatClient directAnswerer;
   private final VectorStore store;
   private final QuoteResolver resolver;
   private final CitationChecker citations;
   private final Mode mode;
 
-  /// The models that play each part, and which arrangement of them to use. `soloAnswerer` is the
+  /// The models that play each part, and which arrangement of them to use. `directAnswerer` is the
   /// answerer with a retriever of its own, for {@link Mode#DIRECT}.
-  public record Roles(Mode mode, ChatClient quoter, ChatClient answerer, ChatClient soloAnswerer) {}
+  public record Roles(
+      Mode mode, ChatClient quoter, ChatClient answerer, ChatClient directAnswerer) {}
 
   /// What the program checks for itself, rather than taking a model's word for it.
   public record Checks(QuoteResolver quotations, CitationChecker citations) {}
@@ -159,7 +160,7 @@ public final class Archive {
   public Archive(Roles roles, Checks checks, VectorStore store) {
     this.quoter = roles.quoter();
     this.answerer = roles.answerer();
-    this.soloAnswerer = roles.soloAnswerer();
+    this.directAnswerer = roles.directAnswerer();
     this.store = store;
     this.resolver = checks.quotations();
     this.citations = checks.citations();
@@ -212,7 +213,7 @@ public final class Archive {
   }
 
   private Ruling direct(String question, String conversationId) {
-    var answererReply = call(soloAnswerer, conversationId + ":answerer", question);
+    var answererReply = call(directAnswerer, conversationId + ":answerer", question);
     var retrieved =
         answererReply.retrieved().isEmpty() ? search(question) : answererReply.retrieved();
     var answererSaid =

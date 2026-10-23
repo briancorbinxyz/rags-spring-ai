@@ -57,6 +57,15 @@ a judge would itself have to be measured against human labels before it could be
 `FactChecker` is the shared shape, because what counts as evidence changed as the series moved from
 a game's own move history to a million words of specifications.
 
+Each persona in `src/main/resources/persona/` is three labelled sections with a stated precedence —
+`[VOICE] style only`, `[TRUTH] overrides VOICE`, `[FORMAT] overrides VOICE` — and all three exist
+because measurement said so rather than because the shape looked tidy. A schema does not buy truth:
+constrained decoding masks any token that would break the shape, so a reply can be perfectly valid
+and wrong. Voice is load-bearing: the round that asked for claims with no instruction about voice is
+the one whose quality collapsed. And position is not precedence: told outright not to name a square,
+a model named one anyway in seven replies out of eight, so the ordering is written down instead of
+implied by where the instruction sits.
+
 ### 1 · Element units and keyword search
 
 A naive baseline split the corpus into 800-token chunks, which cut requirements in half and buried
