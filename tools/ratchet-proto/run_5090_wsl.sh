@@ -21,6 +21,12 @@
 #   tools/ratchet-proto/run_5090_wsl.sh --models qwen3-emb-8b -- --only S1,S2,S3,S4,S5,X1,H1,E5-1
 #
 # Everything after a bare -- is passed through to run.py.
+#
+# A re-run of some configurations under a changed rule goes beside the existing results, not over
+# them: run.py rewrites its .md and .jsonl from scratch, so --only plus the same --out would leave
+# a file holding only the configurations it just ran.
+#
+#   tools/ratchet-proto/run_5090_wsl.sh --out-tag drop-superseded -- --only S3,X1,X1b
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,7 +37,7 @@ SPECTASTIC="${SPECTASTIC:-$REPO/../spectastic}"
 EMBED_PORT="${EMBED_PORT:-8090}"
 RERANK_PORT="${RERANK_PORT:-8091}"
 START_TIMEOUT="${START_TIMEOUT:-3600}"          # seconds per server, first download included
-MODELS=""; FORCE=0; LIST=0; DRY=0; EXTRA=()
+MODELS=""; FORCE=0; LIST=0; DRY=0; OUT_TAG=""; EXTRA=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,8 +45,9 @@ while [[ $# -gt 0 ]]; do
     --force)  FORCE=1; shift ;;
     --list)   LIST=1; shift ;;
     --dry-run) DRY=1; shift ;;
+    --out-tag) OUT_TAG="$2"; shift 2 ;;
     --)       shift; EXTRA=("$@"); break ;;
-    -h|--help) sed -n '2,20p' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help) sed -n '2,29p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -153,7 +160,7 @@ for k in p:
 print('' if v is None else (' '.join(v) if isinstance(v, list) else v))"; }
 
   NAME="$(field name)"
-  OUT="$RESULTS/5090-$NAME"
+  OUT="$RESULTS/5090-$NAME${OUT_TAG:+-$OUT_TAG}"
   if [[ -f "$OUT.md" && -f "$OUT.jsonl" && $FORCE -eq 0 ]]; then
     log "== $NAME: already done, skipping (--force to redo)"; continue
   fi
@@ -222,4 +229,4 @@ print('' if v is None else (' '.join(v) if isinstance(v, list) else v))"; }
 done
 
 log "all done. Results:"
-ls -1 "$RESULTS"/5090-*.md 2>/dev/null | tee -a "$LOG" || log "  (none)"
+ls -1 "$RESULTS"/5090-*${OUT_TAG:+-$OUT_TAG}.md 2>/dev/null | tee -a "$LOG" || log "  (none)"

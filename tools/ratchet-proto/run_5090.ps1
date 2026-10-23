@@ -19,6 +19,9 @@
   .\tools\ratchet-proto\run_5090.ps1 -Models nomic,qwen3-emb-8b
 .EXAMPLE
   .\tools\ratchet-proto\run_5090.ps1 -List
+.EXAMPLE
+  # a re-run under a changed rule, written beside the existing results rather than over them
+  .\tools\ratchet-proto\run_5090.ps1 -OutTag drop-superseded -ExtraArgs '--only','S3,X1,X1b'
 #>
 [CmdletBinding()]
 param(
@@ -31,6 +34,7 @@ param(
     [int]$RerankPort = 8091,
     [int]$StartTimeoutMinutes = 60,   # per server, including the first download
     [switch]$SkipTests,
+    [string]$OutTag = '',             # writes results\5090-<run>-<tag>.* instead, leaving existing results alone
     [string[]]$ExtraArgs = @()        # passed through to run.py, e.g. -ExtraArgs '--only','A,S4' (from a PowerShell prompt, not -File)
 )
 
@@ -292,7 +296,7 @@ function Stop-LlamaServer($s) {
 
 $done = @(); $skipped = @(); $failed = @()
 foreach ($r in $Plan) {
-    $out = Join-Path $Results "5090-$($r.name)"
+    $out = Join-Path $Results $(if ($OutTag) { "5090-$($r.name)-$OutTag" } else { "5090-$($r.name)" })
     if ((Test-Path "$out.md") -and (Test-Path "$out.jsonl") -and -not $Force) {
         Log "== $($r.name): results exist ($out.md), skipped (use -Force to rerun)"
         $skipped += $r.name
@@ -326,11 +330,15 @@ foreach ($r in $Plan) {
 
 # --- the story -------------------------------------------------------------------------------------
 
-$all = @(Get-ChildItem -LiteralPath $Results -Filter '5090-*.jsonl' | Sort-Object Name | ForEach-Object { $_.FullName })
-$all += @(Get-ChildItem -LiteralPath $Results -Filter 'mac-*.jsonl' -ErrorAction SilentlyContinue | Sort-Object Name | ForEach-Object { $_.FullName })
+if ($OutTag) {
+    $all = @(Get-ChildItem -LiteralPath $Results -Filter "5090-*-$OutTag.jsonl" | Sort-Object Name | ForEach-Object { $_.FullName })
+} else {
+    $all = @(Get-ChildItem -LiteralPath $Results -Filter '5090-*.jsonl' | Sort-Object Name | ForEach-Object { $_.FullName })
+    $all += @(Get-ChildItem -LiteralPath $Results -Filter 'mac-*.jsonl' -ErrorAction SilentlyContinue | Sort-Object Name | ForEach-Object { $_.FullName })
+}
 if ($all.Count -gt 0) {
     Log '== story.py'
-    $storyOut = Join-Path $Results '5090-story.md'
+    $storyOut = Join-Path $Results $(if ($OutTag) { "5090-story-$OutTag.md" } else { '5090-story.md' })
     $s = Invoke-Quiet $VenvPy (@((Join-Path $Here 'story.py'), '--md') + $all)
     Set-Content -LiteralPath $storyOut -Value $s.Text -Encoding UTF8
     $null = Invoke-Logged $VenvPy (@((Join-Path $Here 'story.py')) + $all)
