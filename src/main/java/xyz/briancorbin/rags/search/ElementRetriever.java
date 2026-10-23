@@ -17,15 +17,13 @@ import xyz.briancorbin.rags.units.StandingFilter;
 /// ```java
 /// ElementRetriever.builder()
 ///     .keywords(keywords)                 // BM25 over the element units
-///     .vectors(vectors)                   // the same units as vectors; omit for keyword-only
 ///     .identifiers(new IdentifierLookup(units, new SpecGrammar()))
 ///     .filter(StandingFilter.of(Lifecycle.IN_FORCE))
 ///     .build();
 /// ```
 ///
-/// With both searches, each runs {@value #DEPTH_EACH} deep behind the same lifecycle filter and
-/// {@link ReciprocalRankFusion} fuses them on rank alone. With one, its ranking is used as it
-/// stands. Pinned units go first either way and carry no score: they were looked up, not ranked.
+/// The ranking is the keyword search's, behind the standing filter. Pinned units go first and
+/// carry no score: they were looked up, not ranked.
 ///
 /// What comes back is the pinned units, then the first {@value #DEPTH} of the ranking — everything
 /// that can reach a top {@value #DEPTH}, since each pinned unit pushes a ranked one out and never
@@ -40,20 +38,15 @@ public final class ElementRetriever implements DocumentRetriever {
   /// The results a step returns, and so the most candidates anything after it can need.
   public static final int DEPTH = 50;
 
-  /// Each list's depth before fusion. Deeper than the answer, so fusion has room to disagree.
-  public static final int DEPTH_EACH = 100;
-
   /// Metadata marking a unit that was looked up rather than ranked, so nothing reranks it.
   public static final String PINNED = "pinned";
 
   private final KeywordSearch keywords;
-  private final VectorSearch vectors; // null: keyword search only
   private final IdentifierLookup identifiers; // null: none
   private final StandingFilter filter;
 
   private ElementRetriever(Builder b) {
     this.keywords = Objects.requireNonNull(b.keywords, "keywords");
-    this.vectors = b.vectors;
     this.identifiers = b.identifiers;
     this.filter = b.filter;
   }
@@ -65,13 +58,7 @@ public final class ElementRetriever implements DocumentRetriever {
   @Override
   public List<Document> retrieve(Query query) {
     String question = query.text();
-    List<Document> ranked =
-        vectors == null
-            ? keywords.search(question, DEPTH, filter)
-            : ReciprocalRankFusion.fuse(
-                List.of(
-                    keywords.search(question, DEPTH_EACH, filter),
-                    vectors.search(question, DEPTH_EACH, filter)));
+    List<Document> ranked = keywords.search(question, DEPTH, filter);
 
     var out = new LinkedHashMap<String, Document>(); // by id, in order, each once
     for (Document unit : pinned(question)) {
@@ -120,7 +107,6 @@ public final class ElementRetriever implements DocumentRetriever {
 
   public static final class Builder {
     private KeywordSearch keywords;
-    private VectorSearch vectors;
     private IdentifierLookup identifiers;
     private StandingFilter filter = StandingFilter.all();
 
@@ -129,12 +115,6 @@ public final class ElementRetriever implements DocumentRetriever {
     /// Keyword search over the element units. Required.
     public Builder keywords(KeywordSearch keywords) {
       this.keywords = keywords;
-      return this;
-    }
-
-    /// Dense search over the same units, fused with the keywords.
-    public Builder vectors(VectorSearch vectors) {
-      this.vectors = vectors;
       return this;
     }
 

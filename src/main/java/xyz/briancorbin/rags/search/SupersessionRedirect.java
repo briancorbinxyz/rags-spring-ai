@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
+import xyz.briancorbin.rags.spectastic.Lifecycle;
 import xyz.briancorbin.rags.spectastic.SpectasticReader;
 import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.Units;
@@ -44,9 +45,12 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
       Document successor = bestPart(query.text(), current);
       out.putIfAbsent(
           successor.getId(), redirected(successor, address)); // remembers where it came from
+      if (keywords.units().standing(doc) == Lifecycle.HISTORY) {
+        out.putIfAbsent(doc.getId(), doc); // an applied change stays, right behind
+      }
     }
-    // Two stale results can share one successor, so the list can come back shorter than it went in.
-    return List.copyOf(out.values());
+    // An applied change kept behind its successor adds a result; the list stays at the depth.
+    return out.values().stream().limit(ElementRetriever.DEPTH).toList();
   }
 
   /// The current address for `address`: itself, or where its paper trail ends.
