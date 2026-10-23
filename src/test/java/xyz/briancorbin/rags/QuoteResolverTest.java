@@ -17,29 +17,45 @@ class QuoteResolverTest {
   private static Document chunk(String source, int index, int total, String text) {
     return Document.builder()
         .text(text)
-        .metadata(Map.of(Address.SOURCE, source, "chunk_index", index, "total_chunks", total, "title", "T"))
+        .metadata(
+            Map.of(
+                Address.SOURCE, source, "chunk_index", index, "total_chunks", total, "title", "T"))
         .build();
   }
 
   private final List<Document> retrieved =
       List.of(
-          chunk("specs/059-corpus-retrieval-scale/spec.html", 1, 3,
+          chunk(
+              "specs/059-corpus-retrieval-scale/spec.html",
+              1,
+              3,
               "Requirements. Retrieval MUST NOT be built or activated while a corpus fits under the ~200k-token threshold; agentic search is the answer."),
-          chunk("specs/051-knowledge-corpus/spec.html", 0, 2,
+          chunk(
+              "specs/051-knowledge-corpus/spec.html",
+              0,
+              2,
               "The corpus MUST NOT require a vector index or a runtime server to be usable — grep and glob are enough."));
 
   @Test
   void anExactQuotationIsTracedToItsChunk() {
-    var claim = new Claim("No index below the threshold.",
-        List.of("Retrieval MUST NOT be built or activated while a corpus fits under the ~200k-token threshold"));
+    var claim =
+        new Claim(
+            "No index below the threshold.",
+            List.of(
+                "Retrieval MUST NOT be built or activated while a corpus fits under the ~200k-token threshold"));
     var v = resolver.check(claim, retrieved);
     assertEquals(Status.SUPPORTED, v.status());
-    assertEquals("quoted from specs/059-corpus-retrieval-scale/spec.html, chunk 2 of 3", v.reason());
+    assertEquals(
+        "quoted from specs/059-corpus-retrieval-scale/spec.html, chunk 2 of 3", v.reason());
   }
 
   @Test
   void whitespaceTypographicDashesAndOnePairOfQuotesAreForgiven() {
-    var claim = new Claim("x", List.of("\"require a vector   index or a runtime server to be usable - grep and glob\""));
+    var claim =
+        new Claim(
+            "x",
+            List.of(
+                "\"require a vector   index or a runtime server to be usable - grep and glob\""));
     assertEquals(Status.SUPPORTED, resolver.check(claim, retrieved).status());
   }
 
@@ -65,7 +81,9 @@ class QuoteResolverTest {
 
   @Test
   void aClaimWithNoQuotationIsUnchecked() {
-    assertEquals(Status.UNCHECKED, resolver.check(new Claim("Nothing here answers it.", List.of()), retrieved).status());
+    assertEquals(
+        Status.UNCHECKED,
+        resolver.check(new Claim("Nothing here answers it.", List.of()), retrieved).status());
   }
 
   @Test
@@ -75,8 +93,16 @@ class QuoteResolverTest {
             "",
             List.of(
                 new Claim("a", List.of("The corpus MUST NOT require a vector index")),
-                new Claim("b", List.of("Retrieval MUST NOT be built or activated", "invented words that are nowhere at all")),
-                new Claim("c", List.of("agentic search is the answer", "The corpus MUST NOT require a vector index"))));
+                new Claim(
+                    "b",
+                    List.of(
+                        "Retrieval MUST NOT be built or activated",
+                        "invented words that are nowhere at all")),
+                new Claim(
+                    "c",
+                    List.of(
+                        "agentic search is the answer",
+                        "The corpus MUST NOT require a vector index"))));
     var resolution = resolver.resolve(reply, retrieved);
     assertEquals(
         List.of(Status.SUPPORTED, Status.CONTRADICTED, Status.SUPPORTED),

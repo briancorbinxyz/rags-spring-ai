@@ -1,14 +1,13 @@
 package xyz.briancorbin.rags;
 
-import java.util.Map;
 import org.springframework.ai.document.Document;
 
 /**
  * Where a passage came from: the file in the archive, which chunk of it, and the page title.
  *
- * <p>This is provenance, and it lives in a chunk's metadata, not its text. The reader records
- * the title, {@link SpecCorpus} adds the file path, and the splitter adds the chunk number. The
- * model never sees any of it, so nothing here can be mistyped by a model.
+ * <p>This is provenance, and it lives in a chunk's metadata, not its text. The reader records the
+ * title, {@link SpecCorpus} adds the file path, and the splitter adds the chunk number. The model
+ * never sees any of it, so nothing here can be mistyped by a model.
  *
  * @param source the file, relative to the spectastic checkout, e.g. {@code
  *     specs/059-corpus-retrieval-scale/spec.html}

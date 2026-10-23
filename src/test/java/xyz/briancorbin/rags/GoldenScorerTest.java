@@ -26,7 +26,10 @@ class GoldenScorerTest {
   }
 
   private static Document chunk(String source, String text) {
-    return Document.builder().text(text).metadata(Map.of(Address.SOURCE, source, "chunk_index", 0, "total_chunks", 1)).build();
+    return Document.builder()
+        .text(text)
+        .metadata(Map.of(Address.SOURCE, source, "chunk_index", 0, "total_chunks", 1))
+        .build();
   }
 
   @Test
@@ -56,7 +59,8 @@ class GoldenScorerTest {
 
   @Test
   void aChunkFromAnotherFileIsAMissWhateverItSays() throws Exception {
-    assertEquals(Hit.NONE, scorer.hit(FILE + "#FR-001", chunk("specs/002-other/spec.html", page())));
+    assertEquals(
+        Hit.NONE, scorer.hit(FILE + "#FR-001", chunk("specs/002-other/spec.html", page())));
   }
 
   @Test
@@ -88,7 +92,8 @@ class GoldenScorerTest {
   @Test
   void allEvidenceWaitsForEveryExpectedElement() {
     var expected = List.of(FILE + "#FR-001", FILE + "#FR-002");
-    var score = scorer.score(expected, List.of(element(FILE + "#FR-001"), element(FILE + "#FR-002")));
+    var score =
+        scorer.score(expected, List.of(element(FILE + "#FR-001"), element(FILE + "#FR-002")));
     assertEquals(1, score.firstHit());
     assertEquals(2, score.firstAll());
     assertFalse(score.allAt(1));
@@ -99,11 +104,14 @@ class GoldenScorerTest {
   void anAcceptedPassageCountsAsAHitAndStandsInForItsElement() {
     var expected = List.of(FILE + "#FR-001", FILE + "#FR-002");
     var accept = List.of(new GoldenSet.Accept(TASKS + "#T-001", FILE + "#FR-002"));
-    var score = scorer.score(expected, accept, List.of(element(TASKS + "#T-001"), element(FILE + "#FR-001")));
+    var score =
+        scorer.score(
+            expected, accept, List.of(element(TASKS + "#T-001"), element(FILE + "#FR-001")));
     assertEquals(1, score.firstHit());
     assertEquals(2, score.firstAll());
     // Without the audit, the task is a miss and FR-002 is never found.
-    var before = scorer.score(expected, List.of(element(TASKS + "#T-001"), element(FILE + "#FR-001")));
+    var before =
+        scorer.score(expected, List.of(element(TASKS + "#T-001"), element(FILE + "#FR-001")));
     assertEquals(2, before.firstHit());
     assertNull(before.firstAll());
   }
@@ -123,7 +131,9 @@ class GoldenScorerTest {
     var accept = List.of(new GoldenSet.Accept(TASKS + "#T-001", "question"));
     var score =
         scorer.score(
-            List.of(FILE + "#FR-002"), accept, List.of(chunk(TASKS, task.substring(task.length() / 3))));
+            List.of(FILE + "#FR-002"),
+            accept,
+            List.of(chunk(TASKS, task.substring(task.length() / 3))));
     assertNull(score.firstHit());
     assertEquals(1, score.firstPartial());
     assertNull(score.firstAll());

@@ -21,12 +21,12 @@ import xyz.briancorbin.rags.FactChecker.Verdict;
  * quotations to their chunks, and Alpha answers from the traced quotations only.
  *
  * <p>Beta's {@link ChatClient} carries {@link QuestionAnswerAdvisor}, so every call to Beta is a
- * vector search followed by a prompt with the chunk texts pasted in. Alpha's carries no
- * retriever: Alpha never touches the archive, and it never sees a chunk, only quotations that
- * {@link QuoteResolver} found word for word in one. This replaces Episode 2's {@code Broadcast}.
+ * vector search followed by a prompt with the chunk texts pasted in. Alpha's carries no retriever:
+ * Alpha never touches the archive, and it never sees a chunk, only quotations that {@link
+ * QuoteResolver} found word for word in one. This replaces Episode 2's {@code Broadcast}.
  *
- * <p>In solo mode the retriever moves to Alpha, which searches, quotes and answers in one call,
- * and its quotations go through the same resolver.
+ * <p>In solo mode the retriever moves to Alpha, which searches, quotes and answers in one call, and
+ * its quotations go through the same resolver.
  */
 public final class Archive {
 
@@ -39,13 +39,16 @@ public final class Archive {
 
   /** One model call: the reply if there was one, and what came with it. */
   public record Reply(
-      Optional<Commentary> commentary, List<Document> retrieved, Integer promptTokens, long millis) {}
+      Optional<Commentary> commentary,
+      List<Document> retrieved,
+      Integer promptTokens,
+      long millis) {}
 
   /**
    * Everything that happened for one question, so it can be checked and written down.
    *
-   * @param retrieved the chunks the search returned, best first; in duo mode Beta's, in solo
-   *     mode Alpha's
+   * @param retrieved the chunks the search returned, best first; in duo mode Beta's, in solo mode
+   *     Alpha's
    * @param beta Beta's reply, empty in solo mode or if Beta could not be reached
    * @param betaVerdicts the resolver's verdict on each of Beta's claims (Alpha's in solo mode)
    * @param quotes the quotations traced to a chunk, as Alpha was shown them
@@ -140,8 +143,7 @@ public final class Archive {
         resolution.quotes(),
         alphaReply.commentary(),
         alphaVerdicts,
-        alphaReply.commentary().isPresent()
-            && citations.abstained(alphaSaid, resolution.quotes()),
+        alphaReply.commentary().isPresent() && citations.abstained(alphaSaid, resolution.quotes()),
         betaReply.promptTokens(),
         alphaReply.promptTokens(),
         betaReply.millis(),
@@ -184,7 +186,9 @@ public final class Archive {
     return "Question: %s%n%nQuotations Beta traced to the archive. Cite them by label.%n%s"
         .formatted(
             question,
-            quotes.stream().map(Quote::toPrompt).collect(Collectors.joining(System.lineSeparator())));
+            quotes.stream()
+                .map(Quote::toPrompt)
+                .collect(Collectors.joining(System.lineSeparator())));
   }
 
   /**

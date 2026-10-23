@@ -21,11 +21,11 @@ import tools.jackson.databind.json.JsonMapper;
  * The archive: every HTML file under {@code specs/} in a pinned spectastic checkout, read, split
  * and embedded into a {@link SimpleVectorStore}, once.
  *
- * <p>This is Spring AI's ETL pipeline with its defaults. Extract: {@link JsoupDocumentReader}
- * turns each file into one {@link Document}. Transform: {@link TokenTextSplitter} cuts it into
- * chunks of about 800 tokens. Load: the vector store embeds each chunk and keeps it. The only
- * thing added to the defaults is provenance: the reader records a page's title but not which file
- * it read, so the file path, spec and commit are stamped into each document's metadata here.
+ * <p>This is Spring AI's ETL pipeline with its defaults. Extract: {@link JsoupDocumentReader} turns
+ * each file into one {@link Document}. Transform: {@link TokenTextSplitter} cuts it into chunks of
+ * about 800 tokens. Load: the vector store embeds each chunk and keeps it. The only thing added to
+ * the defaults is provenance: the reader records a page's title but not which file it read, so the
+ * file path, spec and commit are stamped into each document's metadata here.
  *
  * <p>Embedding a million words takes minutes, so the store is saved to {@code build/archive/} with
  * a manifest, and a later run with the same commit and embedding model loads it instead.
@@ -35,8 +35,8 @@ public final class SpecCorpus {
   private static final Logger log = LoggerFactory.getLogger(SpecCorpus.class);
 
   /**
-   * Part of the saved store's name. Change it whenever reading, splitting or the embedding
-   * prefixes change, so an old store is rebuilt rather than reused.
+   * Part of the saved store's name. Change it whenever reading, splitting or the embedding prefixes
+   * change, so an old store is rebuilt rather than reused.
    */
   static final String FORMAT = "naive-800-v1";
 
@@ -96,7 +96,8 @@ public final class SpecCorpus {
     if (Files.exists(storeFile) && Files.exists(manifestFile)) {
       store.load(storeFile.toFile());
       Manifest manifest = read(manifestFile);
-      log.info("Loaded {} chunks from {} files ({})", manifest.chunks(), manifest.files(), storeFile);
+      log.info(
+          "Loaded {} chunks from {} files ({})", manifest.chunks(), manifest.files(), storeFile);
       return manifest;
     }
     Manifest manifest = ingest(commit);
@@ -134,8 +135,8 @@ public final class SpecCorpus {
   }
 
   /**
-   * One file as one {@link Document}, with its address stamped in. Everything else is the
-   * reader's default: the whole {@code <body>} as one string of text, whitespace collapsed.
+   * One file as one {@link Document}, with its address stamped in. Everything else is the reader's
+   * default: the whole {@code <body>} as one string of text, whitespace collapsed.
    */
   List<Document> read(Path file, String commit) {
     String source = checkout.relativize(file).toString().replace('\\', '/');
@@ -159,9 +160,13 @@ public final class SpecCorpus {
     }
   }
 
-  /** {@code specs/059-corpus-retrieval-scale/spec.html} is in spec {@code 059-corpus-retrieval-scale}. */
+  /**
+   * {@code specs/059-corpus-retrieval-scale/spec.html} is in spec {@code
+   * 059-corpus-retrieval-scale}.
+   */
   static String specOf(String source) {
-    String[] parts = source.split("/");
+    // -1 keeps trailing empties, so parts.length means what it looks like it means.
+    String[] parts = source.split("/", -1);
     return parts.length > 1 ? parts[1] : "";
   }
 

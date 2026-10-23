@@ -4,23 +4,23 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.springframework.ai.document.Document;
 
 /**
  * Traces each of Beta's quotations to the retrieved chunk it came from, in code.
  *
- * <p>{@code QuestionAnswerAdvisor} gives the model chunk text and nothing else, so the model
- * cannot see an address and cannot be trusted to cite one. It can copy words, though, and copied
- * words can be found. For every source of every claim, the resolver looks for a retrieved chunk
- * that contains it. A match makes the claim supported and the address comes from that chunk's
- * metadata. A quotation found in none of them means Beta paraphrased or invented it: the claim is
- * contradicted and none of it reaches Alpha.
+ * <p>{@code QuestionAnswerAdvisor} gives the model chunk text and nothing else, so the model cannot
+ * see an address and cannot be trusted to cite one. It can copy words, though, and copied words can
+ * be found. For every source of every claim, the resolver looks for a retrieved chunk that contains
+ * it. A match makes the claim supported and the address comes from that chunk's metadata. A
+ * quotation found in none of them means Beta paraphrased or invented it: the claim is contradicted
+ * and none of it reaches Alpha.
  *
- * <p>This is Episode 2's {@code QuoteChecker} with new evidence: the "file" Beta must quote from
- * is now whatever the retriever brought back. The comparison is still exact, after the
- * normalisation in {@link #normalise}, and nothing looser.
+ * <p>This is Episode 2's {@code QuoteChecker} with new evidence: the "file" Beta must quote from is
+ * now whatever the retriever brought back. The comparison is still exact, after the normalisation
+ * in {@link #normalise}, and nothing looser.
  */
 public final class QuoteResolver implements FactChecker<List<Document>> {
 
@@ -35,8 +35,10 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
 
     /** Share of Beta's quoting claims whose every quotation was found, or null with none. */
     public Double verifiedShare() {
-      long quoting = verdicts.stream().filter(verdict -> !verdict.claim().sources().isEmpty()).count();
-      long supported = verdicts.stream().filter(verdict -> verdict.status() == Status.SUPPORTED).count();
+      long quoting =
+          verdicts.stream().filter(verdict -> !verdict.claim().sources().isEmpty()).count();
+      long supported =
+          verdicts.stream().filter(verdict -> verdict.status() == Status.SUPPORTED).count();
       return quoting == 0 ? null : (double) supported / quoting;
     }
   }
@@ -58,7 +60,7 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
             Status.CONTRADICTED,
             "not word for word in anything retrieved: \"%s\"".formatted(preview(quote)));
       }
-      if (quote.split(" ").length < MIN_WORDS) {
+      if (SPACE.split(quote, -1).length < MIN_WORDS) {
         tooShort = quote;
       }
       found.add(Address.of(retrieved.get(at.get())));
@@ -71,9 +73,9 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
   }
 
   /**
-   * Checks every claim, and turns the quotations of the supported ones into labelled {@link
-   * Quote}s for Alpha. A claim with any untraceable quotation contributes nothing, not even its
-   * good quotations: a source that misquotes once is not quoted from again.
+   * Checks every claim, and turns the quotations of the supported ones into labelled {@link Quote}s
+   * for Alpha. A claim with any untraceable quotation contributes nothing, not even its good
+   * quotations: a source that misquotes once is not quoted from again.
    */
   public Resolution resolve(Commentary reply, List<Document> retrieved) {
     var verdicts = checkAll(reply, retrieved);
@@ -90,7 +92,8 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
         int index = locate(key, retrieved).orElseThrow();
         String label = "Q" + (quotes.size() + 1);
         quotes.put(
-            key, new Quote(label, unquote(source.strip()), Address.of(retrieved.get(index)), index + 1));
+            key,
+            new Quote(label, unquote(source.strip()), Address.of(retrieved.get(index)), index + 1));
       }
     }
     return new Resolution(verdicts, List.copyOf(quotes.values()));
@@ -112,10 +115,13 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
    * the typographic forms of quotes, dashes and ellipses, which models routinely type as plain
    * ASCII. Case, spelling and word order all still count.
    */
+  private static final Pattern SPACE = Pattern.compile(" ", Pattern.LITERAL);
+
   static String normalise(String text) {
     String plain = Normalizer.normalize(text == null ? "" : text, Normalizer.Form.NFKC);
     plain =
-        plain.replace('\u2018', '\'')
+        plain
+            .replace('\u2018', '\'')
             .replace('\u2019', '\'')
             .replace('\u201C', '"')
             .replace('\u201D', '"')

@@ -26,8 +26,8 @@ import java.util.HexFormat;
  * <p>The file is a SQLite table of {@code (hash, dimensions, little-endian float32 blob)} — the
  * same table, the same keys and the same bytes as the prototype's {@code ratchet/embed.py}, so both
  * implementations can share one cache file. That is what makes the parity check mean anything: when
- * the Java and the prototype read the same vectors, a difference in their results is a difference in
- * the search, not in the arithmetic.
+ * the Java and the prototype read the same vectors, a difference in their results is a difference
+ * in the search, not in the arithmetic.
  */
 public final class VectorCache implements AutoCloseable {
 

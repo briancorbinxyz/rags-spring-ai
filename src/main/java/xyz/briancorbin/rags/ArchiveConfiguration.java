@@ -17,8 +17,8 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.Resource;
 
 /**
- * The archive's parts: the embedding model, the vector store, the corpus, and the two
- * commentators with their advisors.
+ * The archive's parts: the embedding model, the vector store, the corpus, and the two commentators
+ * with their advisors.
  */
 @Configuration
 class ArchiveConfiguration {
@@ -110,7 +110,9 @@ class ArchiveConfiguration {
     return new CitationChecker();
   }
 
-  /** {@code archive.mode=duo} (the default): Beta finds, Alpha answers. {@code solo}: Alpha alone. */
+  /**
+   * {@code archive.mode=duo} (the default): Beta finds, Alpha answers. {@code solo}: Alpha alone.
+   */
   @Bean
   Archive archive(
       @Qualifier("betaChatClient") ChatClient beta,

@@ -1,5 +1,6 @@
 package xyz.briancorbin.rags;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -12,8 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.SequencedMap;
-import java.util.Set;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import tools.jackson.databind.json.JsonMapper;
 import xyz.briancorbin.rags.GoldenSet.Question;
 
@@ -22,9 +21,9 @@ import xyz.briancorbin.rags.GoldenSet.Question;
  * retrieval's own scorers ({@code trec_eval}, {@code ir_measures}, {@code ranx}) instead of ours.
  *
  * <ul>
- *   <li><b>qrels</b>: one judgment per line, {@code question 0 passage relevance}. Relevance 1 is an
- *       expected passage or one the blind audit accepted; 0 is a passage someone judged and found
- *       wanting: a stale record, or an audit decision of "partly" or "doesn't answer it".
+ *   <li><b>qrels</b>: one judgment per line, {@code question 0 passage relevance}. Relevance 1 is
+ *       an expected passage or one the blind audit accepted; 0 is a passage someone judged and
+ *       found wanting: a stale record, or an audit decision of "partly" or "doesn't answer it".
  *       Unanswerable questions have no relevant passage, so they have no lines.
  *   <li><b>run</b>: one result per line, {@code question Q0 passage rank score run-name}. A long
  *       unit is split into parts, so a ranking can name a passage twice; the scorers keep one entry
@@ -34,7 +33,8 @@ import xyz.briancorbin.rags.GoldenSet.Question;
  * <p>Our Hit@4 is {@code Success@4} in those tools and our MRR is {@code RR}. All-evidence@4 has no
  * exact counterpart: a stand-in covers one expected element, which qrels can't say.
  *
- * <p>The same rules, and byte-for-byte the same qrels, as {@code tools/ratchet-proto/ratchet/trec.py}.
+ * <p>The same rules, and byte-for-byte the same qrels, as {@code
+ * tools/ratchet-proto/ratchet/trec.py}.
  */
 public final class TrecFiles {
 
@@ -58,8 +58,7 @@ public final class TrecFiles {
     for (Question question : answerableById(questions)) {
       judgmentsFor(question, audit)
           .forEach(
-              (passage, relevance) ->
-                  lines.add(question.id() + " 0 " + passage + " " + relevance));
+              (passage, relevance) -> lines.add(question.id() + " 0 " + passage + " " + relevance));
     }
     return lines;
   }
@@ -74,9 +73,11 @@ public final class TrecFiles {
 
   /**
    * One question's judgments, in the order they are written: expected, then accepted, then stale,
-   * then whatever else the audit decided. A passage is judged once, by the first rule that names it.
+   * then whatever else the audit decided. A passage is judged once, by the first rule that names
+   * it.
    */
-  private static SequencedMap<String, Integer> judgmentsFor(Question question, List<Decision> audit) {
+  private static SequencedMap<String, Integer> judgmentsFor(
+      Question question, List<Decision> audit) {
     var judged = new LinkedHashMap<String, Integer>();
     question.expected().forEach(expected -> judged.putIfAbsent(expected, 1));
     question.accept().forEach(accepted -> judged.putIfAbsent(accepted.address(), 1));
@@ -92,7 +93,8 @@ public final class TrecFiles {
    * One line per passage, first occurrence only, ranks from 1. The score is 1/rank, because the
    * scorers sort by score and this keeps our order.
    */
-  public static List<String> run(String questionId, List<String> ranked, String runName, int depth) {
+  public static List<String> run(
+      String questionId, List<String> ranked, String runName, int depth) {
     var lines = new ArrayList<String>();
     var seen = new HashSet<String>();
     for (String passage : ranked) {
@@ -104,7 +106,11 @@ public final class TrecFiles {
         lines.add(
             "%s Q0 %s %d %s %s"
                 .formatted(
-                    questionId, passage, rank, String.format(Locale.ROOT, "%.6f", 1.0 / rank), runName));
+                    questionId,
+                    passage,
+                    rank,
+                    String.format(Locale.ROOT, "%.6f", 1.0 / rank),
+                    runName));
       }
     }
     return lines;

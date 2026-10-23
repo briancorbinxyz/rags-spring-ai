@@ -14,7 +14,8 @@ import xyz.briancorbin.rags.TrecFiles.Decision;
 
 class TrecFilesTest {
 
-  private static Question q(String id, String stratum, List<String> expected, List<Accept> accept, List<String> stale) {
+  private static Question q(
+      String id, String stratum, List<String> expected, List<Accept> accept, List<String> stale) {
     return new Question(id, "?", stratum, expected, accept, stale, "", "c64d41c", "accepted");
   }
 
@@ -22,8 +23,18 @@ class TrecFilesTest {
   void qrelsJudgeEachPassageOnceInAFixedOrder() {
     var questions =
         List.of(
-            q("G-002", "stale", List.of("a#1"), List.of(new Accept("b#2", "question")), List.of("a#old")),
-            q("G-001", "relation", List.of("c#1", "d#2"), List.of(new Accept("e#3", "d#2")), List.of()),
+            q(
+                "G-002",
+                "stale",
+                List.of("a#1"),
+                List.of(new Accept("b#2", "question")),
+                List.of("a#old")),
+            q(
+                "G-001",
+                "relation",
+                List.of("c#1", "d#2"),
+                List.of(new Accept("e#3", "d#2")),
+                List.of()),
             q("G-009", "unanswerable", List.of(), List.of(), List.of()));
     var audit =
         List.of(
@@ -34,8 +45,14 @@ class TrecFilesTest {
             new Decision("G-002", "a#old", "whole"));
     assertEquals(
         List.of(
-            "G-001 0 c#1 1", "G-001 0 d#2 1", "G-001 0 e#3 1", "G-001 0 f#4 0", "G-001 0 z#9 0",
-            "G-002 0 a#1 1", "G-002 0 b#2 1", "G-002 0 a#old 0"),
+            "G-001 0 c#1 1",
+            "G-001 0 d#2 1",
+            "G-001 0 e#3 1",
+            "G-001 0 f#4 0",
+            "G-001 0 z#9 0",
+            "G-002 0 a#1 1",
+            "G-002 0 b#2 1",
+            "G-002 0 a#old 0"),
         TrecFiles.qrels(questions, audit));
   }
 
@@ -43,7 +60,10 @@ class TrecFilesTest {
   void runLinesKeepTheFirstOccurrenceOfASplitPassage() {
     var lines = TrecFiles.run("G-044", List.of("p#1", "p#2", "p#1", "p#3"), "S1", 50);
     assertEquals(
-        List.of("G-044 Q0 p#1 1 1.000000 S1", "G-044 Q0 p#2 2 0.500000 S1", "G-044 Q0 p#3 3 0.333333 S1"),
+        List.of(
+            "G-044 Q0 p#1 1 1.000000 S1",
+            "G-044 Q0 p#2 2 0.500000 S1",
+            "G-044 Q0 p#3 3 0.333333 S1"),
         lines);
   }
 
@@ -63,7 +83,8 @@ class TrecFilesTest {
     var audit = TrecFiles.readAudit(Path.of("results/episode-4/golden-audit-2026-10.jsonl"));
     var shipped =
         new String(
-            new ClassPathResource("golden/qrels.txt").getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            new ClassPathResource("golden/qrels.txt").getInputStream().readAllBytes(),
+            StandardCharsets.UTF_8);
     assertEquals(String.join("\n", TrecFiles.qrels(questions, audit)) + "\n", shipped);
   }
 }

@@ -2,7 +2,6 @@ package xyz.briancorbin.rags;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
@@ -41,7 +40,8 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
         continue;
       }
       Document successor = bestPart(query.text(), current);
-      out.putIfAbsent(successor.getId(), redirected(successor, address)); // remembers where it came from
+      out.putIfAbsent(
+          successor.getId(), redirected(successor, address)); // remembers where it came from
     }
     // Two stale results can share one successor, so the list can come back shorter than it went in.
     return List.copyOf(out.values());
@@ -74,7 +74,9 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
     return at;
   }
 
-  /** The part of a split unit that best matches the question; the unit itself if it has one part. */
+  /**
+   * The part of a split unit that best matches the question; the unit itself if it has one part.
+   */
   private Document bestPart(String question, String address) {
     List<Document> parts = keywords.units().parts(address);
     if (parts.size() == 1) {

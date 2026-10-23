@@ -11,12 +11,14 @@ import org.springframework.ai.rag.Query;
 class SupersessionRedirectTest {
 
   private static final String SPEC = "specs/001-demo/spec.html";
-  private static final String CHANGE = "specs/001-demo/changes/archive/2026-01-01-log-to-stdout/proposal.html";
+  private static final String CHANGE =
+      "specs/001-demo/changes/archive/2026-01-01-log-to-stdout/proposal.html";
 
   @Test
   void aSupersededResultGivesItsPlaceToItsSuccessorAndIsItselfDropped(@TempDir Path dir)
       throws Exception {
-    try (var keywords = KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
+    try (var keywords =
+        KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
       var redirect = new SupersessionRedirect(keywords);
       var in =
           List.of(

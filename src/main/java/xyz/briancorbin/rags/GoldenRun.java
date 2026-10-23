@@ -37,8 +37,8 @@ import xyz.briancorbin.rags.GoldenSet.Question;
  *   <li>{@code -summary.md}: the per-stratum table the article prints.
  * </ul>
  *
- * <p>Every row records the commit, the models and a hash of the prompts. Change any of them and
- * the numbers are a new baseline, not a comparison.
+ * <p>Every row records the commit, the models and a hash of the prompts. Change any of them and the
+ * numbers are a new baseline, not a comparison.
  */
 public final class GoldenRun {
 
@@ -49,7 +49,8 @@ public final class GoldenRun {
 
   /** Words that mark an answer as knowing its source is out of date. A heuristic, said so. */
   private static final Pattern FLAGS_STALE =
-      Pattern.compile("(?i)\\b(?<staleWord>withdrawn|superseded|no longer|retired|archived|was proposed)\\b");
+      Pattern.compile(
+          "(?i)\\b(?<staleWord>withdrawn|superseded|no longer|retired|archived|was proposed)\\b");
 
   /** What the run was measured on. */
   public record Setup(
@@ -95,7 +96,13 @@ public final class GoldenRun {
       // A fresh conversation per question: no question's memory leaks into the next.
       var ruling = archive.ask(q.question(), "golden-" + q.id() + "-" + UUID.randomUUID());
       rows.add(row(q, ruling));
-      log.info("{} [{}] hit@{}={} rank={}", q.id(), q.stratum(), K, rows.getLast().score().hitAt(K), rows.getLast().score().firstHit());
+      log.info(
+          "{} [{}] hit@{}={} rank={}",
+          q.id(),
+          q.stratum(),
+          K,
+          rows.getLast().score().hitAt(K),
+          rows.getLast().score().firstHit());
     }
     return List.copyOf(rows);
   }
@@ -241,8 +248,10 @@ public final class GoldenRun {
               .map(
                   chunk ->
                       Map.of(
-                          "address", Address.of(chunk).toString(),
-                          "score", chunk.getScore() == null ? 0 : chunk.getScore()))
+                          "address",
+                          Address.of(chunk).toString(),
+                          "score",
+                          chunk.getScore() == null ? 0 : chunk.getScore()))
               .toList());
       line.put("score", row.score());
       line.put("beta", ruling.beta().orElse(null));
@@ -327,11 +336,14 @@ public final class GoldenRun {
 
   /** Every question's wall time, ascending, so a percentile can be read straight off it. */
   private static List<Long> sortedMillis(List<Row> rows) {
-    return rows.stream().map(row -> row.ruling().millis()).sorted(Comparator.naturalOrder()).toList();
+    return rows.stream()
+        .map(row -> row.ruling().millis())
+        .sorted(Comparator.naturalOrder())
+        .toList();
   }
 
   /** Every verdict on every claim Alpha made, across the run. */
-  private static List<CitationChecker.Verdict> allAlphaVerdicts(List<Row> rows) {
+  private static List<FactChecker.Verdict> allAlphaVerdicts(List<Row> rows) {
     return rows.stream().flatMap(row -> row.ruling().alphaVerdicts().stream()).toList();
   }
 

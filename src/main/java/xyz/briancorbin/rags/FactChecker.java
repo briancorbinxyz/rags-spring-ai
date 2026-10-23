@@ -42,7 +42,12 @@ public interface FactChecker<E> {
   }
 
   /** Counts per status, and the reasons for anything that is not supported or unchecked. */
-  record Tally(int claims, int supported, int contradicted, int unsupported, int unchecked,
+  record Tally(
+      int claims,
+      int supported,
+      int contradicted,
+      int unsupported,
+      int unchecked,
       List<String> problems) {
 
     public static Tally of(List<Verdict> verdicts) {

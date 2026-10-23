@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
@@ -20,9 +19,9 @@ import xyz.briancorbin.rags.GoldenSet.Question;
  * Runs the golden set through a search, with no model: what came back, and where the expected
  * passages were in it. This is what the ratchet compares.
  *
- * <p>With element units a result <em>is</em> an element, so scoring is matching addresses: a
- * result is a hit when its address is an expected one, or one the audit accepted. A split unit's
- * parts each count as a result, so a long unit can take two of the top four.
+ * <p>With element units a result <em>is</em> an element, so scoring is matching addresses: a result
+ * is a hit when its address is an expected one, or one the audit accepted. A split unit's parts
+ * each count as a result, so a long unit can take two of the top four.
  */
 public final class RetrievalRun {
 
@@ -33,7 +32,8 @@ public final class RetrievalRun {
   static final int STALE_DEPTH = 10;
 
   /** One step of the main line: a search, and what runs after it (or null). */
-  public record Step(String name, String label, DocumentRetriever retriever, DocumentPostProcessor after) {
+  public record Step(
+      String name, String label, DocumentRetriever retriever, DocumentPostProcessor after) {
 
     public List<Document> search(String question) {
       var query = new Query(question);
@@ -42,7 +42,9 @@ public final class RetrievalRun {
     }
   }
 
-  /** One question's outcome: the addresses in rank order, how they scored, and the first stale one. */
+  /**
+   * One question's outcome: the addresses in rank order, how they scored, and the first stale one.
+   */
   public record Result(Question question, List<String> ranked, Score score, Integer firstStale) {
 
     public boolean staleAt(int k) {

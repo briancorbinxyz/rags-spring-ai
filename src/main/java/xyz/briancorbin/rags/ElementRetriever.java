@@ -28,10 +28,10 @@ import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
  * {@link Rrf} fuses them on rank alone. With one, its ranking is used as it stands. Pinned units go
  * first either way and carry no score: they were looked up, not ranked.
  *
- * <p>What comes back is the pinned units, then the first {@value #DEPTH} of the ranking — everything
- * that can reach a top {@value #DEPTH}, since each pinned unit pushes a ranked one out and never
- * pulls a further one in. Cutting to {@value #DEPTH} is {@link TopDocuments}'s job, after any
- * reranking, so a reranker sees the same candidates however many units were pinned.
+ * <p>What comes back is the pinned units, then the first {@value #DEPTH} of the ranking —
+ * everything that can reach a top {@value #DEPTH}, since each pinned unit pushes a ranked one out
+ * and never pulls a further one in. Cutting to {@value #DEPTH} is {@link TopDocuments}'s job, after
+ * any reranking, so a reranker sees the same candidates however many units were pinned.
  *
  * <p>Spring AI 2.0.1 has no fusion of its own. Its {@code ConcatenationDocumentJoiner} is not it:
  * that one re-sorts the joined lists by {@link Document#getScore()} descending, which compares
@@ -70,8 +70,10 @@ public final class ElementRetriever implements DocumentRetriever {
     List<Document> ranked =
         vectors == null
             ? keywords.search(question, DEPTH, filter)
-            : Rrf.fuse(List.of(keywords.search(question, DEPTH_EACH, filter),
-                               vectors.search(question, DEPTH_EACH, filter)));
+            : Rrf.fuse(
+                List.of(
+                    keywords.search(question, DEPTH_EACH, filter),
+                    vectors.search(question, DEPTH_EACH, filter)));
 
     var out = new LinkedHashMap<String, Document>(); // by id, in order, each once
     for (Document unit : pinned(question)) {
@@ -144,7 +146,9 @@ public final class ElementRetriever implements DocumentRetriever {
       return this;
     }
 
-    /** Which lifecycles may come back, named or searched; {@link Lifecycle#ALL} by default (Step 3). */
+    /**
+     * Which lifecycles may come back, named or searched; {@link Lifecycle#ALL} by default (Step 3).
+     */
     public Builder filter(Set<Lifecycle> filter) {
       this.filter = Set.copyOf(filter);
       return this;

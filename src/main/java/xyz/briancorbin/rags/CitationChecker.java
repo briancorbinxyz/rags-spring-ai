@@ -12,11 +12,11 @@ import java.util.regex.Pattern;
 /**
  * Checks that each of Alpha's claims cites quotations Alpha was actually given.
  *
- * <p>Alpha cites by label ("Q2"), the way it cited "move 3" in Episode 2, and the check is just
- * as exact: a label is either in the list Alpha was shown or it is not. A supported verdict here
- * means "rests on a verified quotation", not "is entailed by it". Whether the quotation really
- * says what the claim says is a judgement, and judges arrive in Episode 7, measured against the
- * human labels this episode collects.
+ * <p>Alpha cites by label ("Q2"), the way it cited "move 3" in Episode 2, and the check is just as
+ * exact: a label is either in the list Alpha was shown or it is not. A supported verdict here means
+ * "rests on a verified quotation", not "is entailed by it". Whether the quotation really says what
+ * the claim says is a judgement, and judges arrive in Episode 7, measured against the human labels
+ * this episode collects.
  *
  * <p>Saying {@value #ABSTENTION} is a legitimate answer, and on a question the archive cannot
  * answer it is the right one, so an abstaining claim with no sources is unchecked rather than
@@ -50,7 +50,12 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
     return new Verdict(
         claim,
         Status.SUPPORTED,
-        "cites " + String.join(", ", cited.stream().map(quote -> quote.label() + " (" + quote.address() + ")").toList()));
+        "cites "
+            + String.join(
+                ", ",
+                cited.stream()
+                    .map(quote -> quote.label() + " (" + quote.address() + ")")
+                    .toList()));
   }
 
   /** True when the reply says the answer is not in the archive and backs no claim with a quote. */
@@ -78,7 +83,8 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
 
   /** Accepts "Q2", "q2" and "[Q2]"; nothing looser. */
   private static Optional<Quote> find(String source, List<Quote> given) {
-    String label = source.strip().replaceAll("^\\[(?<label>.*)]$", "${label}").toUpperCase(Locale.ROOT);
+    String label =
+        source.strip().replaceAll("^\\[(?<label>.*)]$", "${label}").toUpperCase(Locale.ROOT);
     return given.stream().filter(quote -> quote.label().equals(label)).findFirst();
   }
 }

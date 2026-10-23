@@ -20,13 +20,13 @@ import org.springframework.ai.document.Document;
  *
  * <ul>
  *   <li>an <b>id</b> is anything shaped like one ({@code FR-012}, {@code NFR-001}, {@code T-100},
- *       {@code REQ-TOOL-001}, {@code US5}) that is also an element id somewhere in the archive.
- *       Ids are written in capitals, so this is case-sensitive: "d-001" in prose is not an id;
- *   <li>a <b>spec</b> is "spec 040", "Spec 058's" or "slice 040" in any case, or a slug like
- *       {@code 040-run-budget}. Three digits throughout the archive today, but the number is read
- *       as written, so a thousandth spec needs nothing changed here;
- *   <li>an id with a spec names that id in that spec, on every page of it. An id with no spec
- *       names something only if exactly one spec has it.
+ *       {@code REQ-TOOL-001}, {@code US5}) that is also an element id somewhere in the archive. Ids
+ *       are written in capitals, so this is case-sensitive: "d-001" in prose is not an id;
+ *   <li>a <b>spec</b> is "spec 040", "Spec 058's" or "slice 040" in any case, or a slug like {@code
+ *       040-run-budget}. Three digits throughout the archive today, but the number is read as
+ *       written, so a thousandth spec needs nothing changed here;
+ *   <li>an id with a spec names that id in that spec, on every page of it. An id with no spec names
+ *       something only if exactly one spec has it.
  * </ul>
  *
  * <p>The addresses come back current first, then applied history, then the rest; pages outside
@@ -35,7 +35,8 @@ import org.springframework.ai.document.Document;
 public final class IdentifierLookup {
 
   private static final Pattern ID =
-      Pattern.compile("(?<![\\w-])(?<prefix>[A-Z]+-)*[A-Z]+-?\\d+(?![\\w-])", Pattern.UNICODE_CHARACTER_CLASS);
+      Pattern.compile(
+          "(?<![\\w-])(?<prefix>[A-Z]+-)*[A-Z]+-?\\d+(?![\\w-])", Pattern.UNICODE_CHARACTER_CLASS);
 
   private static final Pattern SPEC =
       Pattern.compile(
@@ -71,7 +72,8 @@ public final class IdentifierLookup {
     var specs = new LinkedHashSet<String>();
     var matchingSpecs = SPEC.matcher(question);
     while (matchingSpecs.find()) {
-      String inProse = matchingSpecs.group("inProse"); // one branch matched, so one of the two is set
+      String inProse =
+          matchingSpecs.group("inProse"); // one branch matched, so one of the two is set
       specs.add(inProse != null ? inProse : matchingSpecs.group("inSlug"));
     }
     return new Named(ids, specs);
@@ -99,7 +101,9 @@ public final class IdentifierLookup {
     return addresses;
   }
 
-  /** Current first, then applied history; pages outside {@code changes/} first; then archive order. */
+  /**
+   * Current first, then applied history; pages outside {@code changes/} first; then archive order.
+   */
   private Comparator<String> pinOrder() {
     return Comparator.<String>comparingInt(address -> rank(lifecycleOf(address)))
         .thenComparing(address -> address.contains("/changes/"))
@@ -128,7 +132,7 @@ public final class IdentifierLookup {
    * fixed width, so that a thousandth spec cannot read as the hundredth.
    */
   private static String specOf(String address) {
-    String slug = address.split("/")[1];
+    String slug = address.split("/", -1)[1];
     int dash = slug.indexOf('-');
     return dash < 0 ? slug : slug.substring(0, dash);
   }

@@ -114,15 +114,17 @@ public final class Supersession {
       }
       var copy =
           ElementReader.first(
-              delta, inside -> !inside.id().isEmpty() && units.containsKey(source + "#" + inside.id()));
+              delta,
+              inside -> !inside.id().isEmpty() && units.containsKey(source + "#" + inside.id()));
       String from = copy != null ? source + "#" + copy.id() : unitAround(source, delta, units);
-      for (String id : LIST.split(delta.attr("target"))) {
+      for (String id : LIST.split(delta.attr("target"), -1)) {
         if (id.isEmpty()) {
           continue;
         }
         String to =
             source.contains("/changes/")
-                ? find(specDir(source), id, List.of("spec.html", "design.html", "tasks.html"), units)
+                ? find(
+                    specDir(source), id, List.of("spec.html", "design.html", "tasks.html"), units)
                 : find(source, id, units);
         if (to != null
             && from != null
@@ -183,10 +185,15 @@ public final class Supersession {
     if (units.containsKey(source + "#" + id)) {
       return source + "#" + id;
     }
-    return find(specDir(source), id, List.of("spec.html", "tasks.html", "design.html", "verify.html"), units);
+    return find(
+        specDir(source),
+        id,
+        List.of("spec.html", "tasks.html", "design.html", "verify.html"),
+        units);
   }
 
-  private static String find(String specDir, String id, List<String> files, Map<String, Unit> units) {
+  private static String find(
+      String specDir, String id, List<String> files, Map<String, Unit> units) {
     for (String f : files) {
       String address = specDir + "/" + f + "#" + id;
       if (units.containsKey(address)) {
@@ -197,6 +204,7 @@ public final class Supersession {
   }
 
   /** The first link with an href after {@code start}, in document order. */
+  @SuppressWarnings("ReferenceEquality") // the node we were given, not one equal to it
   private static Element next(Element root, Element start) {
     boolean seen = false;
     for (Element element : root.getAllElements()) {
@@ -217,7 +225,10 @@ public final class Supersession {
       return source;
     }
     var dir = Path.of(source).getParent();
-    return (dir == null ? Path.of(path) : dir.resolve(path)).normalize().toString().replace('\\', '/');
+    return (dir == null ? Path.of(path) : dir.resolve(path))
+        .normalize()
+        .toString()
+        .replace('\\', '/');
   }
 
   private static String fragment(String href) {
@@ -226,7 +237,7 @@ public final class Supersession {
   }
 
   private static String specDir(String source) {
-    String[] parts = source.split("/");
+    String[] parts = source.split("/", -1);
     return parts[0] + "/" + parts[1];
   }
 

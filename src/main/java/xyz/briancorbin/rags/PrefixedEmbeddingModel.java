@@ -21,10 +21,10 @@ import org.springframework.ai.embedding.EmbeddingResponse;
  * <p>The prefix goes only to the embedding model. The stored chunk text stays clean, so what the
  * chat model reads and what the quote resolver matches are the words in the file.
  *
- * <p>Which call is which follows from how {@code SimpleVectorStore} uses an {@link
- * EmbeddingModel}: it stores each chunk through {@link #embed(Document)} and searches through
- * {@link #embed(String)}, which ends in {@link #call}. So documents get the document prefix and
- * everything that arrives through {@link #call} is treated as a query.
+ * <p>Which call is which follows from how {@code SimpleVectorStore} uses an {@link EmbeddingModel}:
+ * it stores each chunk through {@link #embed(Document)} and searches through {@link
+ * #embed(String)}, which ends in {@link #call}. So documents get the document prefix and everything
+ * that arrives through {@link #call} is treated as a query.
  */
 public final class PrefixedEmbeddingModel implements EmbeddingModel {
 
@@ -47,20 +47,24 @@ public final class PrefixedEmbeddingModel implements EmbeddingModel {
   /** A chunk being stored. */
   @Override
   public float[] embed(Document document) {
-    var response =
-        delegate.call(prefixed(DOCUMENT, List.of(text(document))));
+    var response = delegate.call(prefixed(DOCUMENT, List.of(text(document))));
     recordTokens(response);
     return response.getResult().getOutput();
   }
 
-  /** Chunks being stored in batches, for vector stores that batch. The options are not passed on. */
+  /**
+   * Chunks being stored in batches, for vector stores that batch. The options are not passed on.
+   */
   @Override
   public List<float[]> embed(
       List<Document> documents, EmbeddingOptions options, BatchingStrategy batchingStrategy) {
     var out = new ArrayList<float[]>(documents.size());
     for (List<Document> batch : batchingStrategy.batch(documents)) {
       var texts = batch.stream().map(PrefixedEmbeddingModel::text).toList();
-      delegate.call(prefixed(DOCUMENT, texts)).getResults().forEach(result -> out.add(result.getOutput()));
+      delegate
+          .call(prefixed(DOCUMENT, texts))
+          .getResults()
+          .forEach(result -> out.add(result.getOutput()));
     }
     return out;
   }

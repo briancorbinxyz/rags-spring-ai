@@ -42,7 +42,8 @@ public final class EmbeddingDemo {
     float[] first = vectors.getFirst();
     out.append(
         "\"%s\" is %d numbers. The first five: %s%n%n"
-            .formatted(SENTENCES.getFirst(), first.length, Arrays.toString(Arrays.copyOf(first, 5))));
+            .formatted(
+                SENTENCES.getFirst(), first.length, Arrays.toString(Arrays.copyOf(first, 5))));
     out.append("Cosine similarity, 1.00 = same direction:\n\n");
     for (int i = 0; i < SENTENCES.size(); i++) {
       for (int j = i + 1; j < SENTENCES.size(); j++) {
@@ -58,7 +59,8 @@ public final class EmbeddingDemo {
     for (int i = 0; i < SENTENCES.size(); i++) {
       out.append(
           "%.2f  %s%n"
-              .formatted(EmbeddingMath.cosineSimilarity(question, vectors.get(i)), SENTENCES.get(i)));
+              .formatted(
+                  EmbeddingMath.cosineSimilarity(question, vectors.get(i)), SENTENCES.get(i)));
     }
     return out.toString();
   }

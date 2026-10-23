@@ -35,13 +35,16 @@ public final class OllamaModel {
               .GET()
               .build();
       HttpResponse<String> response =
-          HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build()
+          HttpClient.newBuilder()
+              .connectTimeout(Duration.ofSeconds(3))
+              .build()
               .send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) {
         return Optional.empty();
       }
       var parsed =
-          JsonMapper.shared().readValue(response.body(), new TypeReference<Map<String, Object>>() {});
+          JsonMapper.shared()
+              .readValue(response.body(), new TypeReference<Map<String, Object>>() {});
       @SuppressWarnings("unchecked")
       List<Map<String, Object>> models = (List<Map<String, Object>>) parsed.get("models");
       if (models == null) {

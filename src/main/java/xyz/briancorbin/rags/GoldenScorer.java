@@ -14,15 +14,15 @@ import org.springframework.ai.document.Document;
 /**
  * Decides, in code, whether a retrieved chunk found the passage a question expects.
  *
- * <p>An expected address names an element, such as {@code spec.html#FR-001}, but the naive
- * chunks know nothing about elements: they are 800-token slices of a page's text. So the scorer
- * finds where the element's text sits in the page's text, finds where the chunk sits, and
- * measures the overlap. A chunk that holds the whole element is a <em>hit</em>. One that holds at
- * least half of it is a <em>partial hit</em>, which is what a requirement cut in two by a chunk
- * boundary looks like.
+ * <p>An expected address names an element, such as {@code spec.html#FR-001}, but the naive chunks
+ * know nothing about elements: they are 800-token slices of a page's text. So the scorer finds
+ * where the element's text sits in the page's text, finds where the chunk sits, and measures the
+ * overlap. A chunk that holds the whole element is a <em>hit</em>. One that holds at least half of
+ * it is a <em>partial hit</em>, which is what a requirement cut in two by a chunk boundary looks
+ * like.
  *
- * <p>The page text is read exactly as the archive read it, with jsoup's {@code body().text()}, so
- * a chunk's text is a slice of it and positions can be compared directly.
+ * <p>The page text is read exactly as the archive read it, with jsoup's {@code body().text()}, so a
+ * chunk's text is a slice of it and positions can be compared directly.
  *
  * <p>From golden set version 2 a question can also carry passages the blind audit accepted (see
  * {@link GoldenSet.Accept}). An accepted passage found whole counts as a hit, and it covers the
@@ -51,7 +51,6 @@ public final class GoldenScorer {
     public boolean allAt(int k) {
       return firstAll != null && firstAll <= k;
     }
-
 
     public boolean hitAt(int k) {
       return firstHit != null && firstHit <= k;
@@ -90,7 +89,8 @@ public final class GoldenScorer {
    * Scores a ranked list of chunks against the expected addresses and the accepted ones. A partial
    * hit on an accepted passage counts as partial, never as a hit.
    */
-  public Score score(List<String> expected, List<GoldenSet.Accept> accept, List<Document> retrieved) {
+  public Score score(
+      List<String> expected, List<GoldenSet.Accept> accept, List<Document> retrieved) {
     Integer hit = null;
     Integer partial = null;
     Integer all = null;
@@ -196,7 +196,9 @@ public final class GoldenScorer {
     // The element's text can occur more than once on a page (in a summary table, say); judge the
     // chunk by the occurrence it overlaps most.
     int best = 0;
-    for (int e0 = page.text().indexOf(element); e0 >= 0; e0 = page.text().indexOf(element, e0 + 1)) {
+    for (int e0 = page.text().indexOf(element);
+        e0 >= 0;
+        e0 = page.text().indexOf(element, e0 + 1)) {
       int overlap = Math.min(e0 + element.length(), c0 + text.length()) - Math.max(e0, c0);
       best = Math.max(best, overlap);
     }
@@ -206,7 +208,9 @@ public final class GoldenScorer {
     return best * 2 >= element.length() ? Hit.PARTIAL : Hit.NONE;
   }
 
-  /** The text of the element an address names, or the whole page for an address with no {@code #}. */
+  /**
+   * The text of the element an address names, or the whole page for an address with no {@code #}.
+   */
   public Optional<String> elementText(String address) {
     int hash = address.indexOf('#');
     String file = hash < 0 ? address : address.substring(0, hash);

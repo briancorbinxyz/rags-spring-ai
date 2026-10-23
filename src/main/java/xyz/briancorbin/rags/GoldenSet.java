@@ -17,8 +17,8 @@ import tools.jackson.databind.json.JsonMapper;
  * be measured rather than judged by feel.
  *
  * <p>One JSON object per line, in the format the search series shares. Every later episode is
- * measured on these same questions, and the set is versioned with the corpus: each question
- * records the spectastic commit it was written against.
+ * measured on these same questions, and the set is versioned with the corpus: each question records
+ * the spectastic commit it was written against.
  */
 public final class GoldenSet {
 
@@ -55,8 +55,8 @@ public final class GoldenSet {
    *     wrongly
    * @param answer a one-line reference answer
    * @param commit the spectastic commit the question was checked against
-   * @param status {@code candidate} until a person has checked it against the source, then
-   *     {@code accepted}
+   * @param status {@code candidate} until a person has checked it against the source, then {@code
+   *     accepted}
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record Question(
@@ -88,7 +88,8 @@ public final class GoldenSet {
   public static List<Question> read(Resource resource) {
     var questions = new ArrayList<Question>();
     try (var in =
-        new BufferedReader(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+        new BufferedReader(
+            new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
       String line;
       while ((line = in.readLine()) != null) {
         if (line.isBlank() || line.strip().startsWith("//")) {

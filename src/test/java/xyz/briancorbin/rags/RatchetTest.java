@@ -18,8 +18,8 @@ import xyz.briancorbin.rags.RetrievalRun.Step;
  * Episode 4's main line, step by step, through the ratchet: the golden set, no model, and each step
  * against the one before. Writes each step's run file to {@code build/episode-4/}.
  *
- * <p>Needs the spectastic checkout at {@code ../spectastic} (or {@code -Dspectastic.path=…}) at
- * the commit the golden set was frozen against; skipped otherwise.
+ * <p>Needs the spectastic checkout at {@code ../spectastic} (or {@code -Dspectastic.path=…}) at the
+ * commit the golden set was frozen against; skipped otherwise.
  */
 class RatchetTest {
 
@@ -28,8 +28,11 @@ class RatchetTest {
   @Test
   void everyStepOfTheMainLinePassesTheRatchet() throws Exception {
     Path checkout = Path.of(System.getProperty("spectastic.path", "../spectastic"));
-    assumeTrue(Files.isDirectory(checkout.resolve("specs")), "no spectastic checkout at " + checkout.toAbsolutePath());
-    assumeTrue(SpecCorpus.commitOf(checkout).equals(COMMIT), "the golden set is frozen at " + COMMIT);
+    assumeTrue(
+        Files.isDirectory(checkout.resolve("specs")),
+        "no spectastic checkout at " + checkout.toAbsolutePath());
+    assumeTrue(
+        SpecCorpus.commitOf(checkout).equals(COMMIT), "the golden set is frozen at " + COMMIT);
 
     var questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));
     try (var keywords = KeywordSearch.of(new ElementUnits(new ElementReader(checkout).get()))) {
@@ -40,23 +43,34 @@ class RatchetTest {
       var cut = new TopDocuments(ElementRetriever.DEPTH);
       var steps =
           List.of(
-              new Step("step-1", "element units + BM25", ElementRetriever.builder()
-                  .keywords(keywords)
-                  .build(), cut),
-              new Step("step-2", "+ identifier lookup", ElementRetriever.builder()
-                  .keywords(keywords)
-                  .identifiers(ids)
-                  .build(), cut),
-              new Step("step-3", "+ lifecycle filter", ElementRetriever.builder()
-                  .keywords(keywords)
-                  .identifiers(ids)
-                  .filter(Lifecycle.IN_FORCE)
-                  .build(), cut),
-              new Step("step-4", "+ supersession redirect", ElementRetriever.builder()
-                  .keywords(keywords)
-                  .identifiers(ids)
-                  .filter(Lifecycle.IN_FORCE)
-                  .build(), PostProcessors.of(cut, new SupersessionRedirect(keywords))));
+              new Step(
+                  "step-1",
+                  "element units + BM25",
+                  ElementRetriever.builder().keywords(keywords).build(),
+                  cut),
+              new Step(
+                  "step-2",
+                  "+ identifier lookup",
+                  ElementRetriever.builder().keywords(keywords).identifiers(ids).build(),
+                  cut),
+              new Step(
+                  "step-3",
+                  "+ lifecycle filter",
+                  ElementRetriever.builder()
+                      .keywords(keywords)
+                      .identifiers(ids)
+                      .filter(Lifecycle.IN_FORCE)
+                      .build(),
+                  cut),
+              new Step(
+                  "step-4",
+                  "+ supersession redirect",
+                  ElementRetriever.builder()
+                      .keywords(keywords)
+                      .identifiers(ids)
+                      .filter(Lifecycle.IN_FORCE)
+                      .build(),
+                  PostProcessors.of(cut, new SupersessionRedirect(keywords))));
 
       var tallies = new ArrayList<Tally>();
       for (Step step : steps) {
@@ -75,7 +89,19 @@ class RatchetTest {
       assertEquals(List.of(24, 26, 26, 26), tallies.stream().map(Tally::allEvidence).toList());
       assertEquals(List.of(3, 3, 1, 0), tallies.stream().map(Tally::stale).toList());
       assertEquals(
-          Map.of("single-fact", 8, "paraphrase", 2, "identifier", 8, "relation", 6, "stale", 7, "intent", 1),
+          Map.of(
+              "single-fact",
+              8,
+              "paraphrase",
+              2,
+              "identifier",
+              8,
+              "relation",
+              6,
+              "stale",
+              7,
+              "intent",
+              1),
           tallies.getLast().hitsByStratum());
     }
   }
@@ -83,9 +109,13 @@ class RatchetTest {
   @Test
   void aStepFailsIfItGoesBackwardsOnAnyRule() {
     var before = new Tally(47, 32, 26, 1, Map.of("identifier", 8, "paraphrase", 2));
-    assertEquals(List.of(), Ratchet.failures(before, new Tally(47, 32, 26, 0, Map.of("identifier", 7, "paraphrase", 3))));
+    assertEquals(
+        List.of(),
+        Ratchet.failures(
+            before, new Tally(47, 32, 26, 0, Map.of("identifier", 7, "paraphrase", 3))));
     assertEquals(
         List.of("Hit@4 32→31", "all-evidence@4 26→25", "identifier 8→6", "stale@4 1→2"),
-        Ratchet.failures(before, new Tally(47, 31, 25, 2, Map.of("identifier", 6, "paraphrase", 3))));
+        Ratchet.failures(
+            before, new Tally(47, 31, 25, 2, Map.of("identifier", 6, "paraphrase", 3))));
   }
 }

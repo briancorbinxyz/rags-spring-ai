@@ -13,11 +13,11 @@ import org.springframework.ai.embedding.EmbeddingRequest;
  *
  * <p>A unit is embedded as {@link ElementReader#passage}, the heading path in front of the text, so
  * {@code FR-001} on its own still carries which spec's requirements it belongs to — the same text a
- * reader would be given, and the same text the reranker scores. Each part of a split unit is its own
- * vector.
+ * reader would be given, and the same text the reranker scores. Each part of a split unit is its
+ * own vector.
  *
- * <p>Every vector is scaled to length one, so the cosine of two of them is their dot product, and
- * a search is an exact scan over all of them. There is no approximate index here on purpose: ten
+ * <p>Every vector is scaled to length one, so the cosine of two of them is their dot product, and a
+ * search is an exact scan over all of them. There is no approximate index here on purpose: ten
  * thousand units is small, the scan takes milliseconds, and an exact answer means a difference in
  * the results is never the index's fault. The lifecycle filter is applied during the scan, before
  * the depth cut, the way a vector store applies a metadata filter.
@@ -35,8 +35,14 @@ public final class VectorSearch {
   private final EmbeddingPrefix prefix;
   private final VectorCache cache;
 
-  private VectorSearch(ElementUnits units, float[][] vectors, Lifecycle[] lifecycles,
-      EmbeddingModel model, String modelId, EmbeddingPrefix prefix, VectorCache cache) {
+  private VectorSearch(
+      ElementUnits units,
+      float[][] vectors,
+      Lifecycle[] lifecycles,
+      EmbeddingModel model,
+      String modelId,
+      EmbeddingPrefix prefix,
+      VectorCache cache) {
     this.units = units;
     this.vectors = vectors;
     this.lifecycles = lifecycles;
@@ -51,8 +57,12 @@ public final class VectorSearch {
    *
    * @param modelId what the cache is keyed by: the model and its digest, never just its name
    */
-  public static VectorSearch of(ElementUnits units, EmbeddingModel model, String modelId,
-      EmbeddingPrefix prefix, VectorCache cache) {
+  public static VectorSearch of(
+      ElementUnits units,
+      EmbeddingModel model,
+      String modelId,
+      EmbeddingPrefix prefix,
+      VectorCache cache) {
     var texts =
         units.all().stream().map(unit -> prefix.document(ElementReader.passage(unit))).toList();
     var vectors = new float[units.size()][];
@@ -118,7 +128,8 @@ public final class VectorSearch {
     if (cached != null) {
       return normalise(cached);
     }
-    float[] raw = model.call(new EmbeddingRequest(List.of(text), null)).getResults().getFirst().getOutput();
+    float[] raw =
+        model.call(new EmbeddingRequest(List.of(text), null)).getResults().getFirst().getOutput();
     cache.put(modelId, text, raw);
     cache.commit();
     return normalise(raw);

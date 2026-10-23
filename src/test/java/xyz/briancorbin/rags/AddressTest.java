@@ -13,7 +13,16 @@ class AddressTest {
     var d =
         Document.builder()
             .text("x")
-            .metadata(Map.of(Address.SOURCE, "specs/059/spec.html", "chunk_index", 0, "total_chunks", 7, "title", "Corpus"))
+            .metadata(
+                Map.of(
+                    Address.SOURCE,
+                    "specs/059/spec.html",
+                    "chunk_index",
+                    0,
+                    "total_chunks",
+                    7,
+                    "title",
+                    "Corpus"))
             .build();
     assertEquals(new Address("specs/059/spec.html", 1, 7, "Corpus"), Address.of(d));
     assertEquals("specs/059/spec.html, chunk 1 of 7", Address.of(d).toString());

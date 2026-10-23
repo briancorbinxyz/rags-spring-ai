@@ -3,8 +3,8 @@ package xyz.briancorbin.rags;
 /**
  * A quotation the program has traced to a retrieved chunk.
  *
- * <p>Only quotations that appear, word for word, in something the retriever brought back become
- * a {@code Quote}. The address comes from that chunk's metadata, never from the model.
+ * <p>Only quotations that appear, word for word, in something the retriever brought back become a
+ * {@code Quote}. The address comes from that chunk's metadata, never from the model.
  *
  * @param label how Alpha cites it, e.g. {@code Q2}
  * @param text the quotation as Beta wrote it

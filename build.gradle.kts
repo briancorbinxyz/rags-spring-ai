@@ -1,7 +1,13 @@
+import net.ltgt.gradle.errorprone.errorprone
+
 plugins {
     java
     id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
+    // Episode 5: one set of conventions, enforced. Google style, 2 spaces, 100 columns --
+    // the code is quoted in the articles, so an unformatted excerpt is a published defect.
+    id("com.diffplug.spotless") version "8.8.0"
+    id("net.ltgt.errorprone") version "4.1.0"
 }
 
 group = "xyz.briancorbin"
@@ -34,11 +40,41 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.53.2.1")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    errorprone("com.google.errorprone:error_prone_core:2.50.0")
 }
 
 dependencyManagement {
     imports {
         mavenBom("org.springframework.ai:spring-ai-bom:${property("springAiVersion")}")
+    }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    // Fail on any warning: a warning nobody acts on is noise that hides the next one.
+    options.compilerArgs.addAll(
+        listOf(
+            "-Werror",
+            "-Xlint:all",
+            "-Xlint:-processing", // JUnit 5's auto-registration triggers this; noise, not signal.
+        ),
+    )
+    options.errorprone {
+        // Error Prone's defaults, plus three it ships switched off that match how this code is read.
+        enable("ImmutableSetForContains", "ConstantPatternCompile", "IdentifierName")
+    }
+}
+
+spotless {
+    java {
+        target("src/**/*.java")
+        googleJavaFormat("1.35.0") // Google style: 2-space indent, 100 columns
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint()
     }
 }
 

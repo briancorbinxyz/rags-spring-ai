@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -31,12 +30,15 @@ public final class KeywordSearch implements AutoCloseable {
   /** The heading path, the id, the text. */
   static final double[] WEIGHTS = {5.0, 10.0, 1.0};
 
+  /** One space: declared above STOP_WORDS, which splits on it while the class initialises. */
+  private static final Pattern SPACE = Pattern.compile(" ", Pattern.LITERAL);
+
   private static final Set<String> STOP_WORDS =
       Set.of(
-          ("a an the of in on for to and or is are was were be by with what which how does do did that this "
+          SPACE.split(
+              "a an the of in on for to and or is are was were be by with what which how does do did that this "
                   + "it its as at from when who whom why where after before into than then there their they them "
-                  + "should must can could would will spec spectastic say says about")
-              .split(" "));
+                  + "should must can could would will spec spectastic say says about"));
 
   private static final Pattern WORD = Pattern.compile("[A-Za-z0-9][A-Za-z0-9\\-]*");
 
@@ -67,7 +69,10 @@ public final class KeywordSearch implements AutoCloseable {
           String path = String.valueOf(marks.get(ElementReader.HEADING_PATH));
           insert.setInt(1, row);
           insert.setString(
-              2, join(path.isEmpty() ? marks.get(ElementReader.TITLE) : path, marks.get(ElementReader.HEADING)));
+              2,
+              join(
+                  path.isEmpty() ? marks.get(ElementReader.TITLE) : path,
+                  marks.get(ElementReader.HEADING)));
           insert.setString(3, String.valueOf(marks.get(ElementReader.ANCHOR)));
           insert.setString(4, unit.getText());
           insert.setString(5, String.valueOf(marks.get(ElementReader.LIFECYCLE)));
@@ -99,7 +104,9 @@ public final class KeywordSearch implements AutoCloseable {
     return query(sql, question, depth, null);
   }
 
-  /** Ranks the given units, and only them, for a question; units with no matching word are left out. */
+  /**
+   * Ranks the given units, and only them, for a question; units with no matching word are left out.
+   */
   public List<Document> rank(String question, Collection<Document> scope) {
     String ids =
         scope.stream()

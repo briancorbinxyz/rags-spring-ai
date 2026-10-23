@@ -45,13 +45,14 @@ public enum Lifecycle {
       Collections.unmodifiableSet(EnumSet.complementOf(EnumSet.copyOf(OUT_OF_DATE)));
 
   /** A search filter: every unit, whatever state it is in. */
-  public static final Set<Lifecycle> ALL = Collections.unmodifiableSet(EnumSet.allOf(Lifecycle.class));
+  public static final Set<Lifecycle> ALL =
+      Collections.unmodifiableSet(EnumSet.allOf(Lifecycle.class));
 
   private static final Set<String> EXCLUDED = Set.of("withdrawn", "superseded", "rejected");
 
   /**
-   * The filter as SQL: {@code lifecycle in ('current', 'history')}, nothing at all for {@link #ALL},
-   * and a condition that matches nothing for a filter that allows nothing.
+   * The filter as SQL: {@code lifecycle in ('current', 'history')}, nothing at all for {@link
+   * #ALL}, and a condition that matches nothing for a filter that allows nothing.
    */
   static String sql(Set<Lifecycle> filter) {
     if (filter.containsAll(ALL)) {

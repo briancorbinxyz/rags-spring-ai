@@ -57,7 +57,12 @@ public final class ElementReader implements DocumentReader {
   /** Longer units are split: about 350 tokens a part, so a question and a part fit a reranker. */
   static final int PART_WORDS = 250;
 
-  private static final Pattern WHITESPACE = Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
+  private static final Pattern WHITESPACE =
+      Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
+
+  /** One space: a constant so the split is not recompiled per unit, and has no regex surprises. */
+  private static final Pattern SPACE = Pattern.compile(" ", Pattern.LITERAL);
+
   private static final Pattern SENTENCE_END =
       Pattern.compile("(?<=[.!?;:])\\s+", Pattern.UNICODE_CHARACTER_CLASS);
   private static final Set<String> HEADINGS = Set.of("h1", "h2", "h3", "h4", "h5", "h6");
@@ -68,7 +73,9 @@ public final class ElementReader implements DocumentReader {
 
   private final Path checkout;
 
-  /** @param checkout a spectastic checkout: the folder that holds {@code specs/} */
+  /**
+   * @param checkout a spectastic checkout: the folder that holds {@code specs/}
+   */
   public ElementReader(Path checkout) {
     this.checkout = checkout;
   }
@@ -141,6 +148,7 @@ public final class ElementReader implements DocumentReader {
     }
   }
 
+  @SuppressWarnings("ReferenceEquality") // the body element itself, not one equal to it
   private static Map<String, Unit> units(Page page) {
     var units = new LinkedHashMap<String, Unit>();
     Element titleElement = page.html().selectFirst("title");
@@ -149,10 +157,12 @@ public final class ElementReader implements DocumentReader {
     Element status = page.html().selectFirst("spec-meta spec-status");
     boolean pageSuperseded = status != null && "superseded".equals(status.attr("value"));
     for (Element el : page.body().getAllElements()) {
+      // Identity on purpose: "is this the body element itself", not "equal to some body".
       if (el == page.body() || el.id().isEmpty()) {
         continue;
       }
-      String text = text(el, inner -> !inner.id().isEmpty()); // an element with an id is its own unit
+      String text =
+          text(el, inner -> !inner.id().isEmpty()); // an element with an id is its own unit
       if (words(text) < MIN_WORDS) {
         continue; // a heading on its own is a label, not a passage
       }
@@ -164,11 +174,20 @@ public final class ElementReader implements DocumentReader {
       if (pageSuperseded && lifecycle == Lifecycle.CURRENT) {
         lifecycle = Lifecycle.SUPERSEDED;
       }
-      String spec = page.source().split("/")[1];
+      String spec = page.source().split("/", -1)[1];
       var ownHeading = first(el, inner -> Set.of("h2", "h3", "h4").contains(inner.normalName()));
       String heading = ownHeading == null ? "" : strippedText(ownHeading);
-      units.put(address, new Unit(page.source(), el.id(), spec, title,
-          headingPath(title, el), heading, lifecycle, parts(text)));
+      units.put(
+          address,
+          new Unit(
+              page.source(),
+              el.id(),
+              spec,
+              title,
+              headingPath(title, el),
+              heading,
+              lifecycle,
+              parts(text)));
     }
     return units;
   }
@@ -198,15 +217,15 @@ public final class ElementReader implements DocumentReader {
    * as many parts as the length needs, each about the same size.
    */
   static List<String> parts(String text, int max) {
-    String[] words = text.split(" ");
+    String[] words = SPACE.split(text, -1);
     if (words.length <= max) {
       return List.of(text);
     }
     int n = (int) Math.ceil(words.length / (double) max);
     double target = words.length / (double) n;
     var pieces = new ArrayList<List<String>>();
-    for (String sentence : SENTENCE_END.split(text)) {
-      List<String> remaining = sentence.isEmpty() ? List.of() : List.of(sentence.split(" "));
+    for (String sentence : SENTENCE_END.split(text, -1)) {
+      List<String> remaining = sentence.isEmpty() ? List.of() : List.of(SPACE.split(sentence, -1));
       while (remaining.size() > max) { // one very long "sentence", a table say: cut by words
         pieces.add(remaining.subList(0, max));
         remaining = remaining.subList(max, remaining.size());
@@ -260,7 +279,8 @@ public final class ElementReader implements DocumentReader {
     return out.isEmpty() ? "" : out.substring(1);
   }
 
-  private static void collect(Element el, Predicate<Element> skip, boolean strip, StringBuilder out) {
+  private static void collect(
+      Element el, Predicate<Element> skip, boolean strip, StringBuilder out) {
     for (Node child : el.childNodes()) {
       if (child instanceof TextNode text) {
         String words = strip ? text.getWholeText().strip() : text.getWholeText();
@@ -280,14 +300,17 @@ public final class ElementReader implements DocumentReader {
   }
 
   static int words(String collapsed) {
-    return collapsed.isEmpty() ? 0 : collapsed.split(" ").length;
+    return collapsed.isEmpty() ? 0 : SPACE.split(collapsed, -1).length;
   }
 
-  /** The first element inside {@code el} (not {@code el} itself), in document order, that matches. */
+  /**
+   * The first element inside {@code el} (not {@code el} itself), in document order, that matches.
+   */
+  @SuppressWarnings("ReferenceEquality") // the node itself is excluded, not one equal to it
   static Element first(Element el, Predicate<Element> test) {
-    for (Element e : el.getAllElements()) {
-      if (e != el && test.test(e)) {
-        return e;
+    for (Element inside : el.getAllElements()) {
+      if (inside != el && test.test(inside)) {
+        return inside;
       }
     }
     return null;
@@ -321,7 +344,8 @@ public final class ElementReader implements DocumentReader {
   /** The HTML files among {@code files}, ordered by their '/' path so a run is reproducible. */
   private static List<Path> sortedHtmlFilesIn(Stream<Path> files) {
     return files
-        .filter(path -> path.getFileName().toString().endsWith(".html") && Files.isRegularFile(path))
+        .filter(
+            path -> path.getFileName().toString().endsWith(".html") && Files.isRegularFile(path))
         .sorted(Comparator.comparing(ElementReader::slash))
         .toList();
   }

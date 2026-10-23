@@ -10,7 +10,12 @@ class ArchiveTest {
   @Test
   void alphaSeesEachQuotationWithItsLabelAndAddress() {
     var quotes =
-        List.of(new Quote("Q1", "Retrieval MUST NOT be built", new Address("specs/059/spec.html", 2, 3, "T"), 1));
+        List.of(
+            new Quote(
+                "Q1",
+                "Retrieval MUST NOT be built",
+                new Address("specs/059/spec.html", 2, 3, "T"),
+                1));
     assertEquals(
         String.join(
             System.lineSeparator(),
@@ -25,7 +30,11 @@ class ArchiveTest {
   @Test
   void withNothingTracedAlphaIsToldSo() {
     assertEquals(
-        String.join(System.lineSeparator(), "Question: Why no index?", "", "Quotations Beta traced to the archive: none."),
+        String.join(
+            System.lineSeparator(),
+            "Question: Why no index?",
+            "",
+            "Quotations Beta traced to the archive: none."),
         Archive.alphaPrompt("Why no index?", List.of()));
   }
 }

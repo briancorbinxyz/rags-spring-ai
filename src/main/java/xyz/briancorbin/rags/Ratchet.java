@@ -23,7 +23,8 @@ import xyz.briancorbin.rags.RetrievalRun.Result;
 public final class Ratchet {
 
   /** Counts over the answerable questions of one run. */
-  public record Tally(int questions, int hits, int allEvidence, int stale, Map<String, Integer> hitsByStratum) {
+  public record Tally(
+      int questions, int hits, int allEvidence, int stale, Map<String, Integer> hitsByStratum) {
 
     public static Tally of(List<Result> results) {
       int answered = 0;
@@ -53,7 +54,8 @@ public final class Ratchet {
 
     @Override
     public String toString() {
-      return "Hit@4 %d/%d, all-evidence@4 %d, stale@4 %d, by kind %s".formatted(hits, questions, allEvidence, stale, hitsByStratum);
+      return "Hit@4 %d/%d, all-evidence@4 %d, stale@4 %d, by kind %s"
+          .formatted(hits, questions, allEvidence, stale, hitsByStratum);
     }
   }
 
@@ -68,12 +70,15 @@ public final class Ratchet {
     if (current.allEvidence() < previous.allEvidence()) {
       why.add("all-evidence@4 %d→%d".formatted(previous.allEvidence(), current.allEvidence()));
     }
-    previous.hitsByStratum().forEach((stratum, before) -> {
-      int after = current.hitsByStratum().getOrDefault(stratum, 0);
-      if (before - after > 1) {
-        why.add("%s %d→%d".formatted(stratum, before, after));
-      }
-    });
+    previous
+        .hitsByStratum()
+        .forEach(
+            (stratum, before) -> {
+              int after = current.hitsByStratum().getOrDefault(stratum, 0);
+              if (before - after > 1) {
+                why.add("%s %d→%d".formatted(stratum, before, after));
+              }
+            });
     if (current.stale() > previous.stale()) {
       why.add("stale@4 %d→%d".formatted(previous.stale(), current.stale()));
     }

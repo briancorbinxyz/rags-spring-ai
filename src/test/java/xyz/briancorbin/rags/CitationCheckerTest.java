@@ -13,8 +13,16 @@ class CitationCheckerTest {
   private final CitationChecker checker = new CitationChecker();
   private final List<Quote> given =
       List.of(
-          new Quote("Q1", "Retrieval MUST NOT be built", new Address("specs/059/spec.html", 2, 3, "T"), 1),
-          new Quote("Q2", "The corpus MUST NOT require a vector index", new Address("specs/051/spec.html", 1, 2, "T"), 2));
+          new Quote(
+              "Q1",
+              "Retrieval MUST NOT be built",
+              new Address("specs/059/spec.html", 2, 3, "T"),
+              1),
+          new Quote(
+              "Q2",
+              "The corpus MUST NOT require a vector index",
+              new Address("specs/051/spec.html", 1, 2, "T"),
+              2));
 
   @Test
   void citingAGivenLabelIsSupported() {
@@ -26,7 +34,8 @@ class CitationCheckerTest {
   @Test
   void bracketsAndCaseAreForgivenButNothingElse() {
     assertEquals(Status.SUPPORTED, checker.check(new Claim("x", List.of("[q2]")), given).status());
-    assertEquals(Status.CONTRADICTED, checker.check(new Claim("x", List.of("Quote 2")), given).status());
+    assertEquals(
+        Status.CONTRADICTED, checker.check(new Claim("x", List.of("Quote 2")), given).status());
   }
 
   @Test
@@ -38,24 +47,34 @@ class CitationCheckerTest {
 
   @Test
   void anUncitedClaimIsUnsupportedUnlessItAbstains() {
-    assertEquals(Status.UNSUPPORTED, checker.check(new Claim("spectastic uses Postgres.", List.of()), given).status());
-    assertEquals(Status.UNCHECKED, checker.check(new Claim("Not in the archive.", List.of()), given).status());
+    assertEquals(
+        Status.UNSUPPORTED,
+        checker.check(new Claim("spectastic uses Postgres.", List.of()), given).status());
+    assertEquals(
+        Status.UNCHECKED,
+        checker.check(new Claim("Not in the archive.", List.of()), given).status());
   }
 
   @Test
   void abstainingMeansSayingSoAndCitingNothing() {
-    assertTrue(checker.abstained(new Commentary("", List.of(new Claim("Not in the archive.", List.of()))), List.of()));
+    assertTrue(
+        checker.abstained(
+            new Commentary("", List.of(new Claim("Not in the archive.", List.of()))), List.of()));
     var both =
         new Commentary(
             "",
-            List.of(new Claim("Not in the archive.", List.of()), new Claim("Though Q1 says this.", List.of("Q1"))));
+            List.of(
+                new Claim("Not in the archive.", List.of()),
+                new Claim("Though Q1 says this.", List.of("Q1"))));
     assertFalse(checker.abstained(both, given));
   }
 
   @Test
   void citedQuotationsComeBackInOrderWithoutRepeats() {
     var reply =
-        new Commentary("", List.of(new Claim("a", List.of("Q2")), new Claim("b", List.of("Q2", "Q1", "Q9"))));
-    assertEquals(List.of("Q2", "Q1"), checker.cited(reply, given).stream().map(Quote::label).toList());
+        new Commentary(
+            "", List.of(new Claim("a", List.of("Q2")), new Claim("b", List.of("Q2", "Q1", "Q9"))));
+    assertEquals(
+        List.of("Q2", "Q1"), checker.cited(reply, given).stream().map(Quote::label).toList());
   }
 }

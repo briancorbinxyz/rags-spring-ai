@@ -46,7 +46,9 @@ class GoldenSetTest {
     assertFalse(questions.get(1).answerable());
   }
 
-  /** The shipped set is well formed: unique ids, known strata, and sources where there should be. */
+  /**
+   * The shipped set is well formed: unique ids, known strata, and sources where there should be.
+   */
   @Test
   void theShippedSetIsWellFormed() {
     var questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));

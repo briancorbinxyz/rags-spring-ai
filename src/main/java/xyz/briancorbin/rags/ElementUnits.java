@@ -18,13 +18,15 @@ import org.springframework.ai.document.Document;
  * so {@link #parts} is how you ask for a unit rather than one piece of it.
  *
  * <p>It holds no index of its own. {@link KeywordSearch} and {@link VectorSearch} each build their
- * own over the same units, which is what lets their results be fused: the same unit, found two ways.
+ * own over the same units, which is what lets their results be fused: the same unit, found two
+ * ways.
  */
 public final class ElementUnits {
 
   private final List<Document> units;
   private final Map<String, Integer> rows = new HashMap<>(); // document id -> archive position
-  private final LinkedHashMap<String, List<Document>> parts = new LinkedHashMap<>(); // address -> parts
+  private final LinkedHashMap<String, List<Document>> parts =
+      new LinkedHashMap<>(); // address -> parts
 
   public ElementUnits(List<Document> units) {
     this.units = List.copyOf(units);

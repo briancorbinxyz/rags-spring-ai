@@ -28,7 +28,8 @@ class PrefixedEmbeddingModelTest {
         out.add(new Embedding(new float[] {1f, 0f}, i));
         tokens += request.getInstructions().get(i).length();
       }
-      return new EmbeddingResponse(out, new EmbeddingResponseMetadata("fake", new DefaultUsage(tokens, 0)));
+      return new EmbeddingResponse(
+          out, new EmbeddingResponseMetadata("fake", new DefaultUsage(tokens, 0)));
     }
 
     @Override
@@ -45,7 +46,9 @@ class PrefixedEmbeddingModelTest {
     model.embed(chunk);
     model.embed("Why no index?");
     assertEquals(
-        List.of("search_document: The index is never the source of record.", "search_query: Why no index?"),
+        List.of(
+            "search_document: The index is never the source of record.",
+            "search_query: Why no index?"),
         recorder.seen);
     // The stored text itself is untouched.
     assertEquals("The index is never the source of record.", chunk.getText());

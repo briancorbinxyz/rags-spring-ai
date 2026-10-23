@@ -11,11 +11,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.json.JsonMapper;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
 import org.springframework.core.io.ClassPathResource;
+import tools.jackson.databind.json.JsonMapper;
 import xyz.briancorbin.rags.Ratchet.Tally;
 import xyz.briancorbin.rags.RetrievalRun.Step;
 
@@ -29,10 +29,10 @@ import xyz.briancorbin.rags.RetrievalRun.Step;
  * test to update quietly.
  *
  * <p>Needs, and skips cleanly without: the spectastic checkout at the pinned commit; Ollama serving
- * {@code nomic-embed-text:v1.5} at the pinned digest; and, for step 6 only,
- * {@code tools/rerank-service/serve.py}. Vectors come from the cache shared with the prototype
- * ({@code -Dvectors.cache=…}); with a cold cache the first run embeds all 11,492 passages, which
- * takes about ten minutes.
+ * {@code nomic-embed-text:v1.5} at the pinned digest; and, for step 6 only, {@code
+ * tools/rerank-service/serve.py}. Vectors come from the cache shared with the prototype ({@code
+ * -Dvectors.cache=…}); with a cold cache the first run embeds all 11,492 passages, which takes
+ * about ten minutes.
  */
 class Episode5RatchetTest {
 
@@ -47,13 +47,27 @@ class Episode5RatchetTest {
   @Test
   void bothEpisode5StepsLoseOnTheLaptopTier() throws Exception {
     Path checkout = Path.of(System.getProperty("spectastic.path", "../spectastic"));
-    assumeTrue(Files.isDirectory(checkout.resolve("specs")), "no spectastic checkout at " + checkout.toAbsolutePath());
-    assumeTrue(SpecCorpus.commitOf(checkout).equals(RatchetTest.COMMIT), "the golden set is frozen at " + RatchetTest.COMMIT);
+    assumeTrue(
+        Files.isDirectory(checkout.resolve("specs")),
+        "no spectastic checkout at " + checkout.toAbsolutePath());
+    assumeTrue(
+        SpecCorpus.commitOf(checkout).equals(RatchetTest.COMMIT),
+        "the golden set is frozen at " + RatchetTest.COMMIT);
 
     String url = System.getProperty("ollama.url", OllamaModel.DEFAULT_URL);
     Optional<String> digest = OllamaModel.digest(url, MODEL);
-    assumeTrue(digest.isPresent(), "Ollama at " + url + " has no " + MODEL + " (ollama pull " + MODEL + ")");
-    assumeTrue(digest.get().startsWith(DIGEST), "a different build of " + MODEL + ": " + digest.get() + ", not " + DIGEST + ". The numbers are a new baseline.");
+    assumeTrue(
+        digest.isPresent(),
+        "Ollama at " + url + " has no " + MODEL + " (ollama pull " + MODEL + ")");
+    assumeTrue(
+        digest.get().startsWith(DIGEST),
+        "a different build of "
+            + MODEL
+            + ": "
+            + digest.get()
+            + ", not "
+            + DIGEST
+            + ". The numbers are a new baseline.");
 
     String rerankUrl = System.getProperty("rerank.url", CrossEncoderReranker.DEFAULT_URL);
     Optional<String> reranker = CrossEncoderReranker.modelAt(rerankUrl);
@@ -78,11 +92,15 @@ class Episode5RatchetTest {
       assertEquals(768, vectors.dimensions());
 
       var step4 =
-          new Step("step-4", "+ supersession redirect", ElementRetriever.builder()
-              .keywords(keywords)
-              .identifiers(ids)
-              .filter(Lifecycle.IN_FORCE)
-              .build(), new SupersessionRedirect(keywords));
+          new Step(
+              "step-4",
+              "+ supersession redirect",
+              ElementRetriever.builder()
+                  .keywords(keywords)
+                  .identifiers(ids)
+                  .filter(Lifecycle.IN_FORCE)
+                  .build(),
+              new SupersessionRedirect(keywords));
 
       var fused =
           ElementRetriever.builder()
@@ -94,8 +112,8 @@ class Episode5RatchetTest {
       var cut = new TopDocuments(ElementRetriever.DEPTH);
       var redirect = new SupersessionRedirect(keywords);
 
-      var step5 = new Step("step-5", "+ dense search, fused", fused,
-          PostProcessors.of(cut, redirect));
+      var step5 =
+          new Step("step-5", "+ dense search, fused", fused, PostProcessors.of(cut, redirect));
 
       Tally four = tally(step4, questions, out);
       Tally five = tally(step5, questions, out);
@@ -105,22 +123,54 @@ class Episode5RatchetTest {
       assertEquals(33, five.allEvidence());
       assertEquals(0, five.stale());
       assertEquals(
-          Map.of("single-fact", 9, "paraphrase", 6, "identifier", 8, "relation", 4, "stale", 7, "intent", 2),
+          Map.of(
+              "single-fact",
+              9,
+              "paraphrase",
+              6,
+              "identifier",
+              8,
+              "relation",
+              4,
+              "stale",
+              7,
+              "intent",
+              2),
           five.hitsByStratum());
-      assertEquals(List.of("relation 6→4"), Ratchet.failures(four, five), "step 5 loses the relation questions");
+      assertEquals(
+          List.of("relation 6→4"),
+          Ratchet.failures(four, five),
+          "step 5 loses the relation questions");
 
-      assumeTrue(reranker.isPresent(),
+      assumeTrue(
+          reranker.isPresent(),
           "no reranker at " + rerankUrl + ": start tools/rerank-service/serve.py for step 6");
       assertEquals("cross-encoder/ms-marco-MiniLM-L-6-v2", reranker.get());
-      var step6 = new Step("step-6", "+ cross-encoder reranking", fused,
-          PostProcessors.of(new CrossEncoderReranker(rerankUrl), cut, redirect));
+      var step6 =
+          new Step(
+              "step-6",
+              "+ cross-encoder reranking",
+              fused,
+              PostProcessors.of(new CrossEncoderReranker(rerankUrl), cut, redirect));
 
       Tally six = tally(step6, questions, out);
       assertEquals(32, six.hits());
       assertEquals(28, six.allEvidence());
       assertEquals(0, six.stale());
       assertEquals(
-          Map.of("single-fact", 7, "paraphrase", 3, "identifier", 8, "relation", 5, "stale", 7, "intent", 2),
+          Map.of(
+              "single-fact",
+              7,
+              "paraphrase",
+              3,
+              "identifier",
+              8,
+              "relation",
+              5,
+              "stale",
+              7,
+              "intent",
+              2),
           six.hitsByStratum());
       assertEquals(
           List.of("Hit@4 36→32", "all-evidence@4 33→28", "single-fact 9→7", "paraphrase 6→3"),
@@ -148,8 +198,10 @@ class Episode5RatchetTest {
   private static void parity(Step step, List<RetrievalRun.Result> results, Path out) {
     var lines = new ArrayList<String>();
     for (RetrievalRun.Result r : results) {
-      lines.add(JsonMapper.shared().writeValueAsString(
-          Map.of("step", step.name(), "id", r.question().id(), "ranked", r.ranked())));
+      lines.add(
+          JsonMapper.shared()
+              .writeValueAsString(
+                  Map.of("step", step.name(), "id", r.question().id(), "ranked", r.ranked())));
     }
     try {
       Files.createDirectories(out);

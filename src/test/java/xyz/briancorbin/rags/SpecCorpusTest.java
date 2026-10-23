@@ -37,9 +37,12 @@ class SpecCorpusTest {
 
   @Test
   void theSpecIsTheFolderUnderSpecs() {
-    assertEquals("059-corpus-retrieval-scale", SpecCorpus.specOf("specs/059-corpus-retrieval-scale/spec.html"));
+    assertEquals(
+        "059-corpus-retrieval-scale",
+        SpecCorpus.specOf("specs/059-corpus-retrieval-scale/spec.html"));
     assertEquals(
         "094-visual-sidecar-convention",
-        SpecCorpus.specOf("specs/094-visual-sidecar-convention/changes/withdrawn/2026-08-14-bind-the-checks/proposal.html"));
+        SpecCorpus.specOf(
+            "specs/094-visual-sidecar-convention/changes/withdrawn/2026-08-14-bind-the-checks/proposal.html"));
   }
 }

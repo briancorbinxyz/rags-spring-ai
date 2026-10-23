@@ -23,18 +23,18 @@ import tools.jackson.databind.json.JsonMapper;
  *
  * <p>An embedding model turns a question and a passage into vectors separately, and never sees them
  * side by side. A cross-encoder does the opposite: one pass over the pair, which is why it scores
- * better and why it costs so much more. So it is used as a second pass over the first
- * {@value ElementRetriever#DEPTH} results, not as a search.
+ * better and why it costs so much more. So it is used as a second pass over the first {@value
+ * ElementRetriever#DEPTH} results, not as a search.
  *
- * <p>It reads exactly what a reader would be given, {@link ElementReader#passage}: the heading path,
- * then the unit's text. Pinned units are never reranked — they were looked up by name, and a model's
- * opinion does not outrank an identifier — so they keep their place at the front.
+ * <p>It reads exactly what a reader would be given, {@link ElementReader#passage}: the heading
+ * path, then the unit's text. Pinned units are never reranked — they were looked up by name, and a
+ * model's opinion does not outrank an identifier — so they keep their place at the front.
  *
- * <p>Spring AI 2.0.1 has no reranking abstraction, so this is a plain {@link DocumentPostProcessor}.
- * The model itself is {@code cross-encoder/ms-marco-MiniLM-L-6-v2} run by sentence-transformers
- * behind {@code tools/rerank-service}: running a cross-encoder in-process in Java means an ONNX
- * export and a tokenizer, which is an episode of its own. One HTTP call keeps the scores identical
- * to the prototype's, which is what the parity check needs.
+ * <p>Spring AI 2.0.1 has no reranking abstraction, so this is a plain {@link
+ * DocumentPostProcessor}. The model itself is {@code cross-encoder/ms-marco-MiniLM-L-6-v2} run by
+ * sentence-transformers behind {@code tools/rerank-service}: running a cross-encoder in-process in
+ * Java means an ONNX export and a tokenizer, which is an episode of its own. One HTTP call keeps
+ * the scores identical to the prototype's, which is what the parity check needs.
  */
 public final class CrossEncoderReranker implements DocumentPostProcessor {
 
@@ -94,7 +94,12 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
       HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) {
         throw new IllegalStateException(
-            "The reranker at " + endpoint + " answered " + response.statusCode() + ": " + response.body());
+            "The reranker at "
+                + endpoint
+                + " answered "
+                + response.statusCode()
+                + ": "
+                + response.body());
       }
       var parsed =
           JsonMapper.shared()
@@ -103,8 +108,11 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
       List<Number> raw = (List<Number>) parsed.get("scores");
       if (raw == null || raw.size() != passages.size()) {
         throw new IllegalStateException(
-            "The reranker returned " + (raw == null ? "no" : raw.size() + "") + " scores for "
-                + passages.size() + " passages");
+            "The reranker returned "
+                + (raw == null ? "no" : raw.size() + "")
+                + " scores for "
+                + passages.size()
+                + " passages");
       }
       return raw.stream().map(Number::doubleValue).toList();
     } catch (IOException e) {
@@ -124,13 +132,16 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
               .GET()
               .build();
       HttpResponse<String> response =
-          HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build()
+          HttpClient.newBuilder()
+              .connectTimeout(Duration.ofSeconds(3))
+              .build()
               .send(request, HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) {
         return java.util.Optional.empty();
       }
       var parsed =
-          JsonMapper.shared().readValue(response.body(), new TypeReference<Map<String, Object>>() {});
+          JsonMapper.shared()
+              .readValue(response.body(), new TypeReference<Map<String, Object>>() {});
       return java.util.Optional.ofNullable((String) parsed.get("model"));
     } catch (IOException | InterruptedException | RuntimeException e) {
       if (e instanceof InterruptedException) {
