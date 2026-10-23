@@ -66,21 +66,21 @@ public final class Archives {
   public static Path pastNineNinetyNine(Path dir) throws IOException {
     write(
         dir,
-        "specs/1000-alpha/spec.html",
+        "specs/1000-first/spec.html",
         """
-        <!doctype html><html><head><title>1000 Alpha</title></head><body><main>
+        <!doctype html><html><head><title>1000 First</title></head><body><main>
         <section id="requirements"><h2>Requirements</h2>
-        <ul><li id="FR-009">The alpha service MUST retry a failed upload twice.</li></ul>
+        <ul><li id="FR-009">The first service MUST retry a failed upload twice.</li></ul>
         </section>
         </main></body></html>
         """);
     write(
         dir,
-        "specs/1001-beta/spec.html",
+        "specs/1001-second/spec.html",
         """
-        <!doctype html><html><head><title>1001 Beta</title></head><body><main>
+        <!doctype html><html><head><title>1001 Second</title></head><body><main>
         <section id="requirements"><h2>Requirements</h2>
-        <ul><li id="FR-009">The beta service MUST reject an upload over one gigabyte.</li></ul>
+        <ul><li id="FR-009">The second service MUST reject an upload over one gigabyte.</li></ul>
         </section>
         </main></body></html>
         """);

@@ -60,9 +60,9 @@ class RunConfiguration {
       @Value("${spring.ai.ollama.base-url}") String ollama,
       @Value("${spring.ai.ollama.chat.model}") String chatModel,
       @Value("${spring.ai.ollama.embedding.model}") String embeddingModel,
-      @Value("classpath:persona/alpha.md") Resource alphaPersona,
-      @Value("classpath:persona/beta.md") Resource betaPersona,
-      @Value("classpath:persona/alpha-solo.md") Resource soloPersona,
+      @Value("classpath:persona/answerer.md") Resource answererPersona,
+      @Value("classpath:persona/quoter.md") Resource quoterPersona,
+      @Value("classpath:persona/answerer-solo.md") Resource soloPersona,
       SpecCorpus corpus,
       Archive archive,
       CitationChecker citations,
@@ -92,7 +92,7 @@ class RunConfiguration {
                   embeddingModel,
                   digests(ollama),
                   GoldenRun.hash(
-                      List.of(text(alphaPersona), text(betaPersona), text(soloPersona))));
+                      List.of(text(answererPersona), text(quoterPersona), text(soloPersona))));
           log.info("Baseline:\n{}", goldenRun.write(rows, setup, Path.of("build")));
         }
         default -> throw new IllegalArgumentException("Unknown archive.run: " + run);
@@ -116,7 +116,7 @@ class RunConfiguration {
       log.info("  {} {} (rank {})", q.label(), q.address(), q.rank());
     }
     ruling
-        .alphaVerdicts()
+        .answererVerdicts()
         .forEach(verdict -> log.info("  [{}] {}", verdict.status(), verdict.reason()));
   }
 

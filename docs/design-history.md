@@ -27,11 +27,27 @@ Each one was kept only if it passed the ratchet: Hit@4 must not fall, all-eviden
 no stratum may lose more than one question, and stale-in-top-4 must not rise. A step that failed is
 in the articles with its numbers, not quietly dropped.
 
-### Two personas, and checks on both
+### The quoter and the answerer
 
-One persona searches and comes back with passages it will quote; the other answers using only the
-quotations traced back to the archive word for word, and abstains when they do not support an
-answer. The split exists so that "the answer is grounded" is a property of the pipeline rather than
+Two roles. The **quoter** searches and comes back with passages it is willing to quote; the
+**answerer** answers using only the quotations traced back to the archive word for word, and
+abstains when they do not support an answer.
+
+The names are deliberate. The classic pair in the literature is *retriever* and *reader* (DrQA,
+2017), and both halves are wrong here: `DocumentRetriever` is already a Spring AI interface that
+this codebase implements, `Reader` is Spring AI's word for ingestion, and in the one framework that
+still ships a `Reader` it means extractive span selection — which is nearer to what the quoter does
+than the answerer. The pair maps backwards. `Quoter` comes from the "quote-first-then-answer"
+literature and from this codebase's own nouns: `Quote`, `QuoteResolver`, `quotes()`.
+
+Neither is an *agent*. Anthropic's distinction is between predefined code paths and models that
+direct their own tool use, and Spring AI's own reference calls this shape a chain workflow: the
+quoter gets exactly one search and does not choose it. Alpha and Beta remain the characters in the
+prompts and in the console output — Beta is "permanently, proudly, in beta", which only works with
+the name — while the code says what the roles do.
+
+The two modes are `QUOTED` and `DIRECT`: quote-then-answer, or one model searching and answering in
+the same call. The split exists so that "the answer is grounded" is a property of the pipeline rather than
 a hope: `QuoteResolver` finds each quotation in what was retrieved or rejects it, and
 `CitationChecker` asks whether the answer cited what it claimed to.
 

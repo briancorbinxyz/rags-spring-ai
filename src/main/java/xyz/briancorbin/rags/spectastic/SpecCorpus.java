@@ -178,34 +178,47 @@ public final class SpecCorpus {
    */
   public static String commitOf(Path checkout) {
     try {
-      Path git = checkout.resolve(".git");
-      if (Files.isRegularFile(git)) {
-        // A worktree: ".git" holds "gitdir: <path>", and branch refs live in the main repository.
-        String pointer = Files.readString(git).strip();
-        git = checkout.resolve(pointer.substring("gitdir:".length()).strip()).normalize();
-      }
+      Path git = gitDirOf(checkout);
       String head = Files.readString(git.resolve("HEAD")).strip();
       if (!head.startsWith("ref: ")) {
         return head; // a tag checkout is detached: HEAD is the commit itself
       }
-      String ref = head.substring(5);
-      Path common = git;
-      if (Files.exists(git.resolve("commondir"))) {
-        common = git.resolve(Files.readString(git.resolve("commondir")).strip()).normalize();
-      }
-      Path loose = common.resolve(ref);
-      if (Files.exists(loose)) {
-        return Files.readString(loose).strip();
-      }
-      for (String line : Files.readAllLines(common.resolve("packed-refs"))) {
-        if (line.endsWith(" " + ref)) {
-          return line.substring(0, line.indexOf(' '));
-        }
-      }
-      throw new IllegalStateException("Cannot resolve " + ref + " in " + common);
+      return resolve(head.substring(5), commonDirOf(git));
     } catch (IOException e) {
       throw new UncheckedIOException("Not a git checkout: " + checkout, e);
     }
+  }
+
+  /** A worktree's {@code .git} is a file holding "gitdir: &lt;path&gt;", not a directory. */
+  private static Path gitDirOf(Path checkout) throws IOException {
+    Path git = checkout.resolve(".git");
+    if (!Files.isRegularFile(git)) {
+      return git;
+    }
+    String pointer = Files.readString(git).strip();
+    return checkout.resolve(pointer.substring("gitdir:".length()).strip()).normalize();
+  }
+
+  /** Where the branch refs live: a worktree's are in the main repository, named by commondir. */
+  private static Path commonDirOf(Path git) throws IOException {
+    Path commondir = git.resolve("commondir");
+    return Files.exists(commondir)
+        ? git.resolve(Files.readString(commondir).strip()).normalize()
+        : git;
+  }
+
+  /** A ref as a commit, loose file first, then the packed table. */
+  private static String resolve(String ref, Path common) throws IOException {
+    Path loose = common.resolve(ref);
+    if (Files.exists(loose)) {
+      return Files.readString(loose).strip();
+    }
+    for (String line : Files.readAllLines(common.resolve("packed-refs"))) {
+      if (line.endsWith(" " + ref)) {
+        return line.substring(0, line.indexOf(' '));
+      }
+    }
+    throw new IllegalStateException("Cannot resolve " + ref + " in " + common);
   }
 
   private static Manifest read(Path manifest) {

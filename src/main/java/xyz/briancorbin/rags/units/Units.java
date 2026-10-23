@@ -39,7 +39,7 @@ public final class Units {
 
   /**
    * What a reader is given, and what is embedded and reranked: the heading path in front of the
-   * text, so a requirement's own id still carries which part of the archive it belongs to.
+   * text, so a passage's own id still carries which part of the archive it belongs to.
    */
   public static String passage(Document unit) {
     String path = String.valueOf(unit.getMetadata().getOrDefault(HEADING_PATH, ""));

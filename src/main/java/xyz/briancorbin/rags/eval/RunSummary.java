@@ -40,7 +40,7 @@ final class RunSummary {
   private static String table(List<Row> rows) {
     var out = new StringBuilder();
     out.append("| Stratum | Questions | Hit@4 | All@4 | Partial@4 | MRR ");
-    out.append("| Alpha abstained | Stale as current |\n");
+    out.append("| Answerer abstained | Stale as current |\n");
     out.append("|---|---|---|---|---|---|---|---|\n");
     byStratum(rows).forEach((stratum, of) -> out.append(of.isEmpty() ? "" : line(stratum, of)));
     return out.append(line("all", rows)).toString();
@@ -73,10 +73,10 @@ final class RunSummary {
 
   private static String quotations(List<Row> rows) {
     OptionalDouble verified = shareOfQuotationsTraced(rows);
-    return "Beta's quotations traced word for word: %s. Alpha's claims: %s.%n"
+    return "Quoter's quotations traced word for word: %s. Answerer's claims: %s.%n"
         .formatted(
             verified.isPresent() ? "%.0f%%".formatted(verified.getAsDouble() * 100) : "n/a",
-            words(Tally.of(allAlphaVerdicts(rows))));
+            words(Tally.of(allAnswererVerdicts(rows))));
   }
 
   private static String timings(List<Row> rows) {
@@ -130,10 +130,10 @@ final class RunSummary {
         .formatted(t.supported(), t.contradicted(), t.unsupported(), t.unchecked());
   }
 
-  /** Beta's quotations that traced word for word, as a share; empty if none were checked. */
+  /** Quoter's quotations that traced word for word, as a share; empty if none were checked. */
   private static OptionalDouble shareOfQuotationsTraced(List<Row> rows) {
     return rows.stream()
-        .map(Row::betaVerified)
+        .map(Row::quoterVerified)
         .filter(share -> share != null)
         .mapToDouble(Double::doubleValue)
         .average();
@@ -147,9 +147,9 @@ final class RunSummary {
         .toList();
   }
 
-  /** Every verdict on every claim Alpha made, across the run. */
-  private static List<FactChecker.Verdict> allAlphaVerdicts(List<Row> rows) {
-    return rows.stream().flatMap(row -> row.ruling().alphaVerdicts().stream()).toList();
+  /** Every verdict on every claim Answerer made, across the run. */
+  private static List<FactChecker.Verdict> allAnswererVerdicts(List<Row> rows) {
+    return rows.stream().flatMap(row -> row.ruling().answererVerdicts().stream()).toList();
   }
 
   /** Mean reciprocal rank over the answerable questions; 0 if there are none. */

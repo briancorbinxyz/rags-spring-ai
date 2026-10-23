@@ -123,29 +123,39 @@ public final class Supersession implements Successors {
       if (!delta.normalName().equals("spec-delta") || delta.attr("target").isEmpty()) {
         continue;
       }
-      var copy =
-          SpectasticReader.first(
-              delta,
-              inside -> !inside.id().isEmpty() && units.containsKey(source + "#" + inside.id()));
-      String from = copy != null ? source + "#" + copy.id() : unitAround(source, delta, units);
+      String from = rewrittenBy(delta, source, units);
       for (String id : LIST.split(delta.attr("target"), -1)) {
-        if (id.isEmpty()) {
-          continue;
-        }
-        String to =
-            source.contains("/changes/")
-                ? find(
-                    specDir(source), id, List.of("spec.html", "design.html", "tasks.html"), units)
-                : find(source, id, units);
-        if (to != null
-            && from != null
-            && !to.equals(from)
-            && units.get(from).lifecycle() != Lifecycle.CURRENT
-            && units.get(to).lifecycle() == Lifecycle.CURRENT) {
+        String to = id.isEmpty() ? null : targetOf(id, source, units);
+        if (replaces(from, to, units)) {
           successors.putIfAbsent(from, to);
         }
       }
     }
+  }
+
+  /** The unit this delta is a copy of: the id'd element inside it, or the unit it sits in. */
+  private static String rewrittenBy(Element delta, String source, Map<String, Unit> units) {
+    var copy =
+        SpectasticReader.first(
+            delta,
+            inside -> !inside.id().isEmpty() && units.containsKey(source + "#" + inside.id()));
+    return copy != null ? source + "#" + copy.id() : unitAround(source, delta, units);
+  }
+
+  /** What the delta's {@code target} names: on a change page, the spec it is a change to. */
+  private static String targetOf(String id, String source, Map<String, Unit> units) {
+    return source.contains("/changes/")
+        ? find(specDir(source), id, List.of("spec.html", "design.html", "tasks.html"), units)
+        : find(source, id, units);
+  }
+
+  /** Only an out-of-date unit is replaced, and only by one that is current. */
+  private static boolean replaces(String from, String to, Map<String, Unit> units) {
+    return to != null
+        && from != null
+        && !to.equals(from)
+        && units.get(from).lifecycle() != Lifecycle.CURRENT
+        && units.get(to).lifecycle() == Lifecycle.CURRENT;
   }
 
   /** An element marked superseded in place: the first link after the mark is its successor. */

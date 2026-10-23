@@ -80,9 +80,10 @@ class IdentifierLookupTest {
             StopWords.of("stopwords/english.txt", "stopwords/spectastic.txt"))) {
       var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       assertEquals(
-          List.of("specs/1000-alpha/spec.html#FR-009"),
+          List.of("specs/1000-first/spec.html#FR-009"),
           ids.lookup("What does FR-009 in spec 1000 require?"));
-      assertEquals(List.of("specs/1001-beta/spec.html#FR-009"), ids.lookup("FR-009 of 1001-beta"));
+      assertEquals(
+          List.of("specs/1001-second/spec.html#FR-009"), ids.lookup("FR-009 of 1001-second"));
       assertEquals(
           List.of(),
           ids.lookup("What does FR-009 require?"),

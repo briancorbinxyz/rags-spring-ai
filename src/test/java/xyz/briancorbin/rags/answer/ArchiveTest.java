@@ -9,7 +9,7 @@ import xyz.briancorbin.rags.units.Address;
 class ArchiveTest {
 
   @Test
-  void alphaSeesEachQuotationWithItsLabelAndAddress() {
+  void theAnswererSeesEachQuotationWithItsLabelAndAddress() {
     var quotes =
         List.of(
             new Quote(
@@ -25,17 +25,17 @@ class ArchiveTest {
             "Quotations Beta traced to the archive. Cite them by label.",
             "Q1 (specs/059/spec.html, chunk 2 of 3)",
             "\"Retrieval MUST NOT be built\""),
-        Archive.alphaPrompt("Why no index?", quotes));
+        Archive.answererPrompt("Why no index?", quotes));
   }
 
   @Test
-  void withNothingTracedAlphaIsToldSo() {
+  void withNothingTracedTheAnswererIsToldSo() {
     assertEquals(
         String.join(
             System.lineSeparator(),
             "Question: Why no index?",
             "",
             "Quotations Beta traced to the archive: none."),
-        Archive.alphaPrompt("Why no index?", List.of()));
+        Archive.answererPrompt("Why no index?", List.of()));
   }
 }

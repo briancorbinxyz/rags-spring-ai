@@ -31,8 +31,8 @@ import xyz.briancorbin.rags.spectastic.SpecCorpus;
  * <p>Three files go to {@code build/}, named {@code episode-3-<model>-<mode>-k4}:
  *
  * <ul>
- *   <li>{@code .csv}: one row per question, with the retrieval score, Beta's traced quotations,
- *       Alpha's claims by verdict, abstention, stale answers, tokens and time;
+ *   <li>{@code .csv}: one row per question, with the retrieval score, Quoter's traced quotations,
+ *       Answerer's claims by verdict, abstention, stale answers, tokens and time;
  *   <li>{@code .jsonl}: the same rows in full, with every chunk retrieved, every quotation and
  *       every claim, so a failure can be diagnosed from the run itself;
  *   <li>{@code -summary.md}: the per-stratum table the article prints.
@@ -66,8 +66,8 @@ public final class GoldenRun {
       Question question,
       Archive.Ruling ruling,
       Score score,
-      Double betaVerified,
-      Tally alphaTally,
+      Double quoterVerified,
+      Tally answererTally,
       boolean staleRetrieved,
       boolean staleCited,
       boolean staleFlagged) {
@@ -77,7 +77,7 @@ public final class GoldenRun {
     }
 
     int tokens() {
-      return value(ruling.betaPromptTokens()) + value(ruling.alphaPromptTokens());
+      return value(ruling.quoterPromptTokens()) + value(ruling.answererPromptTokens());
     }
   }
 
@@ -108,18 +108,18 @@ public final class GoldenRun {
     return List.copyOf(rows);
   }
 
-  /** The quotations the answer leaned on: Alpha's citations in duo mode, all of them in solo. */
+  /** The quotations the answer leaned on: Answerer's citations in duo mode, all of them in solo. */
   private SequencedCollection<Quote> citedBy(Archive.Ruling ruling) {
-    if (ruling.mode() != Archive.Mode.DUO) {
+    if (ruling.mode() != Archive.Mode.QUOTED) {
       return ruling.quotes();
     }
     return ruling
-        .alpha()
+        .answerer()
         .map(reply -> citations.cited(reply, ruling.quotes()))
         .orElseGet(LinkedHashSet::new);
   }
 
-  /** Whether any of the question's stale records is in the top four Beta was handed. */
+  /** Whether any of the question's stale records is in the top four Quoter was handed. */
   private boolean anyStaleAmong(Question question, List<Document> top) {
     return top.stream()
         .anyMatch(
@@ -128,8 +128,8 @@ public final class GoldenRun {
   }
 
   /**
-   * Whether a quotation Alpha relied on came from a stale element itself, rather than merely from a
-   * chunk that also happens to hold it.
+   * Whether a quotation Answerer relied on came from a stale element itself, rather than merely
+   * from a chunk that also happens to hold it.
    */
   private boolean anyStaleQuotedIn(Question question, SequencedCollection<Quote> cited) {
     List<String> staleTexts =
@@ -147,20 +147,20 @@ public final class GoldenRun {
     List<Document> top = ruling.retrieved().subList(0, Math.min(K, ruling.retrieved().size()));
     Score score = scorer.score(question, top);
     Double verified =
-        ruling.mode() == Archive.Mode.DUO
-            ? new QuoteResolver.Resolution(ruling.betaVerdicts(), ruling.quotes()).verifiedShare()
+        ruling.mode() == Archive.Mode.QUOTED
+            ? new QuoteResolver.Resolution(ruling.quoterVerdicts(), ruling.quotes()).verifiedShare()
             : null;
     boolean staleRetrieved = anyStaleAmong(question, top);
     var cited = citedBy(ruling);
     boolean staleCited = anyStaleQuotedIn(question, cited);
     boolean staleFlagged =
-        ruling.alpha().map(reply -> FLAGS_STALE.matcher(reply.answer()).find()).orElse(false);
+        ruling.answerer().map(reply -> FLAGS_STALE.matcher(reply.answer()).find()).orElse(false);
     return new Row(
         question,
         ruling,
         score,
         verified,
-        Tally.of(ruling.alphaVerdicts()),
+        Tally.of(ruling.answererVerdicts()),
         staleRetrieved,
         staleCited,
         staleFlagged);

@@ -11,8 +11,8 @@ import java.util.stream.Collectors;
  * statement with its own sources. {@code aside} is the joke, and it is deliberately unchecked,
  * which is why it may not contain anything a checker could check.
  *
- * <p>A claim's sources are passages from the archive: Beta's are quotations copied word for word,
- * and Alpha's are the labels of the quotations it was given ("Q2").
+ * <p>A claim's sources are passages from the archive: Quoter's are quotations copied word for word,
+ * and Answerer's are the labels of the quotations it was given ("Q2").
  *
  * @param aside one short joke, or empty; it states nothing a reader could check
  * @param claims one to three statements, each with the sources it rests on

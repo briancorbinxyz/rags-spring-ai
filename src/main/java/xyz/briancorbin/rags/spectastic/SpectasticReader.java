@@ -214,12 +214,19 @@ public final class SpectasticReader implements DocumentReader {
     if (words.length <= max) {
       return List.of(text);
     }
-    int n = (int) Math.ceil(words.length / (double) max);
-    double target = words.length / (double) n;
+    int wanted = (int) Math.ceil(words.length / (double) max);
+    return join(sentences(text, max), max, words.length / (double) wanted);
+  }
+
+  /**
+   * The text as runs of words that each fit {@code max}: one per sentence, except that a single
+   * very long "sentence" — a table, say — is cut by word count instead.
+   */
+  private static List<List<String>> sentences(String text, int max) {
     var pieces = new ArrayList<List<String>>();
     for (String sentence : SENTENCE_END.split(text, -1)) {
       List<String> remaining = sentence.isEmpty() ? List.of() : List.of(SPACE.split(sentence, -1));
-      while (remaining.size() > max) { // one very long "sentence", a table say: cut by words
+      while (remaining.size() > max) {
         pieces.add(remaining.subList(0, max));
         remaining = remaining.subList(max, remaining.size());
       }
@@ -227,6 +234,11 @@ public final class SpectasticReader implements DocumentReader {
         pieces.add(remaining);
       }
     }
+    return pieces;
+  }
+
+  /** Runs gathered into parts of about {@code target} words, never more than {@code max}. */
+  private static List<String> join(List<List<String>> pieces, int max, double target) {
     var parts = new ArrayList<String>();
     var current = new ArrayList<String>();
     for (List<String> piece : pieces) {

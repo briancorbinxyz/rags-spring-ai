@@ -8,7 +8,7 @@ import java.util.List;
  *
  * <p>There is a checker for each kind of evidence, and what counts as evidence changes: a game's
  * own history, a file a persona was told to quote from, or what the retriever brought back ({@link
- * QuoteResolver}) and the quotations Alpha was shown ({@link CitationChecker}). Both are still
+ * QuoteResolver}) and the quotations Answerer was shown ({@link CitationChecker}). Both are still
  * plain code. A model could be a checker too, behind this same interface.
  *
  * @param <E> what the claims are checked against

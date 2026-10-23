@@ -56,19 +56,19 @@ class ArchiveConfiguration {
   }
 
   /**
-   * Beta finds things. Its {@link QuestionAnswerAdvisor} searches the store on every call and
+   * Quoter finds things. Its {@link QuestionAnswerAdvisor} searches the store on every call and
    * pastes the top four chunks into the prompt. The memory advisor runs first, so it stores the
    * question as asked, not with four chunks pasted under it.
    */
   @Bean
-  ChatClient betaChatClient(
+  ChatClient quoterChatClient(
       ChatClient.Builder builder,
       ChatMemory chatMemory,
       SimpleVectorStore store,
-      @Value("classpath:persona/beta.md") Resource persona) {
+      @Value("classpath:persona/quoter.md") Resource persona) {
     return builder
         .defaultSystem(persona)
-        // Copying wants a cool head; Beta's personality lives in the aside.
+        // Copying wants a cool head; Quoter's personality lives in the aside.
         .defaultOptions(ChatOptions.builder().temperature(0.3))
         .defaultAdvisors(
             MessageChatMemoryAdvisor.builder(chatMemory).build(),
@@ -76,12 +76,12 @@ class ArchiveConfiguration {
         .build();
   }
 
-  /** Alpha answers. No retriever: Alpha sees only the quotations the program traced. */
+  /** Answerer answers. No retriever: Answerer sees only the quotations the program traced. */
   @Bean
-  ChatClient alphaChatClient(
+  ChatClient answererChatClient(
       ChatClient.Builder builder,
       ChatMemory chatMemory,
-      @Value("classpath:persona/alpha.md") Resource persona) {
+      @Value("classpath:persona/answerer.md") Resource persona) {
     return builder
         .defaultSystem(persona)
         .defaultOptions(ChatOptions.builder().temperature(0.4))
@@ -89,13 +89,13 @@ class ArchiveConfiguration {
         .build();
   }
 
-  /** Alpha alone, for {@code archive.mode=solo}: it searches, quotes and answers in one call. */
+  /** The answerer alone, for {@code archive.mode=direct}: it searches and answers in one call. */
   @Bean
-  ChatClient alphaSoloChatClient(
+  ChatClient soloAnswererChatClient(
       ChatClient.Builder builder,
       ChatMemory chatMemory,
       SimpleVectorStore store,
-      @Value("classpath:persona/alpha-solo.md") Resource persona) {
+      @Value("classpath:persona/answerer-solo.md") Resource persona) {
     return builder
         .defaultSystem(persona)
         .defaultOptions(ChatOptions.builder().temperature(0.3))
@@ -116,21 +116,22 @@ class ArchiveConfiguration {
   }
 
   /**
-   * {@code archive.mode=duo} (the default): Beta finds, Alpha answers. {@code solo}: Alpha alone.
+   * {@code archive.mode=quoted} (the default): the quoter finds and quotes, the answerer answers
+   * only from what was traced. {@code direct}: the answerer alone.
    */
   @Bean
   Archive archive(
-      @Qualifier("betaChatClient") ChatClient beta,
-      @Qualifier("alphaChatClient") ChatClient alpha,
-      @Qualifier("alphaSoloChatClient") ChatClient alphaSolo,
+      @Qualifier("quoterChatClient") ChatClient quoter,
+      @Qualifier("answererChatClient") ChatClient answerer,
+      @Qualifier("soloAnswererChatClient") ChatClient soloAnswerer,
       SimpleVectorStore store,
       QuoteResolver resolver,
       CitationChecker citations,
-      @Value("${archive.mode:duo}") String mode) {
+      @Value("${archive.mode:quoted}") String mode) {
     return new Archive(
-        beta,
-        alpha,
-        alphaSolo,
+        quoter,
+        answerer,
+        soloAnswerer,
         store,
         resolver,
         citations,

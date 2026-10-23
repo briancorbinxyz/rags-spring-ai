@@ -17,24 +17,26 @@ import org.springframework.ai.vectorstore.VectorStore;
 import xyz.briancorbin.rags.answer.FactChecker.Verdict;
 
 /**
- * One question, one hand-off: Beta searches the archive and quotes it, the program traces the
- * quotations to their chunks, and Alpha answers from the traced quotations only.
+ * One question, one hand-off: Quoter searches the archive and quotes it, the program traces the
+ * quotations to their chunks, and Answerer answers from the traced quotations only.
  *
- * <p>Beta's {@link ChatClient} carries {@link QuestionAnswerAdvisor}, so every call to Beta is a
- * vector search followed by a prompt with the chunk texts pasted in. Alpha's carries no retriever:
- * Alpha never touches the archive, and it never sees a chunk, only quotations that {@link
- * QuoteResolver} found word for word in one.
+ * <p>Quoter's {@link ChatClient} carries {@link QuestionAnswerAdvisor}, so every call to Quoter is
+ * a vector search followed by a prompt with the chunk texts pasted in. Answerer's carries no
+ * retriever: Answerer never touches the archive, and it never sees a chunk, only quotations that
+ * {@link QuoteResolver} found word for word in one.
  *
- * <p>In solo mode the retriever moves to Alpha, which searches, quotes and answers in one call, and
- * its quotations go through the same resolver.
+ * <p>In solo mode the retriever moves to Answerer, which searches, quotes and answers in one call,
+ * and its quotations go through the same resolver.
  */
 public final class Archive {
 
   private static final Logger log = LoggerFactory.getLogger(Archive.class);
 
   public enum Mode {
-    DUO,
-    SOLO
+    /** Quote first, then answer only from what was traced. */
+    QUOTED,
+    /** One model answers straight from what the retriever returned. */
+    DIRECT
   }
 
   /** One model call: the reply if there was one, and what came with it. */
@@ -47,55 +49,57 @@ public final class Archive {
   /**
    * Everything that happened for one question, so it can be checked and written down.
    *
-   * @param retrieved the chunks the search returned, best first; in duo mode Beta's, in solo mode
-   *     Alpha's
-   * @param beta Beta's reply, empty in solo mode or if Beta could not be reached
-   * @param betaVerdicts the resolver's verdict on each of Beta's claims (Alpha's in solo mode)
-   * @param quotes the quotations traced to a chunk, as Alpha was shown them
-   * @param alpha Alpha's reply, empty if Alpha could not be reached
-   * @param alphaVerdicts the citation check of each of Alpha's claims (the resolver's, in solo)
-   * @param abstained Alpha said the answer is not in the archive and cited nothing
+   * @param retrieved the chunks the search returned, best first; in duo mode Quoter's, in solo mode
+   *     Answerer's
+   * @param quoter Quoter's reply, empty in solo mode or if Quoter could not be reached
+   * @param quoterVerdicts the resolver's verdict on each of Quoter's claims (Answerer's in solo
+   *     mode)
+   * @param quotes the quotations traced to a chunk, as Answerer was shown them
+   * @param answerer Answerer's reply, empty if Answerer could not be reached
+   * @param answererVerdicts the citation check of each of Answerer's claims (the resolver's, in
+   *     solo)
+   * @param abstained Answerer said the answer is not in the archive and cited nothing
    */
   public record Ruling(
       String question,
       Mode mode,
       List<Document> retrieved,
-      Optional<Commentary> beta,
-      List<Verdict> betaVerdicts,
+      Optional<Commentary> quoter,
+      List<Verdict> quoterVerdicts,
       List<Quote> quotes,
-      Optional<Commentary> alpha,
-      List<Verdict> alphaVerdicts,
+      Optional<Commentary> answerer,
+      List<Verdict> answererVerdicts,
       boolean abstained,
-      Integer betaPromptTokens,
-      Integer alphaPromptTokens,
-      long betaMillis,
-      long alphaMillis,
-      String alphaPrompt) {
+      Integer quoterPromptTokens,
+      Integer answererPromptTokens,
+      long quoterMillis,
+      long answererMillis,
+      String answererPrompt) {
 
     public long millis() {
-      return betaMillis + alphaMillis;
+      return quoterMillis + answererMillis;
     }
   }
 
-  private final ChatClient beta;
-  private final ChatClient alpha;
-  private final ChatClient alphaSolo;
+  private final ChatClient quoter;
+  private final ChatClient answerer;
+  private final ChatClient soloAnswerer;
   private final VectorStore store;
   private final QuoteResolver resolver;
   private final CitationChecker citations;
   private final Mode mode;
 
   public Archive(
-      ChatClient beta,
-      ChatClient alpha,
-      ChatClient alphaSolo,
+      ChatClient quoter,
+      ChatClient answerer,
+      ChatClient soloAnswerer,
       VectorStore store,
       QuoteResolver resolver,
       CitationChecker citations,
       Mode mode) {
-    this.beta = beta;
-    this.alpha = alpha;
-    this.alphaSolo = alphaSolo;
+    this.quoter = quoter;
+    this.answerer = answerer;
+    this.soloAnswerer = soloAnswerer;
     this.store = store;
     this.resolver = resolver;
     this.citations = citations;
@@ -108,78 +112,84 @@ public final class Archive {
 
   /**
    * Answers one question. The conversation id keeps each commentator's memory separate, as in One
-   * conversation per persona: {@code <id>:beta} and {@code <id>:alpha}. A golden run uses a fresh
-   * id per question, so no question's memory leaks into the next.
+   * conversation per persona: {@code <id>:quoter} and {@code <id>:answerer}. A golden run uses a
+   * fresh id per question, so no question's memory leaks into the next.
    */
   public Ruling ask(String question, String conversationId) {
     log.info("Q: {}", question);
-    return mode == Mode.SOLO ? solo(question, conversationId) : duo(question, conversationId);
+    return mode == Mode.DIRECT
+        ? direct(question, conversationId)
+        : quoted(question, conversationId);
   }
 
-  private Ruling duo(String question, String conversationId) {
-    // 1. Beta searches. The advisor runs the vector search and pastes the chunk texts in.
-    var betaReply = call(beta, conversationId + ":beta", question);
-    var retrieved = betaReply.retrieved().isEmpty() ? search(question) : betaReply.retrieved();
-    var betaSaid =
-        betaReply.commentary().orElse(Commentary.factual("Beta found nothing it would quote."));
-    say("Beta", betaSaid);
+  private Ruling quoted(String question, String conversationId) {
+    // 1. Quoter searches. The advisor runs the vector search and pastes the chunk texts in.
+    var quoterReply = call(quoter, conversationId + ":quoter", question);
+    var retrieved = quoterReply.retrieved().isEmpty() ? search(question) : quoterReply.retrieved();
+    var quoterSaid =
+        quoterReply.commentary().orElse(Commentary.factual("Beta found nothing it would quote."));
+    say("Beta", quoterSaid);
 
     // 2. The program traces every quotation to a retrieved chunk, or rejects it.
-    QuoteResolver.Resolution resolution = resolver.resolve(betaSaid, retrieved);
+    QuoteResolver.Resolution resolution = resolver.resolve(quoterSaid, retrieved);
 
-    // 3. Alpha answers from the traced quotations, and only from them.
-    String prompt = alphaPrompt(question, resolution.quotes());
-    var alphaReply = call(alpha, conversationId + ":alpha", prompt);
-    var alphaSaid = alphaReply.commentary().orElse(Commentary.factual("Alpha is unavailable."));
-    say("Alpha", alphaSaid);
-    var alphaVerdicts = citations.checkAll(alphaSaid, resolution.quotes());
+    // 3. Answerer answers from the traced quotations, and only from them.
+    String prompt = answererPrompt(question, resolution.quotes());
+    var answererReply = call(answerer, conversationId + ":answerer", prompt);
+    var answererSaid =
+        answererReply.commentary().orElse(Commentary.factual("Alpha is unavailable."));
+    say("Alpha", answererSaid);
+    var answererVerdicts = citations.checkAll(answererSaid, resolution.quotes());
 
     return new Ruling(
         question,
-        Mode.DUO,
+        Mode.QUOTED,
         retrieved,
-        betaReply.commentary(),
+        quoterReply.commentary(),
         resolution.verdicts(),
         resolution.quotes(),
-        alphaReply.commentary(),
-        alphaVerdicts,
-        alphaReply.commentary().isPresent() && citations.abstained(alphaSaid, resolution.quotes()),
-        betaReply.promptTokens(),
-        alphaReply.promptTokens(),
-        betaReply.millis(),
-        alphaReply.millis(),
+        answererReply.commentary(),
+        answererVerdicts,
+        answererReply.commentary().isPresent()
+            && citations.abstained(answererSaid, resolution.quotes()),
+        quoterReply.promptTokens(),
+        answererReply.promptTokens(),
+        quoterReply.millis(),
+        answererReply.millis(),
         prompt);
   }
 
-  private Ruling solo(String question, String conversationId) {
-    var alphaReply = call(alphaSolo, conversationId + ":alpha", question);
-    var retrieved = alphaReply.retrieved().isEmpty() ? search(question) : alphaReply.retrieved();
-    var alphaSaid = alphaReply.commentary().orElse(Commentary.factual("Alpha is unavailable."));
-    say("Alpha", alphaSaid);
-    var resolution = resolver.resolve(alphaSaid, retrieved);
+  private Ruling direct(String question, String conversationId) {
+    var answererReply = call(soloAnswerer, conversationId + ":answerer", question);
+    var retrieved =
+        answererReply.retrieved().isEmpty() ? search(question) : answererReply.retrieved();
+    var answererSaid =
+        answererReply.commentary().orElse(Commentary.factual("Alpha is unavailable."));
+    say("Alpha", answererSaid);
+    var resolution = resolver.resolve(answererSaid, retrieved);
     boolean abstained =
-        alphaReply.commentary().isPresent()
-            && alphaSaid.claims().stream().anyMatch(CitationChecker::abstains)
+        answererReply.commentary().isPresent()
+            && answererSaid.claims().stream().anyMatch(CitationChecker::abstains)
             && resolution.quotes().isEmpty();
     return new Ruling(
         question,
-        Mode.SOLO,
+        Mode.DIRECT,
         retrieved,
         Optional.empty(),
         resolution.verdicts(),
         resolution.quotes(),
-        alphaReply.commentary(),
+        answererReply.commentary(),
         resolution.verdicts(),
         abstained,
         null,
-        alphaReply.promptTokens(),
+        answererReply.promptTokens(),
         0,
-        alphaReply.millis(),
+        answererReply.millis(),
         question);
   }
 
-  /** What Alpha is given: the question, and each traced quotation with its label and address. */
-  static String alphaPrompt(String question, List<Quote> quotes) {
+  /** What Answerer is given: the question, and each traced quotation with its label and address. */
+  static String answererPrompt(String question, List<Quote> quotes) {
     if (quotes.isEmpty()) {
       return "Question: %s%n%nQuotations Beta traced to the archive: none.".formatted(question);
     }

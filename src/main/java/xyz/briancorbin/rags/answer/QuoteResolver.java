@@ -10,30 +10,32 @@ import org.springframework.ai.document.Document;
 import xyz.briancorbin.rags.units.Address;
 
 /**
- * Traces each of Beta's quotations to the retrieved chunk it came from, in code.
+ * Traces each of Quoter's quotations to the retrieved chunk it came from, in code.
  *
  * <p>{@code QuestionAnswerAdvisor} gives the model chunk text and nothing else, so the model cannot
  * see an address and cannot be trusted to cite one. It can copy words, though, and copied words can
  * be found. For every source of every claim, the resolver looks for a retrieved chunk that contains
  * it. A match makes the claim supported and the address comes from that chunk's metadata. A
- * quotation found in none of them means Beta paraphrased or invented it: the claim is contradicted
- * and none of it reaches Alpha.
+ * quotation found in none of them means Quoter paraphrased or invented it: the claim is
+ * contradicted and none of it reaches Answerer.
  *
- * <p>The "file" Beta must quote from is now whatever the retriever brought back. The comparison is
- * still exact, after the normalisation in {@link #normalise}, and nothing looser.
+ * <p>The "file" Quoter must quote from is now whatever the retriever brought back. The comparison
+ * is still exact, after the normalisation in {@link #normalise}, and nothing looser.
  */
 public final class QuoteResolver implements FactChecker<List<Document>> {
 
   /**
-   * A quotation shorter than this proves little: "MUST NOT" appears in hundreds of chunks. A
-   * shorter one is unsupported, not contradicted, because it may well be in the chunk.
+   * A quotation shorter than this proves little, because any archive has a handful of phrases it
+   * repeats in hundreds of places and a match on one of those says nothing about where the
+   * quotation came from. A shorter one is unsupported rather than contradicted, because it may well
+   * be in the chunk.
    */
   public static final int MIN_WORDS = 4;
 
-  /** What Beta's reply came to once every quotation was traced or rejected. */
+  /** What Quoter's reply came to once every quotation was traced or rejected. */
   public record Resolution(List<Verdict> verdicts, List<Quote> quotes) {
 
-    /** Share of Beta's quoting claims whose every quotation was found, or null with none. */
+    /** Share of Quoter's quoting claims whose every quotation was found, or null with none. */
     public Double verifiedShare() {
       long quoting =
           verdicts.stream().filter(verdict -> !verdict.claim().sources().isEmpty()).count();
@@ -74,7 +76,7 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
 
   /**
    * Checks every claim, and turns the quotations of the supported ones into labelled {@link Quote}s
-   * for Alpha. A claim with any untraceable quotation contributes nothing, not even its good
+   * for Answerer. A claim with any untraceable quotation contributes nothing, not even its good
    * quotations: a source that misquotes once is not quoted from again.
    */
   public Resolution resolve(Commentary reply, List<Document> retrieved) {

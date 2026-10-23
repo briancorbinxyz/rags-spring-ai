@@ -81,7 +81,8 @@ class ArchitectureTest {
         .should()
         .dependOnClassesThat()
         .resideInAnyPackage(ROOT + ".search", SPECTASTIC)
-        .because("Alpha and Beta are handed passages; where they came from is not their concern")
+        .because(
+            "Answerer and Quoter are handed passages; where they came from is not their concern")
         .check(CLASSES);
   }
 

@@ -1,30 +1,28 @@
 package xyz.briancorbin.rags.units;
 
 import org.springframework.ai.document.Document;
-import xyz.briancorbin.rags.spectastic.SpecCorpus;
 
 /**
  * Where a passage came from: the file in the archive, which chunk of it, and the page title.
  *
- * <p>This is provenance, and it lives in a chunk's metadata, not its text. The reader records the
- * title, {@link SpecCorpus} adds the file path, and the splitter adds the chunk number. The model
+ * <p>This is provenance, and it lives in a chunk's metadata, not its text. Whatever read the
+ * archive records the title and the file path, and the splitter adds the chunk number. The model
  * never sees any of it, so nothing here can be mistyped by a model.
  *
- * @param source the file, relative to the spectastic checkout, e.g. {@code
- *     specs/059-corpus-retrieval-scale/spec.html}
+ * @param source the file, relative to the checkout it was read from
  * @param chunk which chunk of the file, counting from 1
  * @param chunks how many chunks the file was split into
  * @param title the page's {@code <title>}
  */
 public record Address(String source, int chunk, int chunks, String title) {
 
-  /** Metadata key {@link SpecCorpus} uses for the file path. */
+  /** Metadata key for the file a chunk came from. */
   public static final String SOURCE = "source";
 
-  /** Metadata key {@link SpecCorpus} uses for the spec folder, e.g. 059-corpus-retrieval-scale. */
+  /** Metadata key for the part of the archive a chunk belongs to. */
   public static final String SPEC = "spec";
 
-  /** Metadata key {@link SpecCorpus} uses for the spectastic commit the archive was read at. */
+  /** Metadata key for the commit the archive was read at, so a run names what it measured. */
   public static final String COMMIT = "commit";
 
   /** Reads the address back out of a stored chunk's metadata. */
@@ -37,7 +35,10 @@ public record Address(String source, int chunk, int chunks, String title) {
         String.valueOf(marks.getOrDefault("title", "")));
   }
 
-  /** How the address is shown to Alpha and to readers: {@code specs/…/spec.html, chunk 2 of 7}. */
+  /**
+   * How the address is shown to a reader, and to the model that must cite it: {@code <source>,
+   * chunk 2 of 7}.
+   */
   @Override
   public String toString() {
     return "%s, chunk %d of %d".formatted(source, chunk, chunks);

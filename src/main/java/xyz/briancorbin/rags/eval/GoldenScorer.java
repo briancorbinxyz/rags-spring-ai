@@ -5,9 +5,11 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.jsoup.Jsoup;
 import org.springframework.ai.document.Document;
 import xyz.briancorbin.rags.units.Address;
@@ -15,12 +17,11 @@ import xyz.briancorbin.rags.units.Address;
 /**
  * Decides, in code, whether a retrieved chunk found the passage a question expects.
  *
- * <p>An expected address names an element, such as {@code spec.html#FR-001}, but the naive chunks
- * know nothing about elements: they are 800-token slices of a page's text. So the scorer finds
- * where the element's text sits in the page's text, finds where the chunk sits, and measures the
- * overlap. A chunk that holds the whole element is a <em>hit</em>. One that holds at least half of
- * it is a <em>partial hit</em>, which is what a requirement cut in two by a chunk boundary looks
- * like.
+ * <p>An expected address names one element, but the naive chunks know nothing about elements: they
+ * are 800-token slices of a page's text. So the scorer finds where the element's text sits in the
+ * page's text, finds where the chunk sits, and measures the overlap. A chunk that holds the whole
+ * element is a <em>hit</em>. One that holds at least half of it is a <em>partial hit</em>, which is
+ * what an element cut in two by a chunk boundary looks like.
  *
  * <p>The page text is read exactly as the archive read it, with jsoup's {@code body().text()}, so a
  * chunk's text is a slice of it and positions can be compared directly.
@@ -138,37 +139,47 @@ public final class GoldenScorer {
    * so a hit is an address that matches: an expected one, or one the audit accepted for the whole
    * question or for one of the expected passages. There are no partial hits.
    */
-  public static Score byAddress(GoldenSet.Question q, List<String> ranked) {
+  public static Score byAddress(GoldenSet.Question question, List<String> ranked) {
     Integer hit = null;
     Integer all = null;
-    var covered = new java.util.HashSet<String>();
-    for (int i = 0; i < ranked.size(); i++) {
-      String address = ranked.get(i);
-      boolean found = false;
-      if (q.expected().contains(address)) {
-        covered.add(address);
-        found = true;
+    var covered = new HashSet<String>();
+    for (int rank = 0; rank < ranked.size(); rank++) {
+      if (cover(question, ranked.get(rank), covered) && hit == null) {
+        hit = rank + 1;
       }
-      for (GoldenSet.Accept a : q.accept()) {
-        if (!a.address().equals(address)) {
-          continue;
-        }
-        if (a.wholeQuestion()) {
-          covered.addAll(q.expected());
-          found = true;
-        } else if (q.expected().contains(a.forTarget())) {
-          covered.add(a.forTarget());
-          found = true;
-        }
-      }
-      if (found && hit == null) {
-        hit = i + 1;
-      }
-      if (all == null && !q.expected().isEmpty() && covered.containsAll(q.expected())) {
-        all = i + 1;
+      if (all == null
+          && !question.expected().isEmpty()
+          && covered.containsAll(question.expected())) {
+        all = rank + 1;
       }
     }
     return new Score(hit, hit, all);
+  }
+
+  /**
+   * Notes which expected passages {@code address} covers, and says whether it covered any. An
+   * accepted passage can stand for one expected passage or for the whole question, which is what
+   * the blind audit decided for it.
+   */
+  private static boolean cover(GoldenSet.Question question, String address, Set<String> covered) {
+    boolean found = false;
+    if (question.expected().contains(address)) {
+      covered.add(address);
+      found = true;
+    }
+    for (GoldenSet.Accept accepted : question.accept()) {
+      if (!accepted.address().equals(address)) {
+        continue;
+      }
+      if (accepted.wholeQuestion()) {
+        covered.addAll(question.expected());
+        found = true;
+      } else if (question.expected().contains(accepted.forTarget())) {
+        covered.add(accepted.forTarget());
+        found = true;
+      }
+    }
+    return found;
   }
 
   /** How much of the element at {@code address} one chunk holds. */

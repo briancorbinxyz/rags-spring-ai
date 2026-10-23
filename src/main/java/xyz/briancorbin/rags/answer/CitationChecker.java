@@ -10,12 +10,12 @@ import java.util.SequencedSet;
 import java.util.regex.Pattern;
 
 /**
- * Checks that each of Alpha's claims cites quotations Alpha was actually given.
+ * Checks that each of Answerer's claims cites quotations Answerer was actually given.
  *
- * <p>Alpha cites by label ("Q2"), and the check is just as exact: a label is either in the list
- * Alpha was shown or it is not. A supported verdict here means "rests on a verified quotation", not
- * "is entailed by it". Whether the quotation really says what the claim says is a judgement, and a
- * judge would have to be measured against the human labels this episode collects.
+ * <p>Answerer cites by label ("Q2"), and the check is just as exact: a label is either in the list
+ * Answerer was shown or it is not. A supported verdict here means "rests on a verified quotation",
+ * not "is entailed by it". Whether the quotation really says what the claim says is a judgement,
+ * and a judge would have to be measured against the human labels this episode collects.
  *
  * <p>Saying {@value #ABSTENTION} is a legitimate answer, and on a question the archive cannot
  * answer it is the right one, so an abstaining claim with no sources is unchecked rather than
@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  */
 public final class CitationChecker implements FactChecker<List<Quote>> {
 
-  /** The exact words Alpha's prompt asks for when nothing it was given answers the question. */
+  /** The exact words Answerer's prompt asks for when nothing it was given answers the question. */
   public static final String ABSTENTION = "Not in the archive.";
 
   private static final Pattern ABSTAINS = Pattern.compile("(?i)\\bnot in the archive\\b");
