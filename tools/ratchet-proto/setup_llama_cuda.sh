@@ -105,6 +105,25 @@ else
   The repo above is the ${KIND} one$([[ "$KIND" == wsl ]] && echo ", which ships no kernel driver — that is the point" || echo ""). Then run this script again."
 fi
 
+# --- can this toolkit emit code for this card? ----------------------------------------------------
+# nvidia-smi's "CUDA Version" is the driver's ceiling and says nothing about which architectures
+# nvcc can target. Blackwell (RTX 50-series, sm_120) needs CUDA 12.8 or newer; an older toolkit
+# builds something that will not run on the card, and says so only at launch.
+if command -v nvcc >/dev/null && command -v nvidia-smi >/dev/null; then
+  CAP="$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d ' ')"
+  NVCC_V="$(nvcc --version | sed -n 's/.*release \([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' | head -1)"
+  if [[ -n "$CAP" && -n "$NVCC_V" ]]; then
+    note "GPU compute capability $CAP, toolkit $NVCC_V"
+    cap_n=${CAP%%.*}; nv_maj=${NVCC_V%%.*}; nv_min=${NVCC_V##*.}
+    if (( cap_n >= 12 )) && { (( nv_maj < 12 )) || { (( nv_maj == 12 )) && (( nv_min < 8 )); }; }; then
+      die "this GPU is compute capability $CAP (Blackwell), but the toolkit is CUDA $NVCC_V.
+  sm_120 needs CUDA 12.8 or newer. Install a current toolkit before building, or the binary will
+  compile and then fail on the card:
+    sudo apt-get install -y cuda-toolkit"
+    fi
+  fi
+fi
+
 # --- llama.cpp ------------------------------------------------------------------------------------
 say "llama.cpp"
 if [[ -d "$LLAMA_DIR/.git" ]]; then
