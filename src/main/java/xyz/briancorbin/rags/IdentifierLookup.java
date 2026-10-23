@@ -36,7 +36,7 @@ public final class IdentifierLookup {
 
   private static final Pattern SPEC =
       Pattern.compile(
-          "\\b(?:spec|specs|slice)\\s+(\\d{3})\\b|(?<![\\w-])(\\d{3})-[a-z]",
+          "\\b(?:spec|specs|slice)\\s+(?<inProse>\\d{3})\\b|(?<![\\w-])(?<inSlug>\\d{3})-[a-z]",
           Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
 
   private final ElementUnits units;
@@ -65,7 +65,7 @@ public final class IdentifierLookup {
     var specs = new ArrayList<String>();
     Matcher s = SPEC.matcher(question);
     while (s.find()) {
-      String spec = s.group(1) != null ? s.group(1) : s.group(2);
+      String spec = s.group("inProse") != null ? s.group("inProse") : s.group("inSlug");
       if (!specs.contains(spec)) {
         specs.add(spec);
       }
