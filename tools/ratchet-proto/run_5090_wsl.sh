@@ -160,7 +160,7 @@ print('' if v is None else (' '.join(v) if isinstance(v, list) else v))"; }
 
   PIDS=(); started=()
   stop_all() {
-    for pid in "${PIDS[@]:-}"; do
+    for pid in ${PIDS[@]+"${PIDS[@]}"}; do
       [[ -n "${pid:-}" ]] && kill "$pid" 2>/dev/null && wait "$pid" 2>/dev/null || true
     done
     PIDS=()
@@ -209,7 +209,8 @@ print('' if v is None else (' '.join(v) if isinstance(v, list) else v))"; }
     PY_ARGS+=(--reranker "llamacpp:$(field reranker.alias)" --llamacpp-rerank-url "$(field reranker.url)")
   fi
   if (( ok )); then
-    "$PY" "$HERE/run.py" "${PY_ARGS[@]}" "${EXTRA[@]:-}" 2>&1 | tee -a "$LOG" || ok=0
+    # ${A[@]+"${A[@]}"} expands to nothing when empty; "${A[@]:-}" would pass one empty arg
+    "$PY" "$HERE/run.py" "${PY_ARGS[@]}" ${EXTRA[@]+"${EXTRA[@]}"} 2>&1 | tee -a "$LOG" || ok=0
   fi
   stop_all
   trap - EXIT INT TERM
