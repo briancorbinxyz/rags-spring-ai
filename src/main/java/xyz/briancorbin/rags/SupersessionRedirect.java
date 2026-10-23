@@ -1,6 +1,5 @@
 package xyz.briancorbin.rags;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,8 +15,10 @@ import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
  * <p>The successor is read from the unit's metadata, where {@link ElementReader} put it ({@code
  * superseded_by}), following up to {@value #HOPS} hops. On a superseded page, the successor is the
  * element with the same id on the new page or, failing that, the new page's best match for the
- * question. An applied change (lifecycle {@code history}) is not wrong, it is how the current text
- * came to be, so it stays, right behind its successor. Anything else out of date is dropped.
+ * question. Whatever was superseded is then dropped, applied changes included. A requirement can be
+ * rewritten by several applied changes in turn, and each one left a proposal in the archive saying
+ * it rewrote that requirement; nothing on those proposals says which rewrite is the live one, so
+ * keeping them puts three versions of the same rule in front of a reader. Episode 5 measured it.
  */
 public final class SupersessionRedirect implements DocumentPostProcessor {
 
@@ -41,12 +42,9 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
       }
       Document successor = bestPart(query.text(), current);
       out.putIfAbsent(successor.getId(), redirected(successor, address)); // remembers where it came from
-      if (ElementReader.lifecycle(doc) == Lifecycle.HISTORY) {
-        out.putIfAbsent(doc.getId(), doc); // an applied change stays, right behind
-      }
     }
-    // An applied change kept behind its successor adds a result; the list stays at the search's depth.
-    return out.values().stream().limit(ElementRetriever.DEPTH).toList();
+    // Two stale results can share one successor, so the list can come back shorter than it went in.
+    return List.copyOf(out.values());
   }
 
   /** The current address for {@code address}: itself, or where its paper trail ends. */
