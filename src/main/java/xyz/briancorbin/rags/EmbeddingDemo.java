@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SimpleVectorStore.EmbeddingMath;
+import xyz.briancorbin.rags.search.PrefixedEmbeddingModel;
 
 /**
  * Embeds a handful of sentences and prints how alike each pair is, before anything bigger is

@@ -15,6 +15,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.Resource;
+import xyz.briancorbin.rags.answer.Archive;
+import xyz.briancorbin.rags.answer.CitationChecker;
+import xyz.briancorbin.rags.answer.QuoteResolver;
+import xyz.briancorbin.rags.search.PrefixedEmbeddingModel;
+import xyz.briancorbin.rags.spectastic.SpecCorpus;
 
 /**
  * The archive's parts: the embedding model, the vector store, the corpus, and the two commentators

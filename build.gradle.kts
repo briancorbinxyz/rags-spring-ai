@@ -41,6 +41,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     errorprone("com.google.errorprone:error_prone_core:2.50.0")
+    // Episode 5: the seams between generic search and this archive, asserted like anything else.
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
 }
 
 dependencyManagement {

@@ -25,6 +25,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import xyz.briancorbin.rags.answer.Archive;
+import xyz.briancorbin.rags.answer.CitationChecker;
+import xyz.briancorbin.rags.answer.Quote;
+import xyz.briancorbin.rags.eval.GoldenRun;
+import xyz.briancorbin.rags.eval.GoldenScorer;
+import xyz.briancorbin.rags.eval.GoldenSet;
+import xyz.briancorbin.rags.search.PrefixedEmbeddingModel;
+import xyz.briancorbin.rags.spectastic.SpecCorpus;
 
 /**
  * What a run does, set by {@code archive.run}:
