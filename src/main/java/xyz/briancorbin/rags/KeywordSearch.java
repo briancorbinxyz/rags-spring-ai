@@ -54,36 +54,54 @@ public final class KeywordSearch implements AutoCloseable {
     this.units = units;
     try {
       db = DriverManager.getConnection("jdbc:sqlite::memory:");
-      try (var create = db.createStatement()) {
-        create.execute(
-            "create virtual table units using fts5(heading_path, anchor, body, lifecycle unindexed)");
-      }
-      db.setAutoCommit(false);
-      try (var insert =
-          db.prepareStatement(
-              "insert into units(rowid, heading_path, anchor, body, lifecycle) values (?, ?, ?, ?, ?)")) {
-        var all = units.all();
-        for (int row = 0; row < all.size(); row++) {
-          var unit = all.get(row);
-          var marks = unit.getMetadata();
-          String path = String.valueOf(marks.get(ElementReader.HEADING_PATH));
-          insert.setInt(1, row);
-          insert.setString(
-              2,
-              join(
-                  path.isEmpty() ? marks.get(ElementReader.TITLE) : path,
-                  marks.get(ElementReader.HEADING)));
-          insert.setString(3, String.valueOf(marks.get(ElementReader.ANCHOR)));
-          insert.setString(4, unit.getText());
-          insert.setString(5, String.valueOf(marks.get(ElementReader.LIFECYCLE)));
-          insert.addBatch();
-        }
-        insert.executeBatch();
-      }
-      db.commit();
+      create();
+      fill();
     } catch (SQLException e) {
       throw new IllegalStateException("Cannot build the keyword index", e);
     }
+  }
+
+  /**
+   * The table. {@code lifecycle} is stored but not indexed: Step 3 filters on it, never matches.
+   */
+  private void create() throws SQLException {
+    try (var create = db.createStatement()) {
+      create.execute(
+          "create virtual table units using fts5"
+              + "(heading_path, anchor, body, lifecycle unindexed)");
+    }
+  }
+
+  /** Every unit, in archive order, so a rowid is the unit's position. */
+  private void fill() throws SQLException {
+    db.setAutoCommit(false);
+    try (var insert =
+        db.prepareStatement(
+            "insert into units(rowid, heading_path, anchor, body, lifecycle)"
+                + " values (?, ?, ?, ?, ?)")) {
+      var all = units.all();
+      for (int row = 0; row < all.size(); row++) {
+        bind(insert, row, all.get(row));
+        insert.addBatch();
+      }
+      insert.executeBatch();
+    }
+    db.commit();
+  }
+
+  /** One unit's columns: what a reader sees in front of the text, the id, the text, the state. */
+  private static void bind(PreparedStatement insert, int row, Document unit) throws SQLException {
+    var marks = unit.getMetadata();
+    String path = String.valueOf(marks.get(ElementReader.HEADING_PATH));
+    insert.setInt(1, row);
+    insert.setString(
+        2,
+        join(
+            path.isEmpty() ? marks.get(ElementReader.TITLE) : path,
+            marks.get(ElementReader.HEADING)));
+    insert.setString(3, String.valueOf(marks.get(ElementReader.ANCHOR)));
+    insert.setString(4, unit.getText());
+    insert.setString(5, String.valueOf(marks.get(ElementReader.LIFECYCLE)));
   }
 
   /** The units this searches. */

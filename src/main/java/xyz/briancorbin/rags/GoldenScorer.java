@@ -176,30 +176,42 @@ public final class GoldenScorer {
     if (!file.equals(Address.of(chunk).source())) {
       return Hit.NONE;
     }
-    Page page = page(file);
     String element = elementText(address).orElse("");
     String text = normalise(chunk.getText());
     if (element.isEmpty() || text.isEmpty()) {
       return Hit.NONE;
     }
-    int c0 = page.text().indexOf(text);
-    if (c0 < 0 || element.length() < 2) {
-      // Not a clean slice of the page (a multi-byte character split by the tokenizer, say).
-      if (text.contains(element)) {
-        return Hit.FULL;
-      }
-      int half = Math.max(1, element.length() / 2);
-      return text.contains(element.substring(0, half)) || text.contains(element.substring(half))
-          ? Hit.PARTIAL
-          : Hit.NONE;
+    Page page = page(file);
+    int chunkAt = page.text().indexOf(text);
+    return chunkAt < 0 || element.length() < 2
+        ? byContaining(text, element)
+        : byOverlap(page, element, chunkAt, text.length());
+  }
+
+  /**
+   * When the chunk is not a clean slice of the page — a multi-byte character the tokenizer split,
+   * say — fall back to asking whether the element's text, or half of it, is in there at all.
+   */
+  private static Hit byContaining(String text, String element) {
+    if (text.contains(element)) {
+      return Hit.FULL;
     }
-    // The element's text can occur more than once on a page (in a summary table, say); judge the
-    // chunk by the occurrence it overlaps most.
+    int half = Math.max(1, element.length() / 2);
+    return text.contains(element.substring(0, half)) || text.contains(element.substring(half))
+        ? Hit.PARTIAL
+        : Hit.NONE;
+  }
+
+  /**
+   * The element's text can occur more than once on a page — in a summary table, say — so judge the
+   * chunk by the occurrence it overlaps most.
+   */
+  private static Hit byOverlap(Page page, String element, int chunkAt, int chunkLength) {
     int best = 0;
-    for (int e0 = page.text().indexOf(element);
-        e0 >= 0;
-        e0 = page.text().indexOf(element, e0 + 1)) {
-      int overlap = Math.min(e0 + element.length(), c0 + text.length()) - Math.max(e0, c0);
+    for (int at = page.text().indexOf(element);
+        at >= 0;
+        at = page.text().indexOf(element, at + 1)) {
+      int overlap = Math.min(at + element.length(), chunkAt + chunkLength) - Math.max(at, chunkAt);
       best = Math.max(best, overlap);
     }
     if (best >= element.length()) {

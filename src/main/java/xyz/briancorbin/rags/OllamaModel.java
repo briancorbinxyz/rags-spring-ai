@@ -29,38 +29,42 @@ public final class OllamaModel {
   /** The model's digest, or empty if Ollama is not answering or does not have it. */
   public static Optional<String> digest(String baseUrl, String model) {
     try {
-      var request =
-          HttpRequest.newBuilder(URI.create(baseUrl.replaceAll("/+$", "") + "/api/tags"))
-              .timeout(Duration.ofSeconds(10))
-              .GET()
-              .build();
-      HttpResponse<String> response =
-          HttpClient.newBuilder()
-              .connectTimeout(Duration.ofSeconds(3))
-              .build()
-              .send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() != 200) {
-        return Optional.empty();
-      }
-      var parsed =
-          JsonMapper.shared()
-              .readValue(response.body(), new TypeReference<Map<String, Object>>() {});
-      @SuppressWarnings("unchecked")
-      List<Map<String, Object>> models = (List<Map<String, Object>>) parsed.get("models");
-      if (models == null) {
-        return Optional.empty();
-      }
-      return models.stream()
-          .filter(listed -> model.equals(listed.get("name")) || model.equals(listed.get("model")))
-          .map(listed -> (String) listed.get("digest"))
-          .filter(digest -> digest != null && !digest.isBlank())
-          .findFirst();
+      HttpResponse<String> response = tags(baseUrl);
+      return response.statusCode() == 200 ? digestIn(response.body(), model) : Optional.empty();
     } catch (IOException | RuntimeException e) {
       return Optional.empty();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Optional.empty();
     }
+  }
+
+  private static HttpResponse<String> tags(String baseUrl)
+      throws IOException, InterruptedException {
+    var request =
+        HttpRequest.newBuilder(URI.create(baseUrl.replaceAll("/+$", "") + "/api/tags"))
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build();
+    return HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(3))
+        .build()
+        .send(request, HttpResponse.BodyHandlers.ofString());
+  }
+
+  /** The digest Ollama lists for {@code model}, matched on either the name or the model field. */
+  private static Optional<String> digestIn(String body, String model) {
+    var parsed = JsonMapper.shared().readValue(body, new TypeReference<Map<String, Object>>() {});
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> models = (List<Map<String, Object>>) parsed.get("models");
+    if (models == null) {
+      return Optional.empty();
+    }
+    return models.stream()
+        .filter(listed -> model.equals(listed.get("name")) || model.equals(listed.get("model")))
+        .map(listed -> (String) listed.get("digest"))
+        .filter(digest -> digest != null && !digest.isBlank())
+        .findFirst();
   }
 
   /** {@code ollama:<model>@<first twelve of the digest>}: what the vector cache is keyed by. */

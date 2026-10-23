@@ -84,36 +84,41 @@ public final class ElementReader implements DocumentReader {
   public List<Document> get() {
     List<Page> pages = pages();
     var units = new LinkedHashMap<String, Unit>(); // address -> unit, in archive order
-    for (Page page : pages) {
-      units.putAll(units(page));
-    }
+    pages.forEach(page -> units.putAll(units(page)));
     var supersession = Supersession.read(pages, units);
     var documents = new ArrayList<Document>();
     for (Unit unit : units.values()) {
       for (int part = 0; part < unit.parts().size(); part++) {
-        var metadata = new LinkedHashMap<String, Object>();
-        metadata.put(SOURCE, unit.source());
-        metadata.put(ANCHOR, unit.anchor());
-        metadata.put(SPEC, unit.spec());
-        metadata.put(TITLE, unit.title());
-        metadata.put(HEADING_PATH, unit.headingPath());
-        metadata.put(HEADING, unit.heading());
-        metadata.put(LIFECYCLE, unit.lifecycle().value());
-        metadata.put(PART, part + 1);
-        metadata.put(PARTS, unit.parts().size());
-        supersession.successor(unit.address()).ifPresent(to -> metadata.put(SUPERSEDED_BY, to));
-        supersession
-            .pageSuccessor(unit.source())
-            .ifPresent(to -> metadata.put(PAGE_SUPERSEDED_BY, to));
-        documents.add(
-            Document.builder()
-                .id(unit.parts().size() == 1 ? unit.address() : unit.address() + "@" + (part + 1))
-                .text(unit.parts().get(part))
-                .metadata(metadata)
-                .build());
+        documents.add(document(unit, part, supersession));
       }
     }
     return documents;
+  }
+
+  /** One part of one unit, as the search and the reader will see it. */
+  private static Document document(Unit unit, int part, Supersession supersession) {
+    return Document.builder()
+        .id(unit.parts().size() == 1 ? unit.address() : unit.address() + "@" + (part + 1))
+        .text(unit.parts().get(part))
+        .metadata(metadata(unit, part, supersession))
+        .build();
+  }
+
+  /** Everything the search filters, pins, redirects or shows a reader, read once here. */
+  private static Map<String, Object> metadata(Unit unit, int part, Supersession supersession) {
+    var metadata = new LinkedHashMap<String, Object>();
+    metadata.put(SOURCE, unit.source());
+    metadata.put(ANCHOR, unit.anchor());
+    metadata.put(SPEC, unit.spec());
+    metadata.put(TITLE, unit.title());
+    metadata.put(HEADING_PATH, unit.headingPath());
+    metadata.put(HEADING, unit.heading());
+    metadata.put(LIFECYCLE, unit.lifecycle().value());
+    metadata.put(PART, part + 1);
+    metadata.put(PARTS, unit.parts().size());
+    supersession.successor(unit.address()).ifPresent(to -> metadata.put(SUPERSEDED_BY, to));
+    supersession.pageSuccessor(unit.source()).ifPresent(to -> metadata.put(PAGE_SUPERSEDED_BY, to));
+    return metadata;
   }
 
   /** What a reader is given: the heading path, then the unit's text. */
