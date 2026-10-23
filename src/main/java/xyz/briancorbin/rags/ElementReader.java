@@ -148,21 +148,30 @@ public final class ElementReader implements DocumentReader {
     }
   }
 
+  /** What a page says about itself, read once rather than once per element. */
+  private record Meta(String title, boolean superseded) {
+    static Meta of(Page page) {
+      Element title = page.html().selectFirst("title");
+      // The page's own status sits in its <spec-meta>; a status inside an element is that
+      // element's.
+      Element status = page.html().selectFirst("spec-meta spec-status");
+      return new Meta(
+          title == null ? "" : strippedText(title),
+          status != null && "superseded".equals(status.attr("value")));
+    }
+  }
+
   @SuppressWarnings("ReferenceEquality") // the body element itself, not one equal to it
   private static Map<String, Unit> units(Page page) {
     var units = new LinkedHashMap<String, Unit>();
-    Element titleElement = page.html().selectFirst("title");
-    String title = titleElement == null ? "" : strippedText(titleElement);
-    // The page's own status sits in its <spec-meta>; a status inside an element is that element's.
-    Element status = page.html().selectFirst("spec-meta spec-status");
-    boolean pageSuperseded = status != null && "superseded".equals(status.attr("value"));
+    Meta meta = Meta.of(page);
     for (Element el : page.body().getAllElements()) {
       // Identity on purpose: "is this the body element itself", not "equal to some body".
       if (el == page.body() || el.id().isEmpty()) {
         continue;
       }
-      String text =
-          text(el, inner -> !inner.id().isEmpty()); // an element with an id is its own unit
+      // An element with an id is its own unit, so its text does not count as this one's.
+      String text = text(el, inner -> !inner.id().isEmpty());
       if (words(text) < MIN_WORDS) {
         continue; // a heading on its own is a label, not a passage
       }
@@ -170,26 +179,27 @@ public final class ElementReader implements DocumentReader {
       if (units.containsKey(address)) {
         continue; // a repeated id: the first is the element, as getElementById says
       }
-      var lifecycle = Lifecycle.read(page.source(), el);
-      if (pageSuperseded && lifecycle == Lifecycle.CURRENT) {
-        lifecycle = Lifecycle.SUPERSEDED;
-      }
-      String spec = page.source().split("/", -1)[1];
-      var ownHeading = first(el, inner -> Set.of("h2", "h3", "h4").contains(inner.normalName()));
-      String heading = ownHeading == null ? "" : strippedText(ownHeading);
-      units.put(
-          address,
-          new Unit(
-              page.source(),
-              el.id(),
-              spec,
-              title,
-              headingPath(title, el),
-              heading,
-              lifecycle,
-              parts(text)));
+      units.put(address, unit(page, el, text, meta));
     }
     return units;
+  }
+
+  /** One element as a unit: where it sits, what it reads as, and what state it is in. */
+  private static Unit unit(Page page, Element el, String text, Meta meta) {
+    var lifecycle = Lifecycle.read(page.source(), el);
+    if (meta.superseded() && lifecycle == Lifecycle.CURRENT) {
+      lifecycle = Lifecycle.SUPERSEDED;
+    }
+    var ownHeading = first(el, inner -> Set.of("h2", "h3", "h4").contains(inner.normalName()));
+    return new Unit(
+        page.source(),
+        el.id(),
+        page.source().split("/", -1)[1],
+        meta.title(),
+        headingPath(meta.title(), el),
+        ownHeading == null ? "" : strippedText(ownHeading),
+        lifecycle,
+        parts(text));
   }
 
   /** Page title › the heading of each section with an id around the element, outermost first. */

@@ -69,40 +69,50 @@ public final class Supersession {
         page.html().select("spec-meta spec-status").stream()
             .anyMatch(status -> "superseded".equals(status.attr("value")));
     for (Element link : page.body().getAllElements()) {
-      if (!link.normalName().equals("a") || !link.hasAttr("href")) {
-        continue;
-      }
-      String href = link.attr("href");
-      if (href.startsWith("http") || href.startsWith("mailto")) {
-        continue;
-      }
-      String target = resolve(source, href);
-      String fragment = fragment(href);
-      if (!sources.contains(target)) {
+      Target target = linkTarget(link, source, sources);
+      if (target == null || !saysSupersededBy(link)) {
         continue;
       }
       String from = unitAround(source, link, units);
-      String to = units.containsKey(target + "#" + fragment) ? target + "#" + fragment : null;
-      if (from == null ? to == null && target.equals(source) : from.equals(to)) {
+      String to = units.containsKey(target.address()) ? target.address() : null;
+      if (from == null ? to == null && target.page().equals(source) : from.equals(to)) {
         continue; // a link to itself
-      }
-      String context =
-          link.parent() == null ? "" : lower(head(ElementReader.rawText(link.parent()), 200));
-      String linkText = lower(ElementReader.rawText(link));
-      String before = "";
-      if (!linkText.isEmpty()) {
-        int at = context.indexOf(linkText);
-        before = tail(at < 0 ? context : context.substring(0, at), 40);
-      }
-      if (!(before.contains("superseded") && before.contains("by"))) {
-        continue;
       }
       if (from != null && to != null && units.get(from).lifecycle() != Lifecycle.CURRENT) {
         successors.putIfAbsent(from, to);
       } else if (pageSuperseded && !source.contains("/changes/")) {
-        pageSuccessors.put(source, target);
+        pageSuccessors.put(source, target.page());
       }
     }
+  }
+
+  /** Where a link points inside the archive: the page, and the address its fragment names. */
+  private record Target(String page, String address) {}
+
+  /** The link's target, or null if it is not a link, or leaves the archive, or points nowhere. */
+  private static Target linkTarget(Element link, String source, Set<String> sources) {
+    if (!link.normalName().equals("a") || !link.hasAttr("href")) {
+      return null;
+    }
+    String href = link.attr("href");
+    if (href.startsWith("http") || href.startsWith("mailto")) {
+      return null;
+    }
+    String page = resolve(source, href);
+    return sources.contains(page) ? new Target(page, page + "#" + fragment(href)) : null;
+  }
+
+  /** Whether the forty characters before the link say "superseded ... by". */
+  private static boolean saysSupersededBy(Element link) {
+    String context =
+        link.parent() == null ? "" : lower(head(ElementReader.rawText(link.parent()), 200));
+    String linkText = lower(ElementReader.rawText(link));
+    String before = "";
+    if (!linkText.isEmpty()) {
+      int at = context.indexOf(linkText);
+      before = tail(at < 0 ? context : context.substring(0, at), 40);
+    }
+    return before.contains("superseded") && before.contains("by");
   }
 
   /** A change proposal's {@code <spec-delta target="…">}: the old copy points at its successor. */

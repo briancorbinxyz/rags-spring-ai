@@ -81,46 +81,45 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
 
   /** One score per passage, higher is more relevant; the scale is the model's own. */
   private List<Double> scores(String question, List<String> passages) {
-    var body = new LinkedHashMap<String, Object>();
-    body.put("query", question);
-    body.put("passages", passages);
-    var request =
-        HttpRequest.newBuilder(endpoint)
-            .timeout(Duration.ofMinutes(10))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(JsonMapper.shared().writeValueAsString(body)))
-            .build();
     try {
-      HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+      HttpResponse<String> response =
+          http.send(scoreRequest(question, passages), HttpResponse.BodyHandlers.ofString());
       if (response.statusCode() != 200) {
         throw new IllegalStateException(
-            "The reranker at "
-                + endpoint
-                + " answered "
-                + response.statusCode()
-                + ": "
-                + response.body());
+            "The reranker at %s answered %d: %s"
+                .formatted(endpoint, response.statusCode(), response.body()));
       }
-      var parsed =
-          JsonMapper.shared()
-              .readValue(response.body(), new TypeReference<Map<String, Object>>() {});
-      @SuppressWarnings("unchecked")
-      List<Number> raw = (List<Number>) parsed.get("scores");
-      if (raw == null || raw.size() != passages.size()) {
-        throw new IllegalStateException(
-            "The reranker returned "
-                + (raw == null ? "no" : raw.size() + "")
-                + " scores for "
-                + passages.size()
-                + " passages");
-      }
-      return raw.stream().map(Number::doubleValue).toList();
+      return parsed(response.body(), passages.size());
     } catch (IOException e) {
       throw new UncheckedIOException("The reranker at " + endpoint + " is not answering", e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IllegalStateException(e);
     }
+  }
+
+  private HttpRequest scoreRequest(String question, List<String> passages) {
+    var body = new LinkedHashMap<String, Object>();
+    body.put("query", question);
+    body.put("passages", passages);
+    return HttpRequest.newBuilder(endpoint)
+        .timeout(Duration.ofMinutes(10))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(JsonMapper.shared().writeValueAsString(body)))
+        .build();
+  }
+
+  /** One score per passage, or an exception: a short list would silently mis-order the results. */
+  private List<Double> parsed(String body, int expected) {
+    var parsed = JsonMapper.shared().readValue(body, new TypeReference<Map<String, Object>>() {});
+    @SuppressWarnings("unchecked")
+    List<Number> raw = (List<Number>) parsed.get("scores");
+    if (raw == null || raw.size() != expected) {
+      throw new IllegalStateException(
+          "The reranker returned %s scores for %d passages"
+              .formatted(raw == null ? "no" : String.valueOf(raw.size()), expected));
+    }
+    return raw.stream().map(Number::doubleValue).toList();
   }
 
   /** The model the service has loaded, or empty if it is not answering: for a test's assumption. */
