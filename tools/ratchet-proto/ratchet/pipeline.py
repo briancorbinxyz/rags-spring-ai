@@ -9,8 +9,9 @@ One question goes through, in order:
 4. reranker: the cross-encoder reorders the first 50 unpinned items;
 5. anchored typed expansion (E5-2): typed-link neighbours of the first pinned unit, inserted right
    after it;
-6. supersession redirect (E5-1): a stale item is replaced by its current successor; applied
-   history is kept, right behind it.
+6. supersession redirect (E5-1): a stale item is replaced by its current successor and dropped,
+   applied history included -- a requirement rewritten several times leaves one archived proposal
+   per rewrite, and none of them says which rewrite is the live one.
 
 Every list is cut to 50 items.
 """
@@ -43,7 +44,7 @@ class Config:
     lifecycle: bool = False
     rerank: bool = False
     expand: bool = False
-    redirect: str | None = None  # None | "behind" | "replace"
+    redirect: str | None = None  # None | "replace" (the rule) | "behind" (keeps applied history)
     rrf_neighbours: bool = False
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
@@ -196,9 +197,9 @@ class Pipeline:
     def redirect(self, final, q, mode):
         """E5-1: replace each stale item by the current element that superseded it (spec-delta
         targets, in-place 'superseded' status with a link, prose 'superseded by'), following up to
-        three hops; a superseded page maps by the same anchor, else its best BM25 unit. With
-        ``mode="behind"`` an applied-history item (an archived change) stays, right behind its
-        successor; anything else stale is dropped."""
+        three hops; a superseded page maps by the same anchor, else its best BM25 unit. The item
+        itself is dropped. ``mode="behind"`` is Episode 4's first rule, which kept an
+        applied-history item right behind its successor: see Episode 5's epilogue for why it went."""
         out = []
         cache = {}
         for n in final:

@@ -308,7 +308,7 @@ separately. Every list is cut to 50 items.
 | S3 | + lifecycle filter | Drops withdrawn, superseded and rejected units (from the path, `data-status`/`status` on the element or an ancestor, or a superseded page); keeps applied history in `changes/archive/`, which G-006 and G-018 need. |
 | S4 | + dense, RRF | BM25 and cosine lists (top 100 each, lifecycle-filtered first) fused by Σ 1/(60 + rank); identifier hits stay pinned above the fusion. |
 | S5 | + reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` reorders the first 50 unpinned items. |
-| E5-1 | + supersession redirect | A stale item is replaced by its current successor (spec-delta targets, in-place `superseded` status with a link, "superseded by" prose; up to three hops). An applied-history item stays, right behind its successor. |
+| E5-1 | + supersession redirect | A stale item is replaced by its current successor (spec-delta targets, in-place `superseded` status with a link, "superseded by" prose; up to three hops) and is itself dropped, applied history included. Two stale items can share a successor, so a list can come back shorter than it went in. |
 | E5-2 | + anchored typed expansion | From the first pinned unit, follow typed links only (validates, cites, target incl. spec-delta, defer-to), one hop, at most 5 units ranked by BM25 among themselves, inserted right after the anchor, after the reranker. |
 
 Without a reranker, S5 is skipped and E5-1/E5-2 run on top of S4, labelled as such.
@@ -320,7 +320,7 @@ Without a reranker, S5 is skipped and E5-1/E5-2 run on top of S4, labelled as su
 | P0, P1 | The earlier keyword prototype exactly (its units, FTS `tokenchars '-'`, its linker) | reproduction |
 | P2, P3 | Same units, default tokenizer | the tokenizer change |
 | X1, X2 | S3 + redirect, S3 + redirect + expansion | Episode 5 on the BM25 line (no embedder involved) |
-| E5-1r, E5-2r | Redirect that drops applied history instead of keeping it behind | the "kept behind" rule |
+| X1b, H1b, E5-1b, E5-2b | Redirect that keeps applied history behind its successor instead of dropping it | Episode 4's first rule (G-043; see Episode 5's epilogue) |
 | EpiB | RRF-merge of neighbours of the top 5 (all link types, k=60, weight 0.5) instead of anchored expansion | the epilogue's rejected design |
 | A | Naive 800-token chunks, dense only | Episode 3's pipeline (calibrates the embedder: nomic should give 9/44) |
 | B | Naive chunks, BM25 only | chunks vs units under BM25 (with S1) |
@@ -379,8 +379,13 @@ also lists which questions were won and lost at Hit@4, because a pass can hide a
   the model card's example; documents as they are. Whether Ollama's build applies the model's
   last-token pooling and normalisation is not verified here (vectors are normalised again
   anyway).
-- **"Kept behind" is read literally.** E5-1 keeps an applied-history item directly behind its
-  successor; E5-1r drops it, as the earlier prototype did. Report whichever the plan meant.
+- **The redirect drops what it replaced.** Episode 4's first rule kept an applied-history item
+  directly behind its successor, on the reasoning that an applied change is how the current text
+  came to be. G-043 showed the hole: a requirement rewritten three times leaves three applied
+  proposals, each marked `status="applied"`, each with a `spec-delta` naming the same requirement,
+  and nothing on any of them saying which rewrite is live. The `*b` variants keep the old rule for
+  comparison. What would separate them is order -- the spec changelog lists its applied changes in
+  sequence -- which is Episode 6's ordering work.
 - **Lifecycle labelling gap.** 004's D-005 is superseded in place by a child `spec-status`, not a
   `data-status`, so the lifecycle filter keeps it; only the redirect fixes G-037.
 - **Fixed, untuned defaults**: part size 250 words, depth 100 per list before fusion, RRF k=60,
