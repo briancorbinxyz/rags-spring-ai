@@ -81,24 +81,26 @@ public final class ElementReader implements DocumentReader {
     }
     var supersession = Supersession.read(pages, units);
     var documents = new ArrayList<Document>();
-    for (Unit u : units.values()) {
-      for (int i = 0; i < u.parts().size(); i++) {
-        Map<String, Object> metadata = new LinkedHashMap<>();
-        metadata.put(SOURCE, u.source());
-        metadata.put(ANCHOR, u.anchor());
-        metadata.put(SPEC, u.spec());
-        metadata.put(TITLE, u.title());
-        metadata.put(HEADING_PATH, u.headingPath());
-        metadata.put(HEADING, u.heading());
-        metadata.put(LIFECYCLE, u.lifecycle().value());
-        metadata.put(PART, i + 1);
-        metadata.put(PARTS, u.parts().size());
-        supersession.successor(u.address()).ifPresent(s -> metadata.put(SUPERSEDED_BY, s));
-        supersession.pageSuccessor(u.source()).ifPresent(s -> metadata.put(PAGE_SUPERSEDED_BY, s));
+    for (Unit unit : units.values()) {
+      for (int part = 0; part < unit.parts().size(); part++) {
+        var metadata = new LinkedHashMap<String, Object>();
+        metadata.put(SOURCE, unit.source());
+        metadata.put(ANCHOR, unit.anchor());
+        metadata.put(SPEC, unit.spec());
+        metadata.put(TITLE, unit.title());
+        metadata.put(HEADING_PATH, unit.headingPath());
+        metadata.put(HEADING, unit.heading());
+        metadata.put(LIFECYCLE, unit.lifecycle().value());
+        metadata.put(PART, part + 1);
+        metadata.put(PARTS, unit.parts().size());
+        supersession.successor(unit.address()).ifPresent(to -> metadata.put(SUPERSEDED_BY, to));
+        supersession
+            .pageSuccessor(unit.source())
+            .ifPresent(to -> metadata.put(PAGE_SUPERSEDED_BY, to));
         documents.add(
             Document.builder()
-                .id(u.parts().size() == 1 ? u.address() : u.address() + "@" + (i + 1))
-                .text(u.parts().get(i))
+                .id(unit.parts().size() == 1 ? unit.address() : unit.address() + "@" + (part + 1))
+                .text(unit.parts().get(part))
                 .metadata(metadata)
                 .build());
       }
@@ -157,13 +159,13 @@ public final class ElementReader implements DocumentReader {
       if (units.containsKey(address)) {
         continue; // a repeated id: the first is the element, as getElementById says
       }
-      Lifecycle lifecycle = Lifecycle.read(page.source(), el);
+      var lifecycle = Lifecycle.read(page.source(), el);
       if (pageSuperseded && lifecycle == Lifecycle.CURRENT) {
         lifecycle = Lifecycle.SUPERSEDED;
       }
       String spec = page.source().split("/")[1];
-      Element h = first(el, e -> Set.of("h2", "h3", "h4").contains(e.normalName()));
-      String heading = h == null ? "" : strippedText(h);
+      var ownHeading = first(el, e -> Set.of("h2", "h3", "h4").contains(e.normalName()));
+      String heading = ownHeading == null ? "" : strippedText(ownHeading);
       units.put(address, new Unit(page.source(), el.id(), spec, title,
           headingPath(title, el), heading, lifecycle, parts(text)));
     }
@@ -176,19 +178,20 @@ public final class ElementReader implements DocumentReader {
     if (!title.isEmpty()) {
       path.add(title);
     }
-    List<Element> outward = el.parents();
-    for (Element a : outward.reversed()) {
-      if (a.id().isEmpty() || Set.of("body", "main", "html").contains(a.normalName())) {
+    var outward = el.parents();
+    for (Element ancestor : outward.reversed()) {
+      if (ancestor.id().isEmpty()
+          || Set.of("body", "main", "html").contains(ancestor.normalName())) {
         continue;
       }
-      String h =
-          a.children().stream()
-              .filter(c -> HEADINGS.contains(c.normalName()))
+      String heading =
+          ancestor.children().stream()
+              .filter(child -> HEADINGS.contains(child.normalName()))
               .findFirst()
               .map(ElementReader::strippedText)
               .orElse("");
-      if (!h.isEmpty() && (path.isEmpty() || !path.getLast().equals(h))) {
-        path.add(h);
+      if (!heading.isEmpty() && (path.isEmpty() || !path.getLast().equals(heading))) {
+        path.add(heading);
       }
     }
     return String.join(" › ", path);
@@ -207,13 +210,13 @@ public final class ElementReader implements DocumentReader {
     double target = words.length / (double) n;
     var pieces = new ArrayList<List<String>>();
     for (String sentence : SENTENCE_END.split(text)) {
-      List<String> w = sentence.isEmpty() ? List.of() : List.of(sentence.split(" "));
-      while (w.size() > max) { // one very long "sentence", a table say: cut by words
-        pieces.add(w.subList(0, max));
-        w = w.subList(max, w.size());
+      List<String> remaining = sentence.isEmpty() ? List.of() : List.of(sentence.split(" "));
+      while (remaining.size() > max) { // one very long "sentence", a table say: cut by words
+        pieces.add(remaining.subList(0, max));
+        remaining = remaining.subList(max, remaining.size());
       }
-      if (!w.isEmpty()) {
-        pieces.add(w);
+      if (!remaining.isEmpty()) {
+        pieces.add(remaining);
       }
     }
     var parts = new ArrayList<String>();
@@ -263,13 +266,15 @@ public final class ElementReader implements DocumentReader {
 
   private static void collect(Element el, Predicate<Element> skip, boolean strip, StringBuilder out) {
     for (Node child : el.childNodes()) {
-      if (child instanceof TextNode t) {
-        String s = strip ? t.getWholeText().strip() : t.getWholeText();
-        if (!strip || !s.isEmpty()) {
-          out.append(' ').append(s);
+      if (child instanceof TextNode text) {
+        String words = strip ? text.getWholeText().strip() : text.getWholeText();
+        if (!strip || !words.isEmpty()) {
+          out.append(' ').append(words);
         }
-      } else if (child instanceof Element e && !RAW.contains(e.normalName()) && !skip.test(e)) {
-        collect(e, skip, strip, out);
+      } else if (child instanceof Element nested
+          && !RAW.contains(nested.normalName())
+          && !skip.test(nested)) {
+        collect(nested, skip, strip, out);
       }
     }
   }

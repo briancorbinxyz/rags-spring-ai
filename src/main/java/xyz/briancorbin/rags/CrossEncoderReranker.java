@@ -81,7 +81,7 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
 
   /** One score per passage, higher is more relevant; the scale is the model's own. */
   private List<Double> scores(String question, List<String> passages) {
-    Map<String, Object> body = new LinkedHashMap<>();
+    var body = new LinkedHashMap<String, Object>();
     body.put("query", question);
     body.put("passages", passages);
     var request =

@@ -78,7 +78,7 @@ public final class TrecFiles {
    */
   public static List<String> run(String questionId, List<String> ranked, String runName, int depth) {
     var lines = new ArrayList<String>();
-    Set<String> seen = new HashSet<>();
+    var seen = new HashSet<String>();
     for (String passage : ranked) {
       if (lines.size() == depth) {
         break;

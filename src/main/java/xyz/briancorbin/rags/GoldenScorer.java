@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Element;
 import org.springframework.ai.document.Document;
 
 /**
@@ -97,32 +96,32 @@ public final class GoldenScorer {
     Integer all = null;
     var covered = new java.util.HashSet<String>();
     for (int i = 0; i < retrieved.size(); i++) {
-      Document chunk = retrieved.get(i);
+      var chunk = retrieved.get(i);
       for (String address : expected) {
-        Hit h = hit(address, chunk);
-        if (h == Hit.FULL) {
+        Hit found = hit(address, chunk);
+        if (found == Hit.FULL) {
           covered.add(address);
           if (hit == null) {
             hit = i + 1;
           }
         }
-        if (h != Hit.NONE && partial == null) {
+        if (found != Hit.NONE && partial == null) {
           partial = i + 1;
         }
       }
-      for (GoldenSet.Accept a : accept) {
-        Hit h = hit(a.address(), chunk);
-        if (h == Hit.FULL) {
-          if (a.wholeQuestion()) {
+      for (GoldenSet.Accept accepted : accept) {
+        Hit found = hit(accepted.address(), chunk);
+        if (found == Hit.FULL) {
+          if (accepted.wholeQuestion()) {
             covered.addAll(expected);
-          } else if (expected.contains(a.forTarget())) {
-            covered.add(a.forTarget());
+          } else if (expected.contains(accepted.forTarget())) {
+            covered.add(accepted.forTarget());
           }
           if (hit == null) {
             hit = i + 1;
           }
         }
-        if (h != Hit.NONE && partial == null) {
+        if (found != Hit.NONE && partial == null) {
           partial = i + 1;
         }
       }
@@ -215,8 +214,8 @@ public final class GoldenScorer {
     if (hash < 0) {
       return Optional.of(page.text());
     }
-    Element el = page.html().getElementById(address.substring(hash + 1));
-    return el == null ? Optional.empty() : Optional.of(normalise(el.text()));
+    var element = page.html().getElementById(address.substring(hash + 1));
+    return element == null ? Optional.empty() : Optional.of(normalise(element.text()));
   }
 
   private Page page(String file) {

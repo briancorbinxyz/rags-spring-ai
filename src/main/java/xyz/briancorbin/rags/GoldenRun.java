@@ -160,34 +160,34 @@ public final class GoldenRun {
             + "unsupported,unchecked,abstained,stale_retrieved,stale_cited,stale_as_current,"
             + "beta_prompt_tokens,alpha_prompt_tokens,millis,commit,chat_model,embedding_model,"
             + "prompts_sha");
-    for (Row r : rows) {
-      var t = r.alphaTally();
+    for (Row row : rows) {
+      var alphaTally = row.alphaTally();
       lines.add(
           String.join(
               ",",
-              r.question().id(),
-              r.question().stratum(),
-              r.question().status(),
-              r.ruling().mode().name().toLowerCase(Locale.ROOT),
-              bit(r.score().hitAt(K)),
-              str(r.score().firstHit()),
-              bit(r.score().partialAt(K)),
-              str(r.score().firstPartial()),
-              bit(r.score().allAt(K)),
-              String.valueOf(r.ruling().quotes().size()),
-              r.betaVerified() == null ? "" : "%.2f".formatted(r.betaVerified()),
-              String.valueOf(t.claims()),
-              String.valueOf(t.supported()),
-              String.valueOf(t.contradicted()),
-              String.valueOf(t.unsupported()),
-              String.valueOf(t.unchecked()),
-              bit(r.ruling().abstained()),
-              bit(r.staleRetrieved()),
-              bit(r.staleCited()),
-              bit(r.staleAsCurrent()),
-              str(r.ruling().betaPromptTokens()),
-              str(r.ruling().alphaPromptTokens()),
-              String.valueOf(r.ruling().millis()),
+              row.question().id(),
+              row.question().stratum(),
+              row.question().status(),
+              row.ruling().mode().name().toLowerCase(Locale.ROOT),
+              bit(row.score().hitAt(K)),
+              str(row.score().firstHit()),
+              bit(row.score().partialAt(K)),
+              str(row.score().firstPartial()),
+              bit(row.score().allAt(K)),
+              String.valueOf(row.ruling().quotes().size()),
+              row.betaVerified() == null ? "" : "%.2f".formatted(row.betaVerified()),
+              String.valueOf(alphaTally.claims()),
+              String.valueOf(alphaTally.supported()),
+              String.valueOf(alphaTally.contradicted()),
+              String.valueOf(alphaTally.unsupported()),
+              String.valueOf(alphaTally.unchecked()),
+              bit(row.ruling().abstained()),
+              bit(row.staleRetrieved()),
+              bit(row.staleCited()),
+              bit(row.staleAsCurrent()),
+              str(row.ruling().betaPromptTokens()),
+              str(row.ruling().alphaPromptTokens()),
+              String.valueOf(row.ruling().millis()),
               setup.corpus().commit().substring(0, 7),
               setup.chatModel(),
               setup.embeddingModel(),
@@ -200,42 +200,50 @@ public final class GoldenRun {
     var mapper = JsonMapper.shared();
     var lines = new ArrayList<String>();
     lines.add(mapper.writeValueAsString(Map.of("setup", setup)));
-    for (Row r : rows) {
-      var ruling = r.ruling();
-      Map<String, Object> m = new LinkedHashMap<>();
-      m.put("id", r.question().id());
-      m.put("question", r.question().question());
-      m.put("stratum", r.question().stratum());
-      m.put("expected", r.question().expected());
-      m.put("accept", r.question().accept());
-      m.put(
+    for (Row row : rows) {
+      var ruling = row.ruling();
+      var line = new LinkedHashMap<String, Object>();
+      line.put("id", row.question().id());
+      line.put("question", row.question().question());
+      line.put("stratum", row.question().stratum());
+      line.put("expected", row.question().expected());
+      line.put("accept", row.question().accept());
+      line.put(
           "retrieved",
           ruling.retrieved().stream()
-              .map(d -> Map.of("address", Address.of(d).toString(), "score", d.getScore() == null ? 0 : d.getScore()))
+              .map(
+                  chunk ->
+                      Map.of(
+                          "address", Address.of(chunk).toString(),
+                          "score", chunk.getScore() == null ? 0 : chunk.getScore()))
               .toList());
-      m.put("score", r.score());
-      m.put("beta", ruling.beta().orElse(null));
-      m.put("beta_verdicts", ruling.betaVerdicts());
-      m.put("quotes", ruling.quotes());
-      m.put("alpha_prompt", ruling.alphaPrompt());
-      m.put("alpha", ruling.alpha().orElse(null));
-      m.put("alpha_verdicts", ruling.alphaVerdicts());
-      m.put("abstained", ruling.abstained());
-      m.put("stale_cited", r.staleCited());
-      m.put("stale_flagged", r.staleFlagged());
-      m.put("millis", ruling.millis());
-      lines.add(mapper.writeValueAsString(m));
+      line.put("score", row.score());
+      line.put("beta", ruling.beta().orElse(null));
+      line.put("beta_verdicts", ruling.betaVerdicts());
+      line.put("quotes", ruling.quotes());
+      line.put("alpha_prompt", ruling.alphaPrompt());
+      line.put("alpha", ruling.alpha().orElse(null));
+      line.put("alpha_verdicts", ruling.alphaVerdicts());
+      line.put("abstained", ruling.abstained());
+      line.put("stale_cited", row.staleCited());
+      line.put("stale_flagged", row.staleFlagged());
+      line.put("millis", ruling.millis());
+      lines.add(mapper.writeValueAsString(line));
     }
     return lines;
   }
 
   /** The table the article prints: one row per stratum, then the whole set. */
   static String summary(List<Row> rows, Setup setup) {
-    var by = new LinkedHashMap<String, List<Row>>();
-    for (String s : GoldenSet.STRATA) {
-      by.put(s, new ArrayList<>());
+    var byStratum = new LinkedHashMap<String, List<Row>>();
+    for (String stratum : GoldenSet.STRATA) {
+      byStratum.put(stratum, new ArrayList<>());
     }
-    rows.forEach(r -> by.computeIfAbsent(r.question().stratum(), k -> new ArrayList<>()).add(r));
+    rows.forEach(
+        row ->
+            byStratum
+                .computeIfAbsent(row.question().stratum(), stratum -> new ArrayList<>())
+                .add(row));
     var out = new StringBuilder();
     out.append(
         "Commit %s · chat %s · embeddings %s · %d files, %d chunks · ingest %.1f min · largest chunk %d tokens%n%n"
@@ -250,17 +258,22 @@ public final class GoldenRun {
     out.append(
         "| Stratum | Questions | Hit@4 | All@4 | Partial@4 | MRR | Alpha abstained | Stale as current |\n");
     out.append("|---|---|---|---|---|---|---|---|\n");
-    for (var e : by.entrySet()) {
-      if (!e.getValue().isEmpty()) {
-        out.append(line(e.getKey(), e.getValue()));
+    for (var stratum : byStratum.entrySet()) {
+      if (!stratum.getValue().isEmpty()) {
+        out.append(line(stratum.getKey(), stratum.getValue()));
       }
     }
     out.append(line("all", rows));
-    var answerable = rows.stream().filter(r -> r.question().answerable()).toList();
-    var unanswerable = rows.stream().filter(r -> !r.question().answerable()).toList();
+    var answerable = rows.stream().filter(row -> row.question().answerable()).toList();
+    var unanswerable = rows.stream().filter(row -> !row.question().answerable()).toList();
     var verified =
-        rows.stream().map(Row::betaVerified).filter(v -> v != null).mapToDouble(Double::doubleValue).average();
-    var millis = rows.stream().map(r -> r.ruling().millis()).sorted(Comparator.naturalOrder()).toList();
+        rows.stream()
+            .map(Row::betaVerified)
+            .filter(score -> score != null)
+            .mapToDouble(Double::doubleValue)
+            .average();
+    var millis =
+        rows.stream().map(row -> row.ruling().millis()).sorted(Comparator.naturalOrder()).toList();
     out.append(
         "%nAbstained correctly on %d of %d unanswerable questions; abstained wrongly on %d of %d answerable ones.%n"
             .formatted(
@@ -339,11 +352,11 @@ public final class GoldenRun {
   /** Short hash of the persona prompts, so a prompt change shows up in every row. */
   static String hash(List<String> prompts) {
     try {
-      var md = java.security.MessageDigest.getInstance("SHA-256");
-      for (String p : prompts) {
-        md.update(p.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      var digest = java.security.MessageDigest.getInstance("SHA-256");
+      for (String prompt : prompts) {
+        digest.update(prompt.getBytes(java.nio.charset.StandardCharsets.UTF_8));
       }
-      return java.util.HexFormat.of().formatHex(md.digest()).substring(0, 12);
+      return java.util.HexFormat.of().formatHex(digest.digest()).substring(0, 12);
     } catch (java.security.NoSuchAlgorithmException e) {
       throw new IllegalStateException(e);
     }

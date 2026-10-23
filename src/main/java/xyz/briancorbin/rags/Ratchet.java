@@ -26,29 +26,29 @@ public final class Ratchet {
   public record Tally(int questions, int hits, int allEvidence, int stale, Map<String, Integer> hitsByStratum) {
 
     public static Tally of(List<Result> results) {
-      int n = 0;
+      int answered = 0;
       int hits = 0;
       int all = 0;
       int stale = 0;
-      var by = new LinkedHashMap<String, Integer>();
-      for (String s : GoldenSet.STRATA) {
-        if (!s.equals("unanswerable")) {
-          by.put(s, 0);
+      var byStratum = new LinkedHashMap<String, Integer>();
+      for (String stratum : GoldenSet.STRATA) {
+        if (!stratum.equals("unanswerable")) {
+          byStratum.put(stratum, 0);
         }
       }
-      for (Result r : results) {
-        if (!r.question().answerable()) {
+      for (Result result : results) {
+        if (!result.question().answerable()) {
           continue;
         }
-        n++;
-        if (r.score().hitAt(RetrievalRun.K)) {
+        answered++;
+        if (result.score().hitAt(RetrievalRun.K)) {
           hits++;
-          by.merge(r.question().stratum(), 1, Integer::sum);
+          byStratum.merge(result.question().stratum(), 1, Integer::sum);
         }
-        all += r.score().allAt(RetrievalRun.K) ? 1 : 0;
-        stale += r.staleAt(RetrievalRun.K) ? 1 : 0;
+        all += result.score().allAt(RetrievalRun.K) ? 1 : 0;
+        stale += result.staleAt(RetrievalRun.K) ? 1 : 0;
       }
-      return new Tally(n, hits, all, stale, by);
+      return new Tally(answered, hits, all, stale, byStratum);
     }
 
     @Override

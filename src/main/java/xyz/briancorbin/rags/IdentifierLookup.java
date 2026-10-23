@@ -6,7 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.ai.document.Document;
 
@@ -56,16 +55,18 @@ public final class IdentifierLookup {
 
   Named parse(String question) {
     var ids = new ArrayList<String>();
-    Matcher m = ID.matcher(question);
-    while (m.find()) {
-      if (anchors.contains(m.group()) && !ids.contains(m.group())) {
-        ids.add(m.group());
+    var matchingIds = ID.matcher(question);
+    while (matchingIds.find()) {
+      String id = matchingIds.group();
+      if (anchors.contains(id) && !ids.contains(id)) {
+        ids.add(id);
       }
     }
     var specs = new ArrayList<String>();
-    Matcher s = SPEC.matcher(question);
-    while (s.find()) {
-      String spec = s.group("inProse") != null ? s.group("inProse") : s.group("inSlug");
+    var matchingSpecs = SPEC.matcher(question);
+    while (matchingSpecs.find()) {
+      String inProse = matchingSpecs.group("inProse"); // one branch matched, so one of the two is set
+      String spec = inProse != null ? inProse : matchingSpecs.group("inSlug");
       if (!specs.contains(spec)) {
         specs.add(spec);
       }

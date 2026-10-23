@@ -36,7 +36,7 @@ public final class RetrievalRun {
   public record Step(String name, String label, DocumentRetriever retriever, DocumentPostProcessor after) {
 
     public List<Document> search(String question) {
-      Query query = new Query(question);
+      var query = new Query(question);
       List<Document> found = retriever.retrieve(query);
       return after == null ? found : after.process(query, found);
     }
@@ -77,18 +77,20 @@ public final class RetrievalRun {
   public static void write(Step step, List<Result> results, Path dir) {
     var trec = new ArrayList<String>();
     var json = new ArrayList<String>();
-    for (Result r : results) {
-      trec.addAll(TrecFiles.run(r.question().id(), r.ranked(), step.name(), ElementRetriever.DEPTH));
-      Map<String, Object> m = new LinkedHashMap<>();
-      m.put("step", step.name());
-      m.put("id", r.question().id());
-      m.put("stratum", r.question().stratum());
-      m.put("expected", r.question().expected());
-      m.put("first_hit", r.score().firstHit());
-      m.put("first_all", r.score().firstAll());
-      m.put("first_stale", r.firstStale());
-      m.put("top10", r.ranked().subList(0, Math.min(10, r.ranked().size())));
-      json.add(JsonMapper.shared().writeValueAsString(m));
+    for (Result result : results) {
+      trec.addAll(
+          TrecFiles.run(
+              result.question().id(), result.ranked(), step.name(), ElementRetriever.DEPTH));
+      var line = new LinkedHashMap<String, Object>();
+      line.put("step", step.name());
+      line.put("id", result.question().id());
+      line.put("stratum", result.question().stratum());
+      line.put("expected", result.question().expected());
+      line.put("first_hit", result.score().firstHit());
+      line.put("first_all", result.score().firstAll());
+      line.put("first_stale", result.firstStale());
+      line.put("top10", result.ranked().subList(0, Math.min(10, result.ranked().size())));
+      json.add(JsonMapper.shared().writeValueAsString(line));
     }
     try {
       Files.createDirectories(dir);

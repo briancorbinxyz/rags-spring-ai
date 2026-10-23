@@ -115,9 +115,10 @@ public final class Archive {
 
   private Ruling duo(String question, String conversationId) {
     // 1. Beta searches. The advisor runs the vector search and pastes the chunk texts in.
-    Reply b = call(beta, conversationId + ":beta", question);
-    List<Document> retrieved = b.retrieved().isEmpty() ? search(question) : b.retrieved();
-    Commentary betaSaid = b.commentary().orElse(Commentary.factual("Beta found nothing it would quote."));
+    var betaReply = call(beta, conversationId + ":beta", question);
+    var retrieved = betaReply.retrieved().isEmpty() ? search(question) : betaReply.retrieved();
+    var betaSaid =
+        betaReply.commentary().orElse(Commentary.factual("Beta found nothing it would quote."));
     say("Beta", betaSaid);
 
     // 2. The program traces every quotation to a retrieved chunk, or rejects it.
@@ -125,8 +126,8 @@ public final class Archive {
 
     // 3. Alpha answers from the traced quotations, and only from them.
     String prompt = alphaPrompt(question, resolution.quotes());
-    Reply a = call(alpha, conversationId + ":alpha", prompt);
-    Commentary alphaSaid = a.commentary().orElse(Commentary.factual("Alpha is unavailable."));
+    var alphaReply = call(alpha, conversationId + ":alpha", prompt);
+    var alphaSaid = alphaReply.commentary().orElse(Commentary.factual("Alpha is unavailable."));
     say("Alpha", alphaSaid);
     var alphaVerdicts = citations.checkAll(alphaSaid, resolution.quotes());
 
@@ -134,27 +135,28 @@ public final class Archive {
         question,
         Mode.DUO,
         retrieved,
-        b.commentary(),
+        betaReply.commentary(),
         resolution.verdicts(),
         resolution.quotes(),
-        a.commentary(),
+        alphaReply.commentary(),
         alphaVerdicts,
-        a.commentary().isPresent() && citations.abstained(alphaSaid, resolution.quotes()),
-        b.promptTokens(),
-        a.promptTokens(),
-        b.millis(),
-        a.millis(),
+        alphaReply.commentary().isPresent()
+            && citations.abstained(alphaSaid, resolution.quotes()),
+        betaReply.promptTokens(),
+        alphaReply.promptTokens(),
+        betaReply.millis(),
+        alphaReply.millis(),
         prompt);
   }
 
   private Ruling solo(String question, String conversationId) {
-    Reply a = call(alphaSolo, conversationId + ":alpha", question);
-    List<Document> retrieved = a.retrieved().isEmpty() ? search(question) : a.retrieved();
-    Commentary alphaSaid = a.commentary().orElse(Commentary.factual("Alpha is unavailable."));
+    var alphaReply = call(alphaSolo, conversationId + ":alpha", question);
+    var retrieved = alphaReply.retrieved().isEmpty() ? search(question) : alphaReply.retrieved();
+    var alphaSaid = alphaReply.commentary().orElse(Commentary.factual("Alpha is unavailable."));
     say("Alpha", alphaSaid);
-    QuoteResolver.Resolution resolution = resolver.resolve(alphaSaid, retrieved);
+    var resolution = resolver.resolve(alphaSaid, retrieved);
     boolean abstained =
-        a.commentary().isPresent()
+        alphaReply.commentary().isPresent()
             && alphaSaid.claims().stream().anyMatch(CitationChecker::abstains)
             && resolution.quotes().isEmpty();
     return new Ruling(
@@ -164,13 +166,13 @@ public final class Archive {
         Optional.empty(),
         resolution.verdicts(),
         resolution.quotes(),
-        a.commentary(),
+        alphaReply.commentary(),
         resolution.verdicts(),
         abstained,
         null,
-        a.promptTokens(),
+        alphaReply.promptTokens(),
         0,
-        a.millis(),
+        alphaReply.millis(),
         question);
   }
 

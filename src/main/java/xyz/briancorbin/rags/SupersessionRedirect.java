@@ -51,13 +51,13 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
   private String follow(String question, String address) {
     String at = address;
     for (int hop = 0; hop < HOPS; hop++) {
-      Map<String, Object> m = keywords.units().parts(at).getFirst().getMetadata();
-      Object next = m.get(ElementReader.SUPERSEDED_BY);
-      Object page = m.get(ElementReader.PAGE_SUPERSEDED_BY);
+      var marks = keywords.units().parts(at).getFirst().getMetadata();
+      Object next = marks.get(ElementReader.SUPERSEDED_BY);
+      Object page = marks.get(ElementReader.PAGE_SUPERSEDED_BY);
       if (next != null) {
         at = next.toString();
       } else if (page != null) {
-        String sameId = page + "#" + m.get(ElementReader.ANCHOR);
+        String sameId = page + "#" + marks.get(ElementReader.ANCHOR);
         if (!keywords.units().parts(sameId).isEmpty()) {
           at = sameId;
         } else {
@@ -95,7 +95,7 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
 
   /** The successor, saying which result it replaced: provenance for the redirect itself. */
   private static Document redirected(Document successor, String from) {
-    Document copy = ElementUnits.scored(successor, successor.getScore());
+    var copy = ElementUnits.scored(successor, successor.getScore());
     copy.getMetadata().put("redirected_from", from);
     return copy;
   }

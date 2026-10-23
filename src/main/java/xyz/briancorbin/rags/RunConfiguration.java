@@ -95,9 +95,9 @@ class RunConfiguration {
   /** Questions typed at the terminal, one conversation, until an empty line. */
   private static void converse(Archive archive) throws IOException {
     String session = UUID.randomUUID().toString();
-    var in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
+    var typed = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
     System.out.println("Ask the archive. An empty line ends the session.");
-    for (String line = in.readLine(); line != null && !line.isBlank(); line = in.readLine()) {
+    for (String line = typed.readLine(); line != null && !line.isBlank(); line = typed.readLine()) {
       print(archive.ask(line.strip(), session));
     }
   }
@@ -121,7 +121,7 @@ class RunConfiguration {
           http.send(
               HttpRequest.newBuilder(URI.create(baseUrl + "/api/tags")).GET().build(),
               HttpResponse.BodyHandlers.ofString());
-      JsonNode tags = JsonMapper.shared().readTree(response.body());
+      var tags = JsonMapper.shared().readTree(response.body());
       for (JsonNode model : tags.path("models")) {
         out.put(model.path("name").asString(""), model.path("digest").asString(""));
       }

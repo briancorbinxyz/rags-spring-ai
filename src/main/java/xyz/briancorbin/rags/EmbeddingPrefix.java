@@ -45,13 +45,13 @@ public enum EmbeddingPrefix {
 
   /** Which prefixes a model wants, read from its name. */
   public static EmbeddingPrefix of(String model) {
-    String m = model.toLowerCase(Locale.ROOT);
-    int colon = m.indexOf(':');
-    String bare = colon < 0 ? m : m.substring(colon + 1); // ollama:nomic-embed-text:v1.5
-    if (bare.startsWith("nomic-embed-text") || m.startsWith("nomic-embed-text")) {
+    String name = model.toLowerCase(Locale.ROOT);
+    int colon = name.indexOf(':');
+    String bare = colon < 0 ? name : name.substring(colon + 1); // ollama:nomic-embed-text:v1.5
+    if (bare.startsWith("nomic-embed-text") || name.startsWith("nomic-embed-text")) {
       return NOMIC;
     }
-    if (bare.startsWith("qwen3-embedding") || m.startsWith("qwen3-embedding")) {
+    if (bare.startsWith("qwen3-embedding") || name.startsWith("qwen3-embedding")) {
       return QWEN3;
     }
     return NONE;

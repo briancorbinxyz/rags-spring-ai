@@ -50,7 +50,7 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
     String tooShort = null;
     for (String source : claim.sources()) {
       String quote = normalise(source);
-      Optional<Integer> at = locate(quote, retrieved);
+      var at = locate(quote, retrieved);
       if (at.isEmpty()) {
         // An invented quotation outweighs everything else in the claim.
         return new Verdict(
@@ -77,7 +77,7 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
    */
   public Resolution resolve(Commentary reply, List<Document> retrieved) {
     var verdicts = checkAll(reply, retrieved);
-    Map<String, Quote> quotes = new LinkedHashMap<>();
+    var quotes = new LinkedHashMap<String, Quote>();
     for (Verdict v : verdicts) {
       if (v.status() != Status.SUPPORTED) {
         continue;
@@ -112,28 +112,28 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
    * the typographic forms of quotes, dashes and ellipses, which models routinely type as plain
    * ASCII. Case, spelling and word order all still count.
    */
-  static String normalise(String s) {
-    String t = Normalizer.normalize(s == null ? "" : s, Normalizer.Form.NFKC);
-    t =
-        t.replace('\u2018', '\'')
+  static String normalise(String text) {
+    String plain = Normalizer.normalize(text == null ? "" : text, Normalizer.Form.NFKC);
+    plain =
+        plain.replace('\u2018', '\'')
             .replace('\u2019', '\'')
             .replace('\u201C', '"')
             .replace('\u201D', '"')
             .replace('\u2013', '-')
             .replace('\u2014', '-')
             .replace("\u2026", "...");
-    t = t.replaceAll("\\s+", " ").strip();
-    return unquote(t);
+    plain = plain.replaceAll("\\s+", " ").strip();
+    return unquote(plain);
   }
 
-  private static String unquote(String s) {
-    if (s.length() >= 2 && s.startsWith("\"") && s.endsWith("\"")) {
-      return s.substring(1, s.length() - 1).strip();
+  private static String unquote(String text) {
+    if (text.length() >= 2 && text.startsWith("\"") && text.endsWith("\"")) {
+      return text.substring(1, text.length() - 1).strip();
     }
-    return s;
+    return text;
   }
 
-  private static String preview(String s) {
-    return s.length() <= 80 ? s : s.substring(0, 77) + "...";
+  private static String preview(String text) {
+    return text.length() <= 80 ? text : text.substring(0, 77) + "...";
   }
 }

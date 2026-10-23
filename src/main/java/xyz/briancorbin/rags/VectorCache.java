@@ -92,7 +92,7 @@ public final class VectorCache implements AutoCloseable {
   /** The cache key: {@code sha256(modelId + NUL + text)}, as the prototype computes it. */
   static String key(String modelId, String text) {
     try {
-      MessageDigest sha = MessageDigest.getInstance("SHA-256");
+      var sha = MessageDigest.getInstance("SHA-256");
       return HexFormat.of()
           .formatHex(sha.digest((modelId + "\0" + text).getBytes(StandardCharsets.UTF_8)));
     } catch (NoSuchAlgorithmException e) {

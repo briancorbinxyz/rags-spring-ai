@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.ai.document.Document;
@@ -61,16 +60,17 @@ public final class KeywordSearch implements AutoCloseable {
       try (var insert =
           db.prepareStatement(
               "insert into units(rowid, heading_path, anchor, body, lifecycle) values (?, ?, ?, ?, ?)")) {
-        List<Document> all = units.all();
+        var all = units.all();
         for (int row = 0; row < all.size(); row++) {
-          Document unit = all.get(row);
-          Map<String, Object> m = unit.getMetadata();
-          String path = String.valueOf(m.get(ElementReader.HEADING_PATH));
+          var unit = all.get(row);
+          var marks = unit.getMetadata();
+          String path = String.valueOf(marks.get(ElementReader.HEADING_PATH));
           insert.setInt(1, row);
-          insert.setString(2, join(path.isEmpty() ? m.get(ElementReader.TITLE) : path, m.get(ElementReader.HEADING)));
-          insert.setString(3, String.valueOf(m.get(ElementReader.ANCHOR)));
+          insert.setString(
+              2, join(path.isEmpty() ? marks.get(ElementReader.TITLE) : path, marks.get(ElementReader.HEADING)));
+          insert.setString(3, String.valueOf(marks.get(ElementReader.ANCHOR)));
           insert.setString(4, unit.getText());
-          insert.setString(5, String.valueOf(m.get(ElementReader.LIFECYCLE)));
+          insert.setString(5, String.valueOf(marks.get(ElementReader.LIFECYCLE)));
           insert.addBatch();
         }
         insert.executeBatch();
@@ -111,10 +111,11 @@ public final class KeywordSearch implements AutoCloseable {
   /** The question as an FTS5 query: each word that isn't a stop word, quoted, OR-ed. */
   static String matchQuery(String question) {
     var words = new ArrayList<String>();
-    Matcher m = WORD.matcher(question);
-    while (m.find()) {
-      if (!STOP_WORDS.contains(m.group().toLowerCase(Locale.ROOT))) {
-        words.add('"' + m.group().replace("\"", "\"\"") + '"');
+    var matchingWords = WORD.matcher(question);
+    while (matchingWords.find()) {
+      String word = matchingWords.group();
+      if (!STOP_WORDS.contains(word.toLowerCase(Locale.ROOT))) {
+        words.add('"' + word.replace("\"", "\"\"") + '"');
       }
     }
     return String.join(" OR ", words);
@@ -149,10 +150,10 @@ public final class KeywordSearch implements AutoCloseable {
     return Double.toString(WEIGHTS[0]) + ", " + WEIGHTS[1] + ", " + WEIGHTS[2];
   }
 
-  private static String join(Object a, Object b) {
-    String x = a == null ? "" : a.toString();
-    String y = b == null ? "" : b.toString();
-    return x.isEmpty() ? y : y.isEmpty() ? x : x + " " + y;
+  private static String join(Object first, Object second) {
+    String before = first == null ? "" : first.toString();
+    String after = second == null ? "" : second.toString();
+    return before.isEmpty() ? after : after.isEmpty() ? before : before + " " + after;
   }
 
   @Override

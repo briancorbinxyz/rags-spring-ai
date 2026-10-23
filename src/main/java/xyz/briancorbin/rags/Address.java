@@ -29,12 +29,12 @@ public record Address(String source, int chunk, int chunks, String title) {
 
   /** Reads the address back out of a stored chunk's metadata. */
   public static Address of(Document chunk) {
-    Map<String, Object> m = chunk.getMetadata();
+    var marks = chunk.getMetadata();
     return new Address(
-        String.valueOf(m.getOrDefault(SOURCE, "unknown")),
-        number(m.get("chunk_index"), 0) + 1, // the splitter counts from 0
-        number(m.get("total_chunks"), 1),
-        String.valueOf(m.getOrDefault("title", "")));
+        String.valueOf(marks.getOrDefault(SOURCE, "unknown")),
+        number(marks.get("chunk_index"), 0) + 1, // the splitter counts from 0
+        number(marks.get("total_chunks"), 1),
+        String.valueOf(marks.getOrDefault("title", "")));
   }
 
   /** How the address is shown to Alpha and to readers: {@code specs/…/spec.html, chunk 2 of 7}. */

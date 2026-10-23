@@ -46,31 +46,33 @@ public final class Supersession {
 
   /** The page that replaced the page {@code source}, if one did. */
   public Optional<String> pageSuccessor(String source) {
-    return Optional.ofNullable(pageSuccessors.get(source)).filter(s -> !s.equals(source));
+    return Optional.ofNullable(pageSuccessors.get(source))
+        .filter(replacement -> !replacement.equals(source));
   }
 
   static Supersession read(List<Page> pages, Map<String, Unit> units) {
-    var s = new Supersession();
-    Set<String> sources = new HashSet<>();
-    pages.forEach(p -> sources.add(p.source()));
+    var supersession = new Supersession();
+    var sources = new HashSet<String>();
+    pages.forEach(page -> sources.add(page.source()));
     for (Page page : pages) {
-      s.prose(page, sources, units);
-      s.deltas(page, units);
-      s.inPlace(page, units);
+      supersession.prose(page, sources, units);
+      supersession.deltas(page, units);
+      supersession.inPlace(page, units);
     }
-    return s;
+    return supersession;
   }
 
   /** "Superseded by" in the words just before a link. */
   private void prose(Page page, Set<String> sources, Map<String, Unit> units) {
     String source = page.source();
     boolean pageSuperseded =
-        page.html().select("spec-meta spec-status").stream().anyMatch(e -> "superseded".equals(e.attr("value")));
-    for (Element a : page.body().getAllElements()) {
-      if (!a.normalName().equals("a") || !a.hasAttr("href")) {
+        page.html().select("spec-meta spec-status").stream()
+            .anyMatch(status -> "superseded".equals(status.attr("value")));
+    for (Element link : page.body().getAllElements()) {
+      if (!link.normalName().equals("a") || !link.hasAttr("href")) {
         continue;
       }
-      String href = a.attr("href");
+      String href = link.attr("href");
       if (href.startsWith("http") || href.startsWith("mailto")) {
         continue;
       }
@@ -79,13 +81,14 @@ public final class Supersession {
       if (!sources.contains(target)) {
         continue;
       }
-      String from = unitAround(source, a, units);
+      String from = unitAround(source, link, units);
       String to = units.containsKey(target + "#" + fragment) ? target + "#" + fragment : null;
       if (from == null ? to == null && target.equals(source) : from.equals(to)) {
         continue; // a link to itself
       }
-      String context = a.parent() == null ? "" : lower(head(ElementReader.rawText(a.parent()), 200));
-      String linkText = lower(ElementReader.rawText(a));
+      String context =
+          link.parent() == null ? "" : lower(head(ElementReader.rawText(link.parent()), 200));
+      String linkText = lower(ElementReader.rawText(link));
       String before = "";
       if (!linkText.isEmpty()) {
         int at = context.indexOf(linkText);
@@ -105,13 +108,15 @@ public final class Supersession {
   /** A change proposal's {@code <spec-delta target="…">}: the old copy points at its successor. */
   private void deltas(Page page, Map<String, Unit> units) {
     String source = page.source();
-    for (Element e : page.body().getAllElements()) {
-      if (!e.normalName().equals("spec-delta") || e.attr("target").isEmpty()) {
+    for (Element delta : page.body().getAllElements()) {
+      if (!delta.normalName().equals("spec-delta") || delta.attr("target").isEmpty()) {
         continue;
       }
-      Element copy = ElementReader.first(e, k -> !k.id().isEmpty() && units.containsKey(source + "#" + k.id()));
-      String from = copy != null ? source + "#" + copy.id() : unitAround(source, e, units);
-      for (String id : LIST.split(e.attr("target"))) {
+      var copy =
+          ElementReader.first(
+              delta, inside -> !inside.id().isEmpty() && units.containsKey(source + "#" + inside.id()));
+      String from = copy != null ? source + "#" + copy.id() : unitAround(source, delta, units);
+      for (String id : LIST.split(delta.attr("target"))) {
         if (id.isEmpty()) {
           continue;
         }
@@ -133,21 +138,28 @@ public final class Supersession {
   /** An element marked superseded in place: the first link after the mark is its successor. */
   private void inPlace(Page page, Map<String, Unit> units) {
     String source = page.source();
-    for (Element e : page.body().getAllElements()) {
-      String address = source + "#" + e.id();
-      if (e.id().isEmpty() || !units.containsKey(address) || successors.containsKey(address)) {
+    for (Element element : page.body().getAllElements()) {
+      String address = source + "#" + element.id();
+      if (element.id().isEmpty()
+          || !units.containsKey(address)
+          || successors.containsKey(address)) {
         continue;
       }
-      Element mark =
-          ElementReader.first(e, k -> k.normalName().equals("spec-status") && "superseded".equals(k.attr("value")));
+      var mark =
+          ElementReader.first(
+              element,
+              status ->
+                  status.normalName().equals("spec-status")
+                      && "superseded".equals(status.attr("value")));
       if (mark == null) {
         continue;
       }
-      Element link = next(page.html(), mark);
-      if (link == null) {
+      var replacement = next(page.html(), mark);
+      if (replacement == null) {
         continue;
       }
-      String to = resolve(source, link.attr("href")) + "#" + fragment(link.attr("href"));
+      String to =
+          resolve(source, replacement.attr("href")) + "#" + fragment(replacement.attr("href"));
       if (units.containsKey(to) && !to.equals(address)) {
         successors.put(address, to);
       }
@@ -158,9 +170,9 @@ public final class Supersession {
 
   /** The unit an element sits in: itself or the nearest element around it that is a unit. */
   private static String unitAround(String source, Element el, Map<String, Unit> units) {
-    for (Element e = el; e != null; e = e.parent()) {
-      if (!e.id().isEmpty() && units.containsKey(source + "#" + e.id())) {
-        return source + "#" + e.id();
+    for (Element around = el; around != null; around = around.parent()) {
+      if (!around.id().isEmpty() && units.containsKey(source + "#" + around.id())) {
+        return source + "#" + around.id();
       }
     }
     return null;
@@ -187,11 +199,11 @@ public final class Supersession {
   /** The first link with an href after {@code start}, in document order. */
   private static Element next(Element root, Element start) {
     boolean seen = false;
-    for (Element e : root.getAllElements()) {
-      if (e == start) {
+    for (Element element : root.getAllElements()) {
+      if (element == start) {
         seen = true;
-      } else if (seen && e.normalName().equals("a") && e.hasAttr("href")) {
-        return e;
+      } else if (seen && element.normalName().equals("a") && element.hasAttr("href")) {
+        return element;
       }
     }
     return null;
@@ -204,7 +216,7 @@ public final class Supersession {
     if (path.isEmpty()) {
       return source;
     }
-    Path dir = Path.of(source).getParent();
+    var dir = Path.of(source).getParent();
     return (dir == null ? Path.of(path) : dir.resolve(path)).normalize().toString().replace('\\', '/');
   }
 
@@ -218,18 +230,20 @@ public final class Supersession {
     return parts[0] + "/" + parts[1];
   }
 
-  private static String lower(String s) {
-    return s.toLowerCase(Locale.ROOT);
+  private static String lower(String text) {
+    return text.toLowerCase(Locale.ROOT);
   }
 
-  /** The first {@code n} characters (code points, not UTF-16 units). */
-  private static String head(String s, int n) {
-    return s.codePointCount(0, s.length()) <= n ? s : s.substring(0, s.offsetByCodePoints(0, n));
+  /** The first {@code wanted} characters (code points, not UTF-16 units). */
+  private static String head(String text, int wanted) {
+    return text.codePointCount(0, text.length()) <= wanted
+        ? text
+        : text.substring(0, text.offsetByCodePoints(0, wanted));
   }
 
-  /** The last {@code n} characters. */
-  private static String tail(String s, int n) {
-    int count = s.codePointCount(0, s.length());
-    return count <= n ? s : s.substring(s.offsetByCodePoints(0, count - n));
+  /** The last {@code wanted} characters. */
+  private static String tail(String text, int wanted) {
+    int count = text.codePointCount(0, text.length());
+    return count <= wanted ? text : text.substring(text.offsetByCodePoints(0, count - wanted));
   }
 }
