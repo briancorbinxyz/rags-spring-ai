@@ -19,9 +19,8 @@ import xyz.briancorbin.rags.units.Address;
  * quotation found in none of them means Beta paraphrased or invented it: the claim is contradicted
  * and none of it reaches Alpha.
  *
- * <p>This is Episode 2's {@code QuoteChecker} with new evidence: the "file" Beta must quote from is
- * now whatever the retriever brought back. The comparison is still exact, after the normalisation
- * in {@link #normalise}, and nothing looser.
+ * <p>The "file" Beta must quote from is now whatever the retriever brought back. The comparison is
+ * still exact, after the normalisation in {@link #normalise}, and nothing looser.
  */
 public final class QuoteResolver implements FactChecker<List<Document>> {
 

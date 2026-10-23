@@ -23,7 +23,7 @@ import xyz.briancorbin.rags.answer.FactChecker.Verdict;
  * <p>Beta's {@link ChatClient} carries {@link QuestionAnswerAdvisor}, so every call to Beta is a
  * vector search followed by a prompt with the chunk texts pasted in. Alpha's carries no retriever:
  * Alpha never touches the archive, and it never sees a chunk, only quotations that {@link
- * QuoteResolver} found word for word in one. This replaces Episode 2's {@code Broadcast}.
+ * QuoteResolver} found word for word in one.
  *
  * <p>In solo mode the retriever moves to Alpha, which searches, quotes and answers in one call, and
  * its quotations go through the same resolver.
@@ -107,9 +107,9 @@ public final class Archive {
   }
 
   /**
-   * Answers one question. The conversation id keeps each commentator's memory separate, as in
-   * Episode 2: {@code <id>:beta} and {@code <id>:alpha}. A golden run uses a fresh id per question,
-   * so no question's memory leaks into the next.
+   * Answers one question. The conversation id keeps each commentator's memory separate, as in One
+   * conversation per persona: {@code <id>:beta} and {@code <id>:alpha}. A golden run uses a fresh
+   * id per question, so no question's memory leaks into the next.
    */
   public Ruling ask(String question, String conversationId) {
     log.info("Q: {}", question);
@@ -192,9 +192,9 @@ public final class Archive {
   }
 
   /**
-   * Calls a commentator and asks for a {@link Commentary}. As in Episode 2, a failure costs the
-   * answer, not the run. The retrieved chunks come back in the response metadata, where {@link
-   * QuestionAnswerAdvisor} puts them under {@code qa_retrieved_documents}.
+   * Calls a commentator and asks for a {@link Commentary}. A failure costs the answer, not the run.
+   * The retrieved chunks come back in the response metadata, where {@link QuestionAnswerAdvisor}
+   * puts them under {@code qa_retrieved_documents}.
    */
   private Reply call(ChatClient client, String conversationId, String user) {
     long start = System.nanoTime();

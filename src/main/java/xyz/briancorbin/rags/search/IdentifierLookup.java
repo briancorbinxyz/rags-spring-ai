@@ -13,7 +13,7 @@ import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.Standing;
 
 /**
- * Finds the passage a question names, so it does not have to be searched for (Episode 4, Step 2).
+ * Finds the passage a question names, so it does not have to be searched for.
  *
  * <p>"What does FR-001 in spec 045 require?" names a part of the archive and a scope to look for it
  * in. {@code FR-001} alone is in over a hundred specs, so:

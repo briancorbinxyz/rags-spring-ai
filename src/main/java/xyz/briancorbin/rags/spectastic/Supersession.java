@@ -15,7 +15,7 @@ import xyz.briancorbin.rags.spectastic.SpectasticReader.Page;
 import xyz.briancorbin.rags.spectastic.SpectasticReader.Unit;
 
 /**
- * The paper trail: which current element replaced each out-of-date one (Episode 4, Step 4).
+ * The paper trail: which current element replaced each out-of-date one.
  *
  * <p>spectastic says it three ways, and all three are read:
  *

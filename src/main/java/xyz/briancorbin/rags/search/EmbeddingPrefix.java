@@ -11,7 +11,7 @@ import java.util.Locale;
  *
  * <ul>
  *   <li>{@link #NOMIC}: {@code search_document: } in front of a passage and {@code search_query: }
- *       in front of a question, the strings Episode 3's {@link PrefixedEmbeddingModel} sends.
+ *       in front of a question, the same strings {@link PrefixedEmbeddingModel} sends.
  *   <li>{@link #QWEN3}: passages bare, and a question behind the task sentence from the
  *       Qwen3-Embedding model card's own example. The card asks for a task sentence per use case;
  *       keeping the card's default is what stops it being tuned on the golden set.

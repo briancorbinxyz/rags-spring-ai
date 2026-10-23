@@ -27,7 +27,7 @@ import xyz.briancorbin.rags.units.Units;
  */
 public final class RetrievalRun {
 
-  /** The golden set scores the top four, as Episode 3's advisor passed four chunks to Beta. */
+  /** The golden set scores the top four, which is what a reader is handed. */
   public static final int K = 4;
 
   /** Stale records are looked for in the first ten results. */

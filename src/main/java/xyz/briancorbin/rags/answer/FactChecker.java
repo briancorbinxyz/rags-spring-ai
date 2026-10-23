@@ -6,10 +6,10 @@ import java.util.List;
 /**
  * Checks claims against evidence and returns a verdict for each.
  *
- * <p>The series adds a checker each time the evidence changes. In Episode 2 the evidence was the
- * game's own history and the colour file. In Episode 3 it is what the retriever brought back
- * ({@link QuoteResolver}) and the quotations Alpha was shown ({@link CitationChecker}). Both are
- * still plain code; a model only becomes a checker in Episode 7, behind this same interface.
+ * <p>There is a checker for each kind of evidence, and what counts as evidence changes: a game's
+ * own history, a file a persona was told to quote from, or what the retriever brought back ({@link
+ * QuoteResolver}) and the quotations Alpha was shown ({@link CitationChecker}). Both are still
+ * plain code. A model could be a checker too, behind this same interface.
  *
  * @param <E> what the claims are checked against
  */

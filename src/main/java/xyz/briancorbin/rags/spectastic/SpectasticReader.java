@@ -24,7 +24,7 @@ import xyz.briancorbin.rags.search.Successors;
 import xyz.briancorbin.rags.units.Units;
 
 /**
- * Reads a spectastic checkout one element at a time (Episode 4, Step 1).
+ * Reads a spectastic checkout one element at a time.
  *
  * <p>Every element with an {@code id} is a unit: a requirement, a decision, a task, a success
  * criterion, a section. Its text is its own text only; an element inside it with an id of its own,

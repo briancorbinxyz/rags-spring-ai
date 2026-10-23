@@ -12,8 +12,8 @@ import xyz.briancorbin.rags.units.StandingFilter;
 
 /**
  * The search, as a Spring AI {@link DocumentRetriever}: keyword search over the element units, the
- * units a question names pinned above it, out-of-date units filtered out, and — from Episode 5 —
- * dense search fused in.
+ * units a question names pinned above it, out-of-date units filtered out, and dense search fused
+ * in.
  *
  * <pre>{@code
  * ElementRetriever.builder()
@@ -134,21 +134,21 @@ public final class ElementRetriever implements DocumentRetriever {
       return this;
     }
 
-    /** Dense search over the same units, fused with the keywords (Episode 5, Step 5). */
+    /** Dense search over the same units, fused with the keywords. */
     public Builder vectors(VectorSearch vectors) {
       this.vectors = vectors;
       return this;
     }
 
-    /** Pin the units a question names by id and spec above the search (Step 2). */
+    /** Pin the units a question names by id and scope above the search. */
     public Builder identifiers(IdentifierLookup identifiers) {
       this.identifiers = identifiers;
       return this;
     }
 
     /**
-     * Which standings may come back, named or searched; every one of them by default (Step 3). The
-     * filter is a value, so it already copies what it was given.
+     * Which standings may come back, named or searched; every one of them by default. The filter is
+     * a value, so it already copies what it was given.
      */
     public Builder filter(StandingFilter filter) {
       this.filter = filter;

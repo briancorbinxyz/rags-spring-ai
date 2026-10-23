@@ -11,8 +11,7 @@ import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.Units;
 
 /**
- * Follows the paper trail (Episode 4, Step 4): a result that something newer replaced gives its
- * place to its successor.
+ * Follows the paper trail: a result that something newer replaced gives its place to its successor.
  *
  * <p>The successor is read from the unit's metadata, where {@link SpectasticReader} put it ({@code
  * superseded_by}), following up to {@value #HOPS} hops. On a superseded page, the successor is the
@@ -20,7 +19,7 @@ import xyz.briancorbin.rags.units.Units;
  * question. Whatever was superseded is then dropped, applied changes included. A requirement can be
  * rewritten by several applied changes in turn, and each one left a proposal in the archive saying
  * it rewrote that requirement; nothing on those proposals says which rewrite is the live one, so
- * keeping them puts three versions of the same rule in front of a reader. Episode 5 measured it.
+ * keeping them puts three versions of the same rule in front of a reader, which was measured.
  */
 public final class SupersessionRedirect implements DocumentPostProcessor {
 

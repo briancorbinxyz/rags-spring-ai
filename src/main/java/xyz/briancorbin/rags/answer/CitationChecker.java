@@ -12,11 +12,10 @@ import java.util.regex.Pattern;
 /**
  * Checks that each of Alpha's claims cites quotations Alpha was actually given.
  *
- * <p>Alpha cites by label ("Q2"), the way it cited "move 3" in Episode 2, and the check is just as
- * exact: a label is either in the list Alpha was shown or it is not. A supported verdict here means
- * "rests on a verified quotation", not "is entailed by it". Whether the quotation really says what
- * the claim says is a judgement, and judges arrive in Episode 7, measured against the human labels
- * this episode collects.
+ * <p>Alpha cites by label ("Q2"), and the check is just as exact: a label is either in the list
+ * Alpha was shown or it is not. A supported verdict here means "rests on a verified quotation", not
+ * "is entailed by it". Whether the quotation really says what the claim says is a judgement, and a
+ * judge would have to be measured against the human labels this episode collects.
  *
  * <p>Saying {@value #ABSTENTION} is a legitimate answer, and on a question the archive cannot
  * answer it is the right one, so an abstaining claim with no sources is unchecked rather than

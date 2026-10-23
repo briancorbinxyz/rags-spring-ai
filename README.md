@@ -14,6 +14,10 @@ describes and compare one episode with the next.
 Compare any two episodes on GitHub with
 [`episode-1...episode-2`](../../compare/episode-1...episode-2).
 
+No class says which episode it belongs to: the code is meant to read on its own.
+[What was added, and why](docs/design-history.md) is where that history lives, along
+with the vocabulary the packages are built on and what the architecture tests enforce.
+
 Episodes 1 and 2 use the game from
 [overengineering-tictactoe](https://github.com/briancorbinxyz/overengineering-tictactoe),
 which stays pure Java; this repository consumes its published `tictactoe-api`

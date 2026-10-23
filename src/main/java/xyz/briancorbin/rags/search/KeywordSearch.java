@@ -57,7 +57,7 @@ public final class KeywordSearch implements AutoCloseable {
   }
 
   /**
-   * The table. {@code lifecycle} is stored but not indexed: Step 3 filters on it, never matches.
+   * The table. {@code lifecycle} is stored but not indexed: a filter reads it, a match never does.
    */
   private void create() throws SQLException {
     try (var create = db.createStatement()) {

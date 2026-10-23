@@ -21,7 +21,7 @@ import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.Units;
 
 /**
- * Episode 5's reranking (Step 6): a cross-encoder reads the question and a passage together.
+ * Reranking: a cross-encoder reads the question and a passage together.
  *
  * <p>An embedding model turns a question and a passage into vectors separately, and never sees them
  * side by side. A cross-encoder does the opposite: one pass over the pair, which is why it scores

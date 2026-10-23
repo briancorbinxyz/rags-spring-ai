@@ -15,7 +15,7 @@ import xyz.briancorbin.rags.units.Standing;
  *   <li>{@link #HISTORY}: an applied change under {@code changes/archive/}, the proposal that made
  *       the current text what it is;
  *   <li>{@link #WITHDRAWN}, {@link #SUPERSEDED}, {@link #REJECTED}: out of date, and kept out of
- *       the search (Step 3).
+ *       the search.
  * </ul>
  *
  * <p>{@link #OUT_OF_DATE} is the one list of which those are, and {@link #IN_FORCE} is its
@@ -33,7 +33,7 @@ public enum Lifecycle implements Standing {
   SUPERSEDED,
   REJECTED;
 
-  /** Replaced, withdrawn or never accepted: the search leaves these out (Step 3). */
+  /** Replaced, withdrawn or never accepted: the search leaves these out. */
   public static final Set<Lifecycle> OUT_OF_DATE =
       Collections.unmodifiableSet(EnumSet.of(WITHDRAWN, SUPERSEDED, REJECTED));
 

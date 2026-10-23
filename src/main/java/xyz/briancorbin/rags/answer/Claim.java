@@ -10,9 +10,8 @@ import java.util.List;
  * backs which statement; a single list of citations for a whole reply cannot.
  *
  * @param text one short statement, literal and checkable
- * @param sources what the statement rests on: in Episode 2 an earlier move ("move 3") or a quoted
- *     line; from Episode 3 a passage copied word for word from the archive, or the label of one
- *     ("Q2") that the program has already traced to its address
+ * @param sources what the statement rests on: a passage copied word for word from the archive, or
+ *     the label of one ("Q2") that the program has already traced to its address
  */
 public record Claim(String text, List<String> sources) {
 
