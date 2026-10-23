@@ -15,7 +15,7 @@ import org.springframework.ai.embedding.EmbeddingResponseMetadata;
 
 class PrefixedEmbeddingModelTest {
 
-  /** Records what it was asked to embed, and reports one token per character. */
+  /// Records what it was asked to embed, and reports one token per character.
   static final class Recorder implements EmbeddingModel {
     final List<String> seen = new ArrayList<>();
 

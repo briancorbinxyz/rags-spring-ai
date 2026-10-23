@@ -6,23 +6,20 @@ import java.util.List;
 import java.util.Map;
 import xyz.briancorbin.rags.eval.RetrievalRun.Result;
 
-/**
- * The ratchet: a step is kept only if it doesn't go backwards. Against the step before it, a step
- * fails if
- *
- * <ul>
- *   <li>fewer questions have an expected passage in the top four (Hit@4);
- *   <li>fewer have every expected passage in the top four (all-evidence@4), so a step can't look
- *       better by finding one end of a multi-hop question and losing the other;
- *   <li>any one kind of question loses more than one question at Hit@4;
- *   <li>or more questions have a stale record in the top four.
- * </ul>
- *
- * <p>Unanswerable questions have nothing to find, so they are not counted here.
- */
+/// The ratchet: a step is kept only if it doesn't go backwards. Against the step before it, a step
+/// fails if
+///
+/// - fewer questions have an expected passage in the top four (Hit@4);
+/// - fewer have every expected passage in the top four (all-evidence@4), so a step can't look
+///   better by finding one end of a multi-hop question and losing the other;
+///
+/// - any one kind of question loses more than one question at Hit@4;
+/// - or more questions have a stale record in the top four.
+///
+/// Unanswerable questions have nothing to find, so they are not counted here.
 public final class Ratchet {
 
-  /** Counts over the answerable questions of one run. */
+  /// Counts over the answerable questions of one run.
   public record Tally(
       int questions, int hits, int allEvidence, int stale, Map<String, Integer> hitsByStratum) {
 
@@ -61,7 +58,7 @@ public final class Ratchet {
 
   private Ratchet() {}
 
-  /** Why {@code current} fails against {@code previous}; empty if it passes. */
+  /// Why `current` fails against `previous`; empty if it passes.
   public static List<String> failures(Tally previous, Tally current) {
     var why = new ArrayList<String>();
     if (current.hits() < previous.hits()) {

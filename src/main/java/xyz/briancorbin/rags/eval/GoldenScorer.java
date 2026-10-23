@@ -14,22 +14,20 @@ import org.jsoup.Jsoup;
 import org.springframework.ai.document.Document;
 import xyz.briancorbin.rags.units.Address;
 
-/**
- * Decides, in code, whether a retrieved chunk found the passage a question expects.
- *
- * <p>An expected address names one element, but the naive chunks know nothing about elements: they
- * are 800-token slices of a page's text. So the scorer finds where the element's text sits in the
- * page's text, finds where the chunk sits, and measures the overlap. A chunk that holds the whole
- * element is a <em>hit</em>. One that holds at least half of it is a <em>partial hit</em>, which is
- * what an element cut in two by a chunk boundary looks like.
- *
- * <p>The page text is read exactly as the archive read it, with jsoup's {@code body().text()}, so a
- * chunk's text is a slice of it and positions can be compared directly.
- *
- * <p>From golden set version 2 a question can also carry passages the blind audit accepted (see
- * {@link GoldenSet.Accept}). An accepted passage found whole counts as a hit, and it covers the
- * expected element it stands in for, or all of them when it answers the whole question.
- */
+/// Decides, in code, whether a retrieved chunk found the passage a question expects.
+///
+/// An expected address names one element, but the naive chunks know nothing about elements: they
+/// are 800-token slices of a page's text. So the scorer finds where the element's text sits in the
+/// page's text, finds where the chunk sits, and measures the overlap. A chunk that holds the whole
+/// element is a *hit*. One that holds at least half of it is a *partial hit*, which is what an
+/// element cut in two by a chunk boundary looks like.
+///
+/// The page text is read exactly as the archive read it, with jsoup's `body().text()`, so a chunk's
+/// text is a slice of it and positions can be compared directly.
+///
+/// From golden set version 2 a question can also carry passages the blind audit accepted (see
+/// {@link GoldenSet.Accept}). An accepted passage found whole counts as a hit, and it covers the
+/// expected element it stands in for, or all of them when it answers the whole question.
 public final class GoldenScorer {
 
   public enum Hit {
@@ -37,7 +35,7 @@ public final class GoldenScorer {
     PARTIAL,
     NONE;
 
-    /** The better of two outcomes on the same chunk. Said out, not left to declaration order. */
+    /// The better of two outcomes on the same chunk. Said out, not left to declaration order.
     Hit or(Hit other) {
       if (this == FULL || other == FULL) {
         return FULL;
@@ -46,18 +44,16 @@ public final class GoldenScorer {
     }
   }
 
-  /**
-   * Where the first full and first partial hits came in the results, counting from 1, or null when
-   * there was none. A full hit also counts as a partial one. {@code firstAll} is the rank by which
-   * every expected element had been found whole (all-evidence), or null if that never happened.
-   */
+  /// Where the first full and first partial hits came in the results, counting from 1, or null when
+  /// there was none. A full hit also counts as a partial one. `firstAll` is the rank by which every
+  /// expected element had been found whole (all-evidence), or null if that never happened.
   public record Score(Integer firstHit, Integer firstPartial, Integer firstAll) {
 
     public Score(Integer firstHit, Integer firstPartial) {
       this(firstHit, firstPartial, null);
     }
 
-    /** Every expected element found whole in the first {@code k} results. */
+    /// Every expected element found whole in the first `k` results.
     public boolean allAt(int k) {
       return firstAll != null && firstAll <= k;
     }
@@ -70,7 +66,7 @@ public final class GoldenScorer {
       return firstPartial != null && firstPartial <= k;
     }
 
-    /** The reciprocal rank of the first full hit: 1, 1/2, 1/3, …, or 0 for a miss. */
+    /// The reciprocal rank of the first full hit: 1, 1/2, 1/3, …, or 0 for a miss.
     public double reciprocalRank() {
       return firstHit == null ? 0 : 1.0 / firstHit;
     }
@@ -85,23 +81,21 @@ public final class GoldenScorer {
     this.checkout = checkout;
   }
 
-  /** Scores a ranked list of chunks against any of the expected addresses. */
+  /// Scores a ranked list of chunks against any of the expected addresses.
   public Score score(List<String> expected, List<Document> retrieved) {
     return score(expected, List.of(), retrieved);
   }
 
-  /** Scores a question, counting the passages its audit accepted. */
+  /// Scores a question, counting the passages its audit accepted.
   public Score score(GoldenSet.Question q, List<Document> retrieved) {
     return score(q.expected(), q.accept(), retrieved);
   }
 
-  /** What a question will accept as an answer: the passages it expects, and the audit's rulings. */
+  /// What a question will accept as an answer: the passages it expects, and the audit's rulings.
   private record Wanted(List<String> expected, List<GoldenSet.Accept> accept) {}
 
-  /**
-   * Scores a ranked list of chunks against the expected addresses and the accepted ones. A partial
-   * hit on an accepted passage counts as partial, never as a hit.
-   */
+  /// Scores a ranked list of chunks against the expected addresses and the accepted ones. A partial
+  /// hit on an accepted passage counts as partial, never as a hit.
   public Score score(
       List<String> expected, List<GoldenSet.Accept> accept, List<Document> retrieved) {
     var wanted = new Wanted(expected, accept);
@@ -124,11 +118,9 @@ public final class GoldenScorer {
     return new Score(hit, partial, all);
   }
 
-  /**
-   * Notes which expected passages this chunk covers, and returns the best it managed on any of
-   * them. An accepted passage can stand for one expected passage or for the whole question, which
-   * is what the blind audit decided for it.
-   */
+  /// Notes which expected passages this chunk covers, and returns the best it managed on any of
+  /// them. An accepted passage can stand for one expected passage or for the whole question, which
+  /// is what the blind audit decided for it.
   private Hit cover(Wanted wanted, Document chunk, Set<String> covered) {
     Hit best = Hit.NONE;
     for (String address : wanted.expected()) {
@@ -152,11 +144,9 @@ public final class GoldenScorer {
     return best;
   }
 
-  /**
-   * Scores a ranked list of element addresses. With element units a result <em>is</em> an element,
-   * so a hit is an address that matches: an expected one, or one the audit accepted for the whole
-   * question or for one of the expected passages. There are no partial hits.
-   */
+  /// Scores a ranked list of element addresses. With element units a result *is* an element, so a
+  /// hit is an address that matches: an expected one, or one the audit accepted for the whole
+  /// question or for one of the expected passages. There are no partial hits.
   public static Score byAddress(GoldenSet.Question question, List<String> ranked) {
     Integer hit = null;
     Integer all = null;
@@ -174,11 +164,9 @@ public final class GoldenScorer {
     return new Score(hit, hit, all);
   }
 
-  /**
-   * Notes which expected passages {@code address} covers, and says whether it covered any. An
-   * accepted passage can stand for one expected passage or for the whole question, which is what
-   * the blind audit decided for it.
-   */
+  /// Notes which expected passages `address` covers, and says whether it covered any. An accepted
+  /// passage can stand for one expected passage or for the whole question, which is what the blind
+  /// audit decided for it.
   private static boolean cover(GoldenSet.Question question, String address, Set<String> covered) {
     boolean found = false;
     if (question.expected().contains(address)) {
@@ -200,7 +188,7 @@ public final class GoldenScorer {
     return found;
   }
 
-  /** How much of the element at {@code address} one chunk holds. */
+  /// How much of the element at `address` one chunk holds.
   public Hit hit(String address, Document chunk) {
     String file = address.contains("#") ? address.substring(0, address.indexOf('#')) : address;
     if (!file.equals(Address.of(chunk).source())) {
@@ -218,10 +206,8 @@ public final class GoldenScorer {
         : byOverlap(page, element, chunkAt, text.length());
   }
 
-  /**
-   * When the chunk is not a clean slice of the page — a multi-byte character the tokenizer split,
-   * say — fall back to asking whether the element's text, or half of it, is in there at all.
-   */
+  /// When the chunk is not a clean slice of the page — a multi-byte character the tokenizer split,
+  /// say — fall back to asking whether the element's text, or half of it, is in there at all.
   private static Hit byContaining(String text, String element) {
     if (text.contains(element)) {
       return Hit.FULL;
@@ -232,10 +218,8 @@ public final class GoldenScorer {
         : Hit.NONE;
   }
 
-  /**
-   * The element's text can occur more than once on a page — in a summary table, say — so judge the
-   * chunk by the occurrence it overlaps most.
-   */
+  /// The element's text can occur more than once on a page — in a summary table, say — so judge the
+  /// chunk by the occurrence it overlaps most.
   private static Hit byOverlap(Page page, String element, int chunkAt, int chunkLength) {
     int best = 0;
     for (int at = page.text().indexOf(element);
@@ -250,9 +234,7 @@ public final class GoldenScorer {
     return best * 2 >= element.length() ? Hit.PARTIAL : Hit.NONE;
   }
 
-  /**
-   * The text of the element an address names, or the whole page for an address with no {@code #}.
-   */
+  /// The text of the element an address names, or the whole page for an address with no `#`.
   public Optional<String> elementText(String address) {
     int hash = address.indexOf('#');
     String file = hash < 0 ? address : address.substring(0, hash);

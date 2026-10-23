@@ -3,7 +3,7 @@ package xyz.briancorbin.rags;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-/** Answerer and Quoter, reassigned to the archive. */
+/// Answerer and Quoter, reassigned to the archive.
 @SpringBootApplication
 public class App {
   public static void main(String[] args) {

@@ -18,23 +18,21 @@ import xyz.briancorbin.rags.eval.GoldenSet.Question;
 import xyz.briancorbin.rags.search.ElementRetriever;
 import xyz.briancorbin.rags.units.Units;
 
-/**
- * Runs the golden set through a search, with no model: what came back, and where the expected
- * passages were in it. This is what the ratchet compares.
- *
- * <p>With element units a result <em>is</em> an element, so scoring is matching addresses: a result
- * is a hit when its address is an expected one, or one the audit accepted. A split unit's parts
- * each count as a result, so a long unit can take two of the top four.
- */
+/// Runs the golden set through a search, with no model: what came back, and where the expected
+/// passages were in it. This is what the ratchet compares.
+///
+/// With element units a result *is* an element, so scoring is matching addresses: a result is a hit
+/// when its address is an expected one, or one the audit accepted. A split unit's parts each count
+/// as a result, so a long unit can take two of the top four.
 public final class RetrievalRun {
 
-  /** The golden set scores the top four, which is what a reader is handed. */
+  /// The golden set scores the top four, which is what a reader is handed.
   public static final int K = 4;
 
-  /** Stale records are looked for in the first ten results. */
+  /// Stale records are looked for in the first ten results.
   static final int STALE_DEPTH = 10;
 
-  /** One step of the main line: a search, and what runs after it (or null). */
+  /// One step of the main line: a search, and what runs after it (or null).
   public record Step(
       String name, String label, DocumentRetriever retriever, DocumentPostProcessor after) {
 
@@ -45,9 +43,7 @@ public final class RetrievalRun {
     }
   }
 
-  /**
-   * One question's outcome: the addresses in rank order, how they scored, and the first stale one.
-   */
+  /// One question's outcome: the addresses in rank order, how they scored, and the first stale one.
   public record Result(Question question, List<String> ranked, Score score, Integer firstStale) {
 
     public boolean staleAt(int k) {
@@ -75,10 +71,7 @@ public final class RetrievalRun {
     return null;
   }
 
-  /**
-   * Writes {@code <step>.run} (TREC), {@code <step>.jsonl} (every question's top ten and score)
-   * into {@code dir}.
-   */
+  /// Writes `<step>.run` (TREC), `<step>.jsonl` (every question's top ten and score) into `dir`.
   public static void write(Step step, List<Result> results, Path dir) {
     var trec = new ArrayList<String>();
     var json = new ArrayList<String>();
@@ -99,7 +92,7 @@ public final class RetrievalRun {
     }
   }
 
-  /** One question's record: what was asked for, where it was found, and the first ten results. */
+  /// One question's record: what was asked for, where it was found, and the first ten results.
   private static SequencedMap<String, Object> line(Step step, Result result) {
     var line = new LinkedHashMap<String, Object>();
     line.put("step", step.name());

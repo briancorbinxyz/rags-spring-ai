@@ -25,35 +25,33 @@ import xyz.briancorbin.rags.eval.GoldenScorer.Score;
 import xyz.briancorbin.rags.eval.GoldenSet.Question;
 import xyz.briancorbin.rags.spectastic.SpecCorpus;
 
-/**
- * Runs every golden question through the archive and writes down what happened.
- *
- * <p>Three files go to {@code build/}, named {@code episode-3-<model>-<mode>-k4}:
- *
- * <ul>
- *   <li>{@code .csv}: one row per question, with the retrieval score, Quoter's traced quotations,
- *       Answerer's claims by verdict, abstention, stale answers, tokens and time;
- *   <li>{@code .jsonl}: the same rows in full, with every chunk retrieved, every quotation and
- *       every claim, so a failure can be diagnosed from the run itself;
- *   <li>{@code -summary.md}: the per-stratum table the article prints.
- * </ul>
- *
- * <p>Every row records the commit, the models and a hash of the prompts. Change any of them and the
- * numbers are a new baseline, not a comparison.
- */
+/// Runs every golden question through the archive and writes down what happened.
+///
+/// Three files go to `build/`, named `episode-3-<model>-<mode>-k4`:
+///
+/// - `.csv`: one row per question, with the retrieval score, Quoter's traced quotations, Answerer's
+///   claims by verdict, abstention, stale answers, tokens and time;
+///
+/// - `.jsonl`: the same rows in full, with every chunk retrieved, every quotation and every claim,
+///   so a failure can be diagnosed from the run itself;
+///
+/// - `-summary.md`: the per-stratum table the article prints.
+///
+/// Every row records the commit, the models and a hash of the prompts. Change any of them and the
+/// numbers are a new baseline, not a comparison.
 public final class GoldenRun {
 
   private static final Logger log = LoggerFactory.getLogger(GoldenRun.class);
 
-  /** The advisor's default: four chunks per question. */
+  /// The advisor's default: four chunks per question.
   static final int K = 4;
 
-  /** Words that mark an answer as knowing its source is out of date. A heuristic, said so. */
+  /// Words that mark an answer as knowing its source is out of date. A heuristic, said so.
   private static final Pattern FLAGS_STALE =
       Pattern.compile(
           "(?i)\\b(?<staleWord>withdrawn|superseded|no longer|retired|archived|was proposed)\\b");
 
-  /** What the run was measured on. */
+  /// What the run was measured on.
   public record Setup(
       SpecCorpus.Manifest corpus,
       String chatModel,
@@ -61,7 +59,7 @@ public final class GoldenRun {
       Map<String, String> digests,
       String promptsHash) {}
 
-  /** One question's outcome. */
+  /// One question's outcome.
   public record Row(
       Question question,
       Archive.Ruling ruling,
@@ -109,7 +107,7 @@ public final class GoldenRun {
     return List.copyOf(rows);
   }
 
-  /** The quotations the answer leaned on: Answerer's citations in duo mode, all of them in solo. */
+  /// The quotations the answer leaned on: Answerer's citations in duo mode, all of them in solo.
   private SequencedCollection<Quote> citedBy(Archive.Ruling ruling) {
     if (ruling.mode() != Archive.Mode.QUOTED) {
       return ruling.quotes();
@@ -121,7 +119,7 @@ public final class GoldenRun {
         .orElseGet(LinkedHashSet::new);
   }
 
-  /** Whether any of the question's stale records is in the top four Quoter was handed. */
+  /// Whether any of the question's stale records is in the top four Quoter was handed.
   private boolean anyStaleAmong(Question question, List<Document> top) {
     return top.stream()
         .anyMatch(
@@ -129,10 +127,8 @@ public final class GoldenRun {
                 question.stale().stream().anyMatch(stale -> scorer.hit(stale, chunk) != Hit.NONE));
   }
 
-  /**
-   * Whether a quotation Answerer relied on came from a stale element itself, rather than merely
-   * from a chunk that also happens to hold it.
-   */
+  /// Whether a quotation Answerer relied on came from a stale element itself, rather than merely
+  /// from a chunk that also happens to hold it.
   private boolean anyStaleQuotedIn(Question question, SequencedCollection<Quote> cited) {
     List<String> staleTexts =
         question.stale().stream()
@@ -158,14 +154,14 @@ public final class GoldenRun {
         flagsStale(ruling));
   }
 
-  /** How much of what the quoter offered traced word for word; nothing to share in direct mode. */
+  /// How much of what the quoter offered traced word for word; nothing to share in direct mode.
   private static Double verifiedShare(Archive.Ruling ruling) {
     return ruling.mode() == Archive.Mode.QUOTED
         ? new QuoteResolver.Resolution(ruling.quoter().verdicts(), ruling.quotes()).verifiedShare()
         : null;
   }
 
-  /** Whether the answer says, in words, that what it found is out of date. A heuristic, said so. */
+  /// Whether the answer says, in words, that what it found is out of date. A heuristic, said so.
   private static boolean flagsStale(Archive.Ruling ruling) {
     return ruling
         .answerer()
@@ -178,7 +174,7 @@ public final class GoldenRun {
     return i == null ? 0 : i;
   }
 
-  /** Writes the three files and returns the summary table. */
+  /// Writes the three files and returns the summary table.
   public String write(List<Row> rows, Setup setup, Path dir) {
     String name =
         "episode-3-%s-%s-k%d"
@@ -199,7 +195,7 @@ public final class GoldenRun {
     return summary;
   }
 
-  /** Short hash of the persona prompts, so a prompt change shows up in every row. */
+  /// Short hash of the persona prompts, so a prompt change shows up in every row.
   public static String hash(List<String> prompts) {
     try {
       var digest = java.security.MessageDigest.getInstance("SHA-256");

@@ -10,42 +10,40 @@ import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
 import xyz.briancorbin.rags.units.StandingFilter;
 
-/**
- * The search, as a Spring AI {@link DocumentRetriever}: keyword search over the element units, the
- * units a question names pinned above it, out-of-date units filtered out, and dense search fused
- * in.
- *
- * <pre>{@code
- * ElementRetriever.builder()
- *     .keywords(keywords)                 // BM25 over the element units
- *     .vectors(vectors)                   // the same units as vectors; omit for keyword-only
- *     .identifiers(new IdentifierLookup(units, new SpecGrammar()))
- *     .filter(StandingFilter.of(Lifecycle.IN_FORCE))
- *     .build();
- * }</pre>
- *
- * <p>With both searches, each runs {@value #DEPTH_EACH} deep behind the same lifecycle filter and
- * {@link Rrf} fuses them on rank alone. With one, its ranking is used as it stands. Pinned units go
- * first either way and carry no score: they were looked up, not ranked.
- *
- * <p>What comes back is the pinned units, then the first {@value #DEPTH} of the ranking —
- * everything that can reach a top {@value #DEPTH}, since each pinned unit pushes a ranked one out
- * and never pulls a further one in. Cutting to {@value #DEPTH} is {@link TopDocuments}'s job, after
- * any reranking, so a reranker sees the same candidates however many units were pinned.
- *
- * <p>Spring AI 2.0.1 has no fusion of its own. Its {@code ConcatenationDocumentJoiner} is not it:
- * that one re-sorts the joined lists by {@link Document#getScore()} descending, which compares
- * scores from different scales and throws on a pinned unit, whose score is null.
- */
+/// The search, as a Spring AI {@link DocumentRetriever}: keyword search over the element units, the
+/// units a question names pinned above it, out-of-date units filtered out, and dense search fused
+/// in.
+///
+/// ```java
+/// ElementRetriever.builder()
+///     .keywords(keywords)                 // BM25 over the element units
+///     .vectors(vectors)                   // the same units as vectors; omit for keyword-only
+///     .identifiers(new IdentifierLookup(units, new SpecGrammar()))
+///     .filter(StandingFilter.of(Lifecycle.IN_FORCE))
+///     .build();
+/// ```
+///
+/// With both searches, each runs {@value #DEPTH_EACH} deep behind the same lifecycle filter and
+/// {@link ReciprocalRankFusion} fuses them on rank alone. With one, its ranking is used as it
+/// stands. Pinned units go first either way and carry no score: they were looked up, not ranked.
+///
+/// What comes back is the pinned units, then the first {@value #DEPTH} of the ranking — everything
+/// that can reach a top {@value #DEPTH}, since each pinned unit pushes a ranked one out and never
+/// pulls a further one in. Cutting to {@value #DEPTH} is {@link TopDocuments}'s job, after any
+/// reranking, so a reranker sees the same candidates however many units were pinned.
+///
+/// Spring AI 2.0.1 has no fusion of its own. Its `ConcatenationDocumentJoiner` is not it: that one
+/// re-sorts the joined lists by {@link Document#getScore()} descending, which compares scores from
+/// different scales and throws on a pinned unit, whose score is null.
 public final class ElementRetriever implements DocumentRetriever {
 
-  /** The results a step returns, and so the most candidates anything after it can need. */
+  /// The results a step returns, and so the most candidates anything after it can need.
   public static final int DEPTH = 50;
 
-  /** Each list's depth before fusion. Deeper than the answer, so fusion has room to disagree. */
+  /// Each list's depth before fusion. Deeper than the answer, so fusion has room to disagree.
   public static final int DEPTH_EACH = 100;
 
-  /** Metadata marking a unit that was looked up rather than ranked, so nothing reranks it. */
+  /// Metadata marking a unit that was looked up rather than ranked, so nothing reranks it.
   public static final String PINNED = "pinned";
 
   private final KeywordSearch keywords;
@@ -70,7 +68,7 @@ public final class ElementRetriever implements DocumentRetriever {
     List<Document> ranked =
         vectors == null
             ? keywords.search(question, DEPTH, filter)
-            : Rrf.fuse(
+            : ReciprocalRankFusion.fuse(
                 List.of(
                     keywords.search(question, DEPTH_EACH, filter),
                     vectors.search(question, DEPTH_EACH, filter)));
@@ -92,7 +90,7 @@ public final class ElementRetriever implements DocumentRetriever {
     return List.copyOf(out.values());
   }
 
-  /** Every part of every unit the question names, in the lookup's order, that the filter allows. */
+  /// Every part of every unit the question names, in the lookup's order, that the filter allows.
   private List<Document> pinned(String question) {
     if (identifiers == null) {
       return List.of();
@@ -108,14 +106,14 @@ public final class ElementRetriever implements DocumentRetriever {
     return out;
   }
 
-  /** A copy of a unit with no score and the pinned mark: looked up, not ranked. */
+  /// A copy of a unit with no score and the pinned mark: looked up, not ranked.
   private static Document mark(Document unit) {
     var metadata = new HashMap<>(unit.getMetadata());
     metadata.put(PINNED, true);
     return Document.builder().id(unit.getId()).text(unit.getText()).metadata(metadata).build();
   }
 
-  /** Whether a unit was pinned by the identifier lookup, and so is not a ranked result. */
+  /// Whether a unit was pinned by the identifier lookup, and so is not a ranked result.
   public static boolean isPinned(Document unit) {
     return Boolean.TRUE.equals(unit.getMetadata().get(PINNED));
   }
@@ -128,28 +126,26 @@ public final class ElementRetriever implements DocumentRetriever {
 
     private Builder() {}
 
-    /** Keyword search over the element units. Required. */
+    /// Keyword search over the element units. Required.
     public Builder keywords(KeywordSearch keywords) {
       this.keywords = keywords;
       return this;
     }
 
-    /** Dense search over the same units, fused with the keywords. */
+    /// Dense search over the same units, fused with the keywords.
     public Builder vectors(VectorSearch vectors) {
       this.vectors = vectors;
       return this;
     }
 
-    /** Pin the units a question names by id and scope above the search. */
+    /// Pin the units a question names by id and scope above the search.
     public Builder identifiers(IdentifierLookup identifiers) {
       this.identifiers = identifiers;
       return this;
     }
 
-    /**
-     * Which standings may come back, named or searched; every one of them by default. The filter is
-     * a value, so it already copies what it was given.
-     */
+    /// Which standings may come back, named or searched; every one of them by default. The filter
+    /// is a value, so it already copies what it was given.
     public Builder filter(StandingFilter filter) {
       this.filter = filter;
       return this;

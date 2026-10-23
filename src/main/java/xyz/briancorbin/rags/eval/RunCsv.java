@@ -9,14 +9,12 @@ import java.util.function.BiFunction;
 import xyz.briancorbin.rags.eval.GoldenRun.Row;
 import xyz.briancorbin.rags.eval.GoldenRun.Setup;
 
-/**
- * One row per question, for a spreadsheet: the scores, what each persona was sure of, and the run's
- * provenance repeated on every line so a row can be read on its own.
- *
- * <p>Each column is declared once, as its heading and how to read it. A header list and a cell list
- * kept side by side would be two things to keep in the same order, and nothing would say when they
- * stopped being.
- */
+/// One row per question, for a spreadsheet: the scores, what each persona was sure of, and the
+/// run's provenance repeated on every line so a row can be read on its own.
+///
+/// Each column is declared once, as its heading and how to read it. A header list and a cell list
+/// kept side by side would be two things to keep in the same order, and nothing would say when they
+/// stopped being.
 final class RunCsv {
 
   private RunCsv() {}

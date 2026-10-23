@@ -16,16 +16,14 @@ import com.tngtech.archunit.lang.SimpleConditionEvent;
 import org.junit.jupiter.api.Test;
 import xyz.briancorbin.rags.eval.GoldenSet;
 
-/**
- * The seams, asserted.
- *
- * <p>Every rule here was true when it was written. They exist because the next change will be made
- * by someone who has not read the article explaining why the search does not know what a spec is,
- * and a convention nothing checks is one that lasts until somebody is in a hurry.
- *
- * <p>ArchUnit reads bytecode, so a {@code {@link}} in a comment is not a dependency and does not
- * count here — which is the right answer: a mention is not a coupling.
- */
+/// The seams, asserted.
+///
+/// Every rule here was true when it was written. They exist because the next change will be made by
+/// someone who has not read the article explaining why the search does not know what a spec is, and
+/// a convention nothing checks is one that lasts until somebody is in a hurry.
+///
+/// ArchUnit reads bytecode, so a {@code {@link}} in a comment is not a dependency and does not
+/// count here — which is the right answer: a mention is not a coupling.
 class ArchitectureTest {
 
   private static final String ROOT = "xyz.briancorbin.rags";
@@ -36,10 +34,8 @@ class ArchitectureTest {
           .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
           .importPackages(ROOT);
 
-  /**
-   * The point of the whole exercise. Retrieval may name the ports — {@code Standing}, {@code
-   * Successors}, {@code IdentifierGrammar} — but never the archive that answers them.
-   */
+  /// The point of the whole exercise. Retrieval may name the ports — `Standing`, `Successors`,
+  /// `IdentifierGrammar` — but never the archive that answers them.
   @Test
   void theSearchDoesNotKnowWhoseArchiveItIs() {
     noClasses()
@@ -54,7 +50,7 @@ class ArchitectureTest {
         .check(CLASSES);
   }
 
-  /** Scoring a run reads its results; it is never what produces them. */
+  /// Scoring a run reads its results; it is never what produces them.
   @Test
   void theSearchDoesNotDependOnItsOwnScoring() {
     noClasses()
@@ -67,7 +63,7 @@ class ArchitectureTest {
         .check(CLASSES);
   }
 
-  /** The document model is the bottom of the stack: it waits to be used, it does not reach up. */
+  /// The document model is the bottom of the stack: it waits to be used, it does not reach up.
   @Test
   void theUnitModelDoesNotReachUpwards() {
     noClasses()
@@ -80,7 +76,7 @@ class ArchitectureTest {
         .check(CLASSES);
   }
 
-  /** The two personas read quotations; they have no business knowing how retrieval works. */
+  /// The two personas read quotations; they have no business knowing how retrieval works.
   @Test
   void theAnswerSideDoesNotKnowHowRetrievalWorks() {
     noClasses()
@@ -94,7 +90,7 @@ class ArchitectureTest {
         .check(CLASSES);
   }
 
-  /** Two packages that each need the other are one package wearing a disguise. */
+  /// Two packages that each need the other are one package wearing a disguise.
   @Test
   void thePackagesDoNotDependOnEachOtherInCircles() {
     slices()
@@ -105,15 +101,13 @@ class ArchitectureTest {
         .check(CLASSES);
   }
 
-  /** At most this many constructor parameters before the call site stops being readable. */
+  /// At most this many constructor parameters before the call site stops being readable.
   private static final int MANY = 8;
 
-  /**
-   * More than a handful of things handed to a constructor is a builder waiting to be written, and a
-   * record's canonical constructor takes every component — which is why this lives here rather than
-   * in Checkstyle, whose {@code ParameterNumber} refuses {@code RECORD_DEF} and so cannot see a
-   * record at all. ArchUnit reads bytecode, where a record is a class with a constructor.
-   */
+  /// More than a handful of things handed to a constructor is a builder waiting to be written, and
+  /// a record's canonical constructor takes every component — which is why this lives here rather
+  /// than in Checkstyle, whose `ParameterNumber` refuses `RECORD_DEF` and so cannot see a record at
+  /// all. ArchUnit reads bytecode, where a record is a class with a constructor.
   @Test
   void nothingTakesMoreThanAHandfulOfThingsAtOnce() {
     constructors()
@@ -142,14 +136,12 @@ class ArchitectureTest {
     };
   }
 
-  /** At most this many parameters on anything a caller outside the class can see. */
+  /// At most this many parameters on anything a caller outside the class can see.
   private static final int FEW = 3;
 
-  /**
-   * Three for the visible surface. Checkstyle counts four for everything, because it cannot tell a
-   * private helper from public API — its xpath filter will not suppress by check id — and ArchUnit
-   * reads the modifiers, so the tighter half of the rule lives here.
-   */
+  /// Three for the visible surface. Checkstyle counts four for everything, because it cannot tell a
+  /// private helper from public API — its xpath filter will not suppress by check id — and ArchUnit
+  /// reads the modifiers, so the tighter half of the rule lives here.
   @Test
   void whatIsVisibleOutsideAClassTakesFewThings() {
     methods()

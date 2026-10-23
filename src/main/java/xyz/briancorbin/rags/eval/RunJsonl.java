@@ -11,10 +11,8 @@ import xyz.briancorbin.rags.eval.GoldenRun.Row;
 import xyz.briancorbin.rags.eval.GoldenRun.Setup;
 import xyz.briancorbin.rags.units.Address;
 
-/**
- * One JSON object per question, for anything that wants the whole record: every retrieved address
- * and score, both personas' replies, every verdict and every quotation.
- */
+/// One JSON object per question, for anything that wants the whole record: every retrieved address
+/// and score, both personas' replies, every verdict and every quotation.
 final class RunJsonl {
 
   private RunJsonl() {}
@@ -27,7 +25,7 @@ final class RunJsonl {
     return lines;
   }
 
-  /** One question's record, in the order it reads best. */
+  /// One question's record, in the order it reads best.
   private static SequencedMap<String, Object> object(Row row) {
     var ruling = row.ruling();
     var line = new LinkedHashMap<String, Object>();
@@ -51,7 +49,7 @@ final class RunJsonl {
     return line;
   }
 
-  /** Each retrieved chunk as its address and its score, in the order it was ranked. */
+  /// Each retrieved chunk as its address and its score, in the order it was ranked.
   private static List<Map<String, Object>> retrieved(Archive.Ruling ruling) {
     return ruling.retrieved().stream()
         .map(

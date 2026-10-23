@@ -16,21 +16,19 @@ import xyz.briancorbin.rags.units.Standing;
 import xyz.briancorbin.rags.units.StandingFilter;
 import xyz.briancorbin.rags.units.Units;
 
-/**
- * Keyword search over the element units: BM25, as SQLite's full-text search (FTS5) ships it.
- *
- * <p>One row per unit, in three weighted columns: the heading path and the element's own heading
- * (×5), the element's id (×10) and its text (×1). FTS5's default tokenizer, {@code unicode61},
- * splits on hyphens, so {@code FR-012} is the two tokens {@code fr 012}, and quoting it as a phrase
- * keeps them together. The question becomes every word that isn't a stop word, each quoted, OR-ed:
- * a unit needs only one of them to be a candidate, and BM25 ranks the candidates.
- *
- * <p>The lifecycle is a fourth column, unindexed, so a {@link Lifecycle} filter runs inside the
- * query, before the results are cut to a depth, as a vector store's metadata filter does.
- */
+/// Keyword search over the element units: BM25, as SQLite's full-text search (FTS5) ships it.
+///
+/// One row per unit, in three weighted columns: the heading path and the element's own heading
+/// (×5), the element's id (×10) and its text (×1). FTS5's default tokenizer, `unicode61`, splits on
+/// hyphens, so `FR-012` is the two tokens `fr 012`, and quoting it as a phrase keeps them together.
+/// The question becomes every word that isn't a stop word, each quoted, OR-ed: a unit needs only
+/// one of them to be a candidate, and BM25 ranks the candidates.
+///
+/// The lifecycle is a fourth column, unindexed, so a {@link Lifecycle} filter runs inside the
+/// query, before the results are cut to a depth, as a vector store's metadata filter does.
 public final class KeywordSearch implements AutoCloseable {
 
-  /** The heading path, the id, the text. */
+  /// The heading path, the id, the text.
   static final double[] WEIGHTS = {5.0, 10.0, 1.0};
 
   private static final Pattern WORD = Pattern.compile("[A-Za-z0-9][A-Za-z0-9\\-]*");
@@ -39,7 +37,7 @@ public final class KeywordSearch implements AutoCloseable {
   private final Connection db;
   private final StopWords stopWords;
 
-  /** A keyword index over these units. Built once; it owns a SQLite connection, so close it. */
+  /// A keyword index over these units. Built once; it owns a SQLite connection, so close it.
   public static KeywordSearch of(ElementUnits units, StopWords stopWords) {
     return new KeywordSearch(units, stopWords);
   }
@@ -56,9 +54,7 @@ public final class KeywordSearch implements AutoCloseable {
     }
   }
 
-  /**
-   * The table. {@code lifecycle} is stored but not indexed: a filter reads it, a match never does.
-   */
+  /// The table. `lifecycle` is stored but not indexed: a filter reads it, a match never does.
   private void create() throws SQLException {
     try (var create = db.createStatement()) {
       create.execute(
@@ -67,7 +63,7 @@ public final class KeywordSearch implements AutoCloseable {
     }
   }
 
-  /** Every unit, in archive order, so a rowid is the unit's position. */
+  /// Every unit, in archive order, so a rowid is the unit's position.
   private void fill() throws SQLException {
     db.setAutoCommit(false);
     try (var insert =
@@ -84,7 +80,7 @@ public final class KeywordSearch implements AutoCloseable {
     db.commit();
   }
 
-  /** One unit's columns: what a reader sees in front of the text, the id, the text, the state. */
+  /// One unit's columns: what a reader sees in front of the text, the id, the text, the state.
   private static void bind(PreparedStatement insert, int row, Document unit) throws SQLException {
     var marks = unit.getMetadata();
     String path = String.valueOf(marks.get(Units.HEADING_PATH));
@@ -96,16 +92,14 @@ public final class KeywordSearch implements AutoCloseable {
     insert.setString(5, String.valueOf(marks.get(Units.STANDING)));
   }
 
-  /** The units this searches. */
+  /// The units this searches.
   public ElementUnits units() {
     return units;
   }
 
-  /**
-   * The {@code depth} best units for a question, best first, each with its BM25 score (higher is
-   * better). Only units whose lifecycle is in {@code filter} come back; the filter runs before the
-   * cut, so a filtered search still returns {@code depth} units when it can.
-   */
+  /// The `depth` best units for a question, best first, each with its BM25 score (higher is
+  /// better). Only units whose lifecycle is in `filter` come back; the filter runs before the cut,
+  /// so a filtered search still returns `depth` units when it can.
   public List<Document> search(String question, int depth, StandingFilter filter) {
     String where = where(filter);
     String sql =
@@ -114,9 +108,8 @@ public final class KeywordSearch implements AutoCloseable {
     return query(sql, question, depth, null);
   }
 
-  /**
-   * Ranks the given units, and only them, for a question; units with no matching word are left out.
-   */
+  /// Ranks the given units, and only them, for a question; units with no matching word are left
+  /// out.
   public List<Document> rank(String question, Collection<Document> scope) {
     String ids =
         scope.stream()
@@ -128,13 +121,11 @@ public final class KeywordSearch implements AutoCloseable {
     return query(sql, question, scope.size(), ids);
   }
 
-  /**
-   * A standing filter as SQL: {@code lifecycle in ('current', 'history')}, nothing at all when
-   * every standing is allowed, and a condition that matches nothing when none is.
-   *
-   * <p>This lives here rather than on {@link Standing} because it is SQL — the shape of the filter
-   * is the archive's, and expressing it in FTS5 is this adapter's.
-   */
+  /// A standing filter as SQL: `lifecycle in ('current', 'history')`, nothing at all when every
+  /// standing is allowed, and a condition that matches nothing when none is.
+  ///
+  /// This lives here rather than on {@link Standing} because it is SQL — the shape of the filter is
+  /// the archive's, and expressing it in FTS5 is this adapter's.
   private String where(StandingFilter filter) {
     if (filter.everything()) {
       return "";
@@ -147,7 +138,7 @@ public final class KeywordSearch implements AutoCloseable {
         .collect(Collectors.joining(", ", "lifecycle in (", ")"));
   }
 
-  /** The question as an FTS5 query: each word that isn't a stop word, quoted, OR-ed. */
+  /// The question as an FTS5 query: each word that isn't a stop word, quoted, OR-ed.
   static String matchQuery(String question, StopWords stopWords) {
     var words = new ArrayList<String>();
     var matchingWords = WORD.matcher(question);

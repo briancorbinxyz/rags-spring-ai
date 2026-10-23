@@ -21,27 +21,25 @@ import tools.jackson.databind.json.JsonMapper;
 import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.Units;
 
-/**
- * Reranking: a cross-encoder reads the question and a passage together.
- *
- * <p>An embedding model turns a question and a passage into vectors separately, and never sees them
- * side by side. A cross-encoder does the opposite: one pass over the pair, which is why it scores
- * better and why it costs so much more. So it is used as a second pass over the first {@value
- * ElementRetriever#DEPTH} results, not as a search.
- *
- * <p>It reads exactly what a reader would be given, {@link Units#passage}: the heading path, then
- * the unit's text. Pinned units are never reranked — they were looked up by name, and a model's
- * opinion does not outrank an identifier — so they keep their place at the front.
- *
- * <p>Spring AI 2.0.1 has no reranking abstraction, so this is a plain {@link
- * DocumentPostProcessor}. The model itself is {@code cross-encoder/ms-marco-MiniLM-L-6-v2} run by
- * sentence-transformers behind {@code tools/rerank-service}: running a cross-encoder in-process in
- * Java means an ONNX export and a tokenizer, which is an episode of its own. One HTTP call keeps
- * the scores identical to the prototype's, which is what the parity check needs.
- */
+/// Reranking: a cross-encoder reads the question and a passage together.
+///
+/// An embedding model turns a question and a passage into vectors separately, and never sees them
+/// side by side. A cross-encoder does the opposite: one pass over the pair, which is why it scores
+/// better and why it costs so much more. So it is used as a second pass over the first {@value
+/// ElementRetriever#DEPTH} results, not as a search.
+///
+/// It reads exactly what a reader would be given, {@link Units#passage}: the heading path, then the
+/// unit's text. Pinned units are never reranked — they were looked up by name, and a model's
+/// opinion does not outrank an identifier — so they keep their place at the front.
+///
+/// Spring AI 2.0.1 has no reranking abstraction, so this is a plain {@link DocumentPostProcessor}.
+/// The model itself is `cross-encoder/ms-marco-MiniLM-L-6-v2` run by sentence-transformers behind
+/// `tools/rerank-service`: running a cross-encoder in-process in Java means an ONNX export and a
+/// tokenizer, which is an episode of its own. One HTTP call keeps the scores identical to the
+/// prototype's, which is what the parity check needs.
 public final class CrossEncoderReranker implements DocumentPostProcessor {
 
-  /** Where {@code tools/rerank-service/serve.py} listens by default. */
+  /// Where `tools/rerank-service/serve.py` listens by default.
   public static final String DEFAULT_URL = "http://127.0.0.1:8099";
 
   private final URI endpoint;
@@ -82,7 +80,7 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
     return List.copyOf(out);
   }
 
-  /** One score per passage, higher is more relevant; the scale is the model's own. */
+  /// One score per passage, higher is more relevant; the scale is the model's own.
   private List<Double> scores(String question, List<String> passages) {
     try {
       HttpResponse<String> response =
@@ -112,7 +110,7 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
         .build();
   }
 
-  /** One score per passage, or an exception: a short list would silently mis-order the results. */
+  /// One score per passage, or an exception: a short list would silently mis-order the results.
   private List<Double> parsed(String body, int expected) {
     var parsed = JsonMapper.shared().readValue(body, new TypeReference<Map<String, Object>>() {});
     @SuppressWarnings("unchecked")
@@ -125,7 +123,7 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
     return raw.stream().map(Number::doubleValue).toList();
   }
 
-  /** The model the service has loaded, or empty if it is not answering: for a test's assumption. */
+  /// The model the service has loaded, or empty if it is not answering: for a test's assumption.
   public static Optional<String> modelAt(String baseUrl) {
     try {
       HttpResponse<String> response = health(baseUrl);

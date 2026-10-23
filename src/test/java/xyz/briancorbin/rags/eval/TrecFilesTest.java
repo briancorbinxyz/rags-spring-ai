@@ -74,10 +74,8 @@ class TrecFilesTest {
     assertEquals(50, TrecFiles.run("q", ranked, new TrecFiles.Run("x", 50)).size());
   }
 
-  /**
-   * The shipped qrels are exactly what the golden set and the audit say. If this fails, regenerate
-   * {@code qrels.txt} (see the golden set's README) rather than editing it by hand.
-   */
+  /// The shipped qrels are exactly what the golden set and the audit say. If this fails, regenerate
+  /// `qrels.txt` (see the golden set's README) rather than editing it by hand.
   @Test
   void theShippedQrelsMatchTheGoldenSetAndTheAudit() throws IOException {
     var questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));

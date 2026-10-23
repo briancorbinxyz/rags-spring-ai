@@ -9,21 +9,19 @@ import java.util.Optional;
 import java.util.SequencedSet;
 import java.util.regex.Pattern;
 
-/**
- * Checks that each of Answerer's claims cites quotations Answerer was actually given.
- *
- * <p>Answerer cites by label ("Q2"), and the check is just as exact: a label is either in the list
- * Answerer was shown or it is not. A supported verdict here means "rests on a verified quotation",
- * not "is entailed by it". Whether the quotation really says what the claim says is a judgement,
- * and a judge would have to be measured against the human labels this episode collects.
- *
- * <p>Saying {@value #ABSTENTION} is a legitimate answer, and on a question the archive cannot
- * answer it is the right one, so an abstaining claim with no sources is unchecked rather than
- * unsupported.
- */
+/// Checks that each of Answerer's claims cites quotations Answerer was actually given.
+///
+/// Answerer cites by label ("Q2"), and the check is just as exact: a label is either in the list
+/// Answerer was shown or it is not. A supported verdict here means "rests on a verified quotation",
+/// not "is entailed by it". Whether the quotation really says what the claim says is a judgement,
+/// and a judge would have to be measured against the human labels this episode collects.
+///
+/// Saying {@value #ABSTENTION} is a legitimate answer, and on a question the archive cannot answer
+/// it is the right one, so an abstaining claim with no sources is unchecked rather than
+/// unsupported.
 public final class CitationChecker implements FactChecker<List<Quote>> {
 
-  /** The exact words Answerer's prompt asks for when nothing it was given answers the question. */
+  /// The exact words Answerer's prompt asks for when nothing it was given answers the question.
   public static final String ABSTENTION = "Not in the archive.";
 
   private static final Pattern ABSTAINS = Pattern.compile("(?i)\\bnot in the archive\\b");
@@ -49,14 +47,14 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
     return new Verdict(claim, Status.SUPPORTED, "cites " + labels(cited));
   }
 
-  /** The quotations a claim leaned on, by label and address, in the order it cited them. */
+  /// The quotations a claim leaned on, by label and address, in the order it cited them.
   private static String labels(List<Quote> cited) {
     return cited.stream()
         .map(quote -> quote.label() + " (" + quote.address() + ")")
         .collect(java.util.stream.Collectors.joining(", "));
   }
 
-  /** True when the reply says the answer is not in the archive and backs no claim with a quote. */
+  /// True when the reply says the answer is not in the archive and backs no claim with a quote.
   public boolean abstained(Commentary reply, List<Quote> given) {
     var verdicts = checkAll(reply, given);
     boolean says = reply.claims().stream().anyMatch(CitationChecker::abstains);
@@ -64,7 +62,7 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
     return says && !cites;
   }
 
-  /** The quotations a reply cites, in the order first cited, for the results file. */
+  /// The quotations a reply cites, in the order first cited, for the results file.
   public SequencedSet<Quote> cited(Commentary reply, List<Quote> given) {
     var cited = new LinkedHashSet<Quote>(); // a quotation cited twice is still cited once
     for (Claim claim : reply.claims()) {
@@ -79,7 +77,7 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
     return ABSTAINS.matcher(claim.text()).find();
   }
 
-  /** Accepts "Q2", "q2" and "[Q2]"; nothing looser. */
+  /// Accepts "Q2", "q2" and "[Q2]"; nothing looser.
   private static Optional<Quote> find(String source, List<Quote> given) {
     String label =
         source.strip().replaceAll("^\\[(?<label>.*)]$", "${label}").toUpperCase(Locale.ROOT);

@@ -5,13 +5,11 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
 
-/**
- * Post-processors in a row, each given what the one before it returned.
- *
- * <p>Spring AI's {@code DocumentPostProcessor} is a single step, and its advisor takes a list, but
- * there is no composite that makes several of them one. A step of the main line is one search and
- * one thing after it, so here is the composite.
- */
+/// Post-processors in a row, each given what the one before it returned.
+///
+/// Spring AI's `DocumentPostProcessor` is a single step, and its advisor takes a list, but there is
+/// no composite that makes several of them one. A step of the main line is one search and one thing
+/// after it, so here is the composite.
 public record PostProcessors(List<DocumentPostProcessor> steps) implements DocumentPostProcessor {
 
   public PostProcessors {

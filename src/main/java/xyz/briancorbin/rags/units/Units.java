@@ -2,17 +2,15 @@ package xyz.briancorbin.rags.units;
 
 import org.springframework.ai.document.Document;
 
-/**
- * What a unit carries, and how to read it back.
- *
- * <p>Every search, filter, redirect and report in this codebase goes through these keys, so they
- * are declared once here rather than wherever they were first needed. A unit has a source, an id, a
- * heading path, a position among its parts, a standing, and possibly a successor, whatever archive
- * it came out of.
- *
- * <p>The standing is stored as a label, and turning a label back into a standing needs {@link
- * Standings}, which the archive hands in: see {@link ElementUnits#standing(Document)}.
- */
+/// What a unit carries, and how to read it back.
+///
+/// Every search, filter, redirect and report in this codebase goes through these keys, so they are
+/// declared once here rather than wherever they were first needed. A unit has a source, an id, a
+/// heading path, a position among its parts, a standing, and possibly a successor, whatever archive
+/// it came out of.
+///
+/// The standing is stored as a label, and turning a label back into a standing needs {@link
+/// Standings}, which the archive hands in: see {@link ElementUnits#standing(Document)}.
 public final class Units {
 
   private Units() {}
@@ -32,21 +30,19 @@ public final class Units {
   public static final String SUPERSEDED_BY = "superseded_by";
   public static final String PAGE_SUPERSEDED_BY = "page_superseded_by";
 
-  /** {@code <source>#<anchor>}: the address the golden set and the run files use. */
+  /// `<source>#<anchor>`: the address the golden set and the run files use.
   public static String address(Document unit) {
     return unit.getMetadata().get(SOURCE) + "#" + unit.getMetadata().get(ANCHOR);
   }
 
-  /**
-   * What a reader is given, and what is embedded and reranked: the heading path in front of the
-   * text, so a passage's own id still carries which part of the archive it belongs to.
-   */
+  /// What a reader is given, and what is embedded and reranked: the heading path in front of the
+  /// text, so a passage's own id still carries which part of the archive it belongs to.
   public static String passage(Document unit) {
     String path = String.valueOf(unit.getMetadata().getOrDefault(HEADING_PATH, ""));
     return path.isEmpty() ? unit.getText() : path + "\n" + unit.getText();
   }
 
-  /** The label a unit's standing was stored under; {@link Standings} says what it means. */
+  /// The label a unit's standing was stored under; {@link Standings} says what it means.
   public static Object standingLabel(Document unit) {
     return unit.getMetadata().get(STANDING);
   }

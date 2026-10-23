@@ -12,22 +12,18 @@ import org.springframework.ai.document.Document;
 import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.Standing;
 
-/**
- * Finds the passage a question names, so it does not have to be searched for.
- *
- * <p>"What does FR-001 in spec 045 require?" names a part of the archive and a scope to look for it
- * in. {@code FR-001} alone is in over a hundred specs, so:
- *
- * <ul>
- *   <li>an id with a scope names that id in that scope, on every page of it;
- *   <li>an id with no scope names something only if exactly one scope has it.
- * </ul>
- *
- * <p>What a name looks like is the {@link IdentifierGrammar}'s business; which names exist is this
- * class's, because it is the one holding the units. The addresses come back by {@link
- * Standing#precedence()}, then pages outside {@code changes/} before change proposals, then archive
- * order.
- */
+/// Finds the passage a question names, so it does not have to be searched for.
+///
+/// "What does FR-001 in spec 045 require?" names a part of the archive and a scope to look for it
+/// in. `FR-001` alone is in over a hundred specs, so:
+///
+/// - an id with a scope names that id in that scope, on every page of it;
+/// - an id with no scope names something only if exactly one scope has it.
+///
+/// What a name looks like is the {@link IdentifierGrammar}'s business; which names exist is this
+/// class's, because it is the one holding the units. The addresses come back by {@link
+/// Standing#precedence()}, then pages outside `changes/` before change proposals, then archive
+/// order.
 public final class IdentifierLookup {
 
   private final ElementUnits units;
@@ -46,7 +42,7 @@ public final class IdentifierLookup {
     }
   }
 
-  /** The ids the question names that this archive actually has, and the scopes it named them by. */
+  /// The ids the question names that this archive actually has, and the scopes it named them by.
   IdentifierGrammar.Named parse(String question) {
     IdentifierGrammar.Named named = grammar.named(question);
     var ids = new LinkedHashSet<String>();
@@ -54,7 +50,7 @@ public final class IdentifierLookup {
     return new IdentifierGrammar.Named(ids, named.scopes());
   }
 
-  /** The addresses of the units the question names, in the order they should be pinned. */
+  /// The addresses of the units the question names, in the order they should be pinned.
   public SequencedCollection<String> lookup(String question) {
     IdentifierGrammar.Named named = parse(question);
     var pinned = new LinkedHashSet<String>(); // two ids can name one address; it is pinned once
@@ -64,7 +60,7 @@ public final class IdentifierLookup {
     return pinned.stream().sorted(pinOrder()).toList();
   }
 
-  /** Every address carrying {@code id}, narrowed to {@code scopes} if the question named any. */
+  /// Every address carrying `id`, narrowed to `scopes` if the question named any.
   private List<String> addressesNamedBy(String id, Set<String> scopes) {
     List<String> addresses = byAnchor.getOrDefault(id, List.of());
     if (!scopes.isEmpty()) {
@@ -78,7 +74,7 @@ public final class IdentifierLookup {
     return addresses;
   }
 
-  /** Most authoritative first; pages outside {@code changes/} first; then archive order. */
+  /// Most authoritative first; pages outside `changes/` first; then archive order.
   private Comparator<String> pinOrder() {
     return Comparator.<String>comparingInt(address -> standingOf(address).precedence())
         .thenComparing(address -> address.contains("/changes/"))

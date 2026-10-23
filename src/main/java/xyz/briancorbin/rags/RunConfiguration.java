@@ -34,19 +34,15 @@ import xyz.briancorbin.rags.eval.GoldenSet;
 import xyz.briancorbin.rags.search.PrefixedEmbeddingModel;
 import xyz.briancorbin.rags.spectastic.SpecCorpus;
 
-/**
- * What a run does, set by {@code archive.run}:
- *
- * <ul>
- *   <li>{@code golden} (the default): every golden question, with results written to {@code
- *       build/};
- *   <li>{@code ask}: the question in {@code archive.question}, or, with none, questions typed at
- *       the terminal in one conversation, so follow-ups work;
- *   <li>{@code demo}: the embedding demo, which needs no archive;
- *   <li>{@code ingest}: build or load the store and stop;
- *   <li>{@code none}: nothing, for tests.
- * </ul>
- */
+/// What a run does, set by `archive.run`:
+///
+/// - `golden` (the default): every golden question, with results written to `build/`;
+/// - `ask`: the question in `archive.question`, or, with none, questions typed at the terminal in
+///   one conversation, so follow-ups work;
+///
+/// - `demo`: the embedding demo, which needs no archive;
+/// - `ingest`: build or load the store and stop;
+/// - `none`: nothing, for tests.
 @Configuration
 class RunConfiguration {
 
@@ -88,7 +84,7 @@ class RunConfiguration {
     };
   }
 
-  /** One question from the command line, or a conversation at the terminal if none was given. */
+  /// One question from the command line, or a conversation at the terminal if none was given.
   private static void ask(SpecCorpus corpus, Archive archive, String question) throws IOException {
     corpus.open();
     if (question.isBlank()) {
@@ -98,7 +94,7 @@ class RunConfiguration {
     print(archive.ask(question, UUID.randomUUID().toString()));
   }
 
-  /** Every golden question, scored, with the run files written beside the summary. */
+  /// Every golden question, scored, with the run files written beside the summary.
   private static void golden(
       SpecCorpus corpus,
       GoldenRun goldenRun,
@@ -113,7 +109,7 @@ class RunConfiguration {
     log.info("Baseline:\n{}", goldenRun.write(rows, setup, Path.of("build")));
   }
 
-  /** Questions typed at the terminal, one conversation, until an empty line. */
+  /// Questions typed at the terminal, one conversation, until an empty line.
   private static void converse(Archive archive) throws IOException {
     String session = UUID.randomUUID().toString();
     var typed = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
@@ -123,7 +119,7 @@ class RunConfiguration {
     }
   }
 
-  /** The quotations and their addresses: provenance, printed. */
+  /// The quotations and their addresses: provenance, printed.
   private static void print(Archive.Ruling ruling) {
     for (Quote q : ruling.quotes()) {
       log.info("  {} {} (rank {})", q.label(), q.address(), q.rank());
@@ -134,10 +130,8 @@ class RunConfiguration {
         .forEach(verdict -> log.info("  [{}] {}", verdict.status(), verdict.reason()));
   }
 
-  /**
-   * The exact model builds, from Ollama's {@code /api/tags}. A tag such as {@code qwen3:8b} can be
-   * re-pointed at new weights; the digest cannot.
-   */
+  /// The exact model builds, from Ollama's `/api/tags`. A tag such as `qwen3:8b` can be re-pointed
+  /// at new weights; the digest cannot.
   static Map<String, String> digests(String baseUrl) {
     var out = new LinkedHashMap<String, String>();
     try (var http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()) {

@@ -2,18 +2,16 @@ package xyz.briancorbin.rags.search;
 
 import java.util.List;
 
-/**
- * An {@link Embedder} that adds the task prefixes a model was trained with, and hands the rest
- * down.
- *
- * <p>{@code nomic-embed-text} learned which of a passage and a question it was being given from a
- * prefix, and {@code qwen3-embedding} from an instruction on the query side only. Without them both
- * still return numbers, just worse ones, and nothing warns you. Which prefixes belong to which
- * model is {@link EmbeddingPrefix}'s business; applying them is this class's.
- *
- * <p>This sits at the top of the stack so that everything below it — the cache especially — sees
- * the text the model will actually be sent.
- */
+/// An {@link Embedder} that adds the task prefixes a model was trained with, and hands the rest
+/// down.
+///
+/// `nomic-embed-text` learned which of a passage and a question it was being given from a prefix,
+/// and `qwen3-embedding` from an instruction on the query side only. Without them both still return
+/// numbers, just worse ones, and nothing warns you. Which prefixes belong to which model is {@link
+/// EmbeddingPrefix}'s business; applying them is this class's.
+///
+/// This sits at the top of the stack so that everything below it — the cache especially — sees the
+/// text the model will actually be sent.
 public final class PrefixedEmbedder implements Embedder {
 
   private final Embedder delegate;

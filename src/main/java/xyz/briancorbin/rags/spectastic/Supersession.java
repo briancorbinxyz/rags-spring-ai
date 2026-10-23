@@ -14,23 +14,21 @@ import xyz.briancorbin.rags.search.Successors;
 import xyz.briancorbin.rags.spectastic.SpectasticReader.Page;
 import xyz.briancorbin.rags.spectastic.SpectasticReader.Unit;
 
-/**
- * The paper trail: which current element replaced each out-of-date one.
- *
- * <p>spectastic says it three ways, and all three are read:
- *
- * <ul>
- *   <li>a change proposal's {@code <spec-delta target="FR-003">}: an archived or withdrawn copy of
- *       a requirement points at the requirement it changed;
- *   <li>an element marked superseded in place, with a {@code <spec-status value="superseded">}
- *       inside it, followed by a link to its successor;
- *   <li>prose: "superseded by" just before a link.
- * </ul>
- *
- * <p>A whole page can be superseded too ({@code <spec-status value="superseded">} on the page,
- * "superseded by" a link to the new page); then {@link #pageSuccessor} names the new page. The
- * first link found for an element wins, read page by page in path order.
- */
+/// The paper trail: which current element replaced each out-of-date one.
+///
+/// spectastic says it three ways, and all three are read:
+///
+/// - a change proposal's `<spec-delta target="FR-003">`: an archived or withdrawn copy of a
+///   requirement points at the requirement it changed;
+///
+/// - an element marked superseded in place, with a `<spec-status value="superseded">` inside it,
+///   followed by a link to its successor;
+///
+/// - prose: "superseded by" just before a link.
+///
+/// A whole page can be superseded too (`<spec-status value="superseded">` on the page, "superseded
+/// by" a link to the new page); then {@link #pageSuccessor} names the new page. The first link
+/// found for an element wins, read page by page in path order.
 public final class Supersession implements Successors {
 
   private static final Pattern LIST = Pattern.compile("[\\s,]+", Pattern.UNICODE_CHARACTER_CLASS);
@@ -63,7 +61,7 @@ public final class Supersession implements Successors {
     return supersession;
   }
 
-  /** "Superseded by" in the words just before a link. */
+  /// "Superseded by" in the words just before a link.
   private void prose(Page page, Set<String> sources, Map<String, Unit> units) {
     String source = page.source();
     boolean pageSuperseded =
@@ -87,10 +85,10 @@ public final class Supersession implements Successors {
     }
   }
 
-  /** Where a link points inside the archive: the page, and the address its fragment names. */
+  /// Where a link points inside the archive: the page, and the address its fragment names.
   private record Target(String page, String address) {}
 
-  /** The link's target, or null if it is not a link, or leaves the archive, or points nowhere. */
+  /// The link's target, or null if it is not a link, or leaves the archive, or points nowhere.
   private static Target linkTarget(Element link, String source, Set<String> sources) {
     if (!link.normalName().equals("a") || !link.hasAttr("href")) {
       return null;
@@ -103,7 +101,7 @@ public final class Supersession implements Successors {
     return sources.contains(page) ? new Target(page, page + "#" + fragment(href)) : null;
   }
 
-  /** Whether the forty characters before the link say "superseded ... by". */
+  /// Whether the forty characters before the link say "superseded ... by".
   private static boolean saysSupersededBy(Element link) {
     String context =
         link.parent() == null ? "" : lower(head(SpectasticReader.rawText(link.parent()), 200));
@@ -116,7 +114,7 @@ public final class Supersession implements Successors {
     return before.contains("superseded") && before.contains("by");
   }
 
-  /** A change proposal's {@code <spec-delta target="…">}: the old copy points at its successor. */
+  /// A change proposal's `<spec-delta target="…">`: the old copy points at its successor.
   private void deltas(Page page, Map<String, Unit> units) {
     String source = page.source();
     for (Element delta : page.body().getAllElements()) {
@@ -133,7 +131,7 @@ public final class Supersession implements Successors {
     }
   }
 
-  /** The unit this delta is a copy of: the id'd element inside it, or the unit it sits in. */
+  /// The unit this delta is a copy of: the id'd element inside it, or the unit it sits in.
   private static String rewrittenBy(Element delta, String source, Map<String, Unit> units) {
     var copy =
         SpectasticReader.first(
@@ -142,14 +140,14 @@ public final class Supersession implements Successors {
     return copy != null ? source + "#" + copy.id() : unitAround(source, delta, units);
   }
 
-  /** What the delta's {@code target} names: on a change page, the spec it is a change to. */
+  /// What the delta's `target` names: on a change page, the spec it is a change to.
   private static String targetOf(String id, String source, Map<String, Unit> units) {
     return source.contains("/changes/")
         ? find(specDir(source), id, List.of("spec.html", "design.html", "tasks.html"), units)
         : find(source, id, units);
   }
 
-  /** Only an out-of-date unit is replaced, and only by one that is current. */
+  /// Only an out-of-date unit is replaced, and only by one that is current.
   private static boolean replaces(String from, String to, Map<String, Unit> units) {
     return to != null
         && from != null
@@ -158,7 +156,7 @@ public final class Supersession implements Successors {
         && units.get(to).lifecycle() == Lifecycle.CURRENT;
   }
 
-  /** An element marked superseded in place: the first link after the mark is its successor. */
+  /// An element marked superseded in place: the first link after the mark is its successor.
   private void inPlace(Page page, Map<String, Unit> units) {
     String source = page.source();
     for (Element element : page.body().getAllElements()) {
@@ -175,10 +173,8 @@ public final class Supersession implements Successors {
     }
   }
 
-  /**
-   * Where an element marked superseded in place points: the first link after its {@code
-   * spec-status}. Null if it carries no such mark, or the mark is followed by nothing.
-   */
+  /// Where an element marked superseded in place points: the first link after its `spec-status`.
+  /// Null if it carries no such mark, or the mark is followed by nothing.
   private static String markedSuccessor(Page page, Element element, String source) {
     var mark =
         SpectasticReader.first(
@@ -197,7 +193,7 @@ public final class Supersession implements Successors {
 
   // --- helpers -------------------------------------------------------------------------------
 
-  /** The unit an element sits in: itself or the nearest element around it that is a unit. */
+  /// The unit an element sits in: itself or the nearest element around it that is a unit.
   private static String unitAround(String source, Element el, Map<String, Unit> units) {
     for (Element around = el; around != null; around = around.parent()) {
       if (!around.id().isEmpty() && units.containsKey(source + "#" + around.id())) {
@@ -207,7 +203,7 @@ public final class Supersession implements Successors {
     return null;
   }
 
-  /** An id on this page, else on the spec's spec, tasks, design or verify page. */
+  /// An id on this page, else on the spec's spec, tasks, design or verify page.
   private static String find(String source, String id, Map<String, Unit> units) {
     if (units.containsKey(source + "#" + id)) {
       return source + "#" + id;
@@ -230,7 +226,7 @@ public final class Supersession implements Successors {
     return null;
   }
 
-  /** The first link with an href after {@code start}, in document order. */
+  /// The first link with an href after `start`, in document order.
   @SuppressWarnings("ReferenceEquality") // the node we were given, not one equal to it
   private static Element next(Element root, Element start) {
     boolean seen = false;
@@ -244,7 +240,7 @@ public final class Supersession implements Successors {
     return null;
   }
 
-  /** The page an href points at, relative to the page it's on. */
+  /// The page an href points at, relative to the page it's on.
   static String resolve(String source, String href) {
     int hash = href.indexOf('#');
     String path = hash < 0 ? href : href.substring(0, hash);
@@ -272,14 +268,14 @@ public final class Supersession implements Successors {
     return text.toLowerCase(Locale.ROOT);
   }
 
-  /** The first {@code wanted} characters (code points, not UTF-16 units). */
+  /// The first `wanted` characters (code points, not UTF-16 units).
   private static String head(String text, int wanted) {
     return text.codePointCount(0, text.length()) <= wanted
         ? text
         : text.substring(0, text.offsetByCodePoints(0, wanted));
   }
 
-  /** The last {@code wanted} characters. */
+  /// The last `wanted` characters.
   private static String tail(String text, int wanted) {
     int count = text.codePointCount(0, text.length());
     return count <= wanted ? text : text.substring(text.offsetByCodePoints(0, count - wanted));

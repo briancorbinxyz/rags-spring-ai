@@ -27,13 +27,11 @@ import xyz.briancorbin.rags.spectastic.SpectasticReader;
 import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.StandingFilter;
 
-/**
- * Episode 4's main line, step by step, through the ratchet: the golden set, no model, and each step
- * against the one before. Writes each step's run file to {@code build/episode-4/}.
- *
- * <p>Needs the spectastic checkout at {@code ../spectastic} (or {@code -Dspectastic.path=…}) at the
- * commit the golden set was frozen against; skipped otherwise.
- */
+/// Episode 4's main line, step by step, through the ratchet: the golden set, no model, and each
+/// step against the one before. Writes each step's run file to `build/episode-4/`.
+///
+/// Needs the spectastic checkout at `../spectastic` (or `-Dspectastic.path=…`) at the commit the
+/// golden set was frozen against; skipped otherwise.
 class RatchetTest {
 
   static final String COMMIT = "c64d41c2e5d0d42c4fefd1b506cb083b9812bf6c";

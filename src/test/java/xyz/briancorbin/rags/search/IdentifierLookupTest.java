@@ -66,11 +66,9 @@ class IdentifierLookupTest {
     }
   }
 
-  /**
-   * The archive is three digits wide, and both the pattern and {@code specOf} used to say so. A
-   * fixed three-digit read makes 1000 and 1001 the same spec, which turns "pin only if exactly one
-   * spec has this id" into pinning both.
-   */
+  /// The archive is three digits wide, and both the pattern and `specOf` used to say so. A fixed
+  /// three-digit read makes 1000 and 1001 the same spec, which turns "pin only if exactly one spec
+  /// has this id" into pinning both.
   @Test
   void aSpecNumberedPastNineNinetyNineIsStillOneSpec(@TempDir Path dir) throws Exception {
     try (var keywords =

@@ -10,17 +10,17 @@ import xyz.briancorbin.rags.spectastic.SpectasticReader;
 import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.Units;
 
-/**
- * Follows the paper trail: a result that something newer replaced gives its place to its successor.
- *
- * <p>The successor is read from the unit's metadata, where {@link SpectasticReader} put it ({@code
- * superseded_by}), following up to {@value #HOPS} hops. On a superseded page, the successor is the
- * element with the same id on the new page or, failing that, the new page's best match for the
- * question. Whatever was superseded is then dropped, applied changes included. A requirement can be
- * rewritten by several applied changes in turn, and each one left a proposal in the archive saying
- * it rewrote that requirement; nothing on those proposals says which rewrite is the live one, so
- * keeping them puts three versions of the same rule in front of a reader, which was measured.
- */
+/// Follows the paper trail: a result that something newer replaced gives its place to its
+/// successor.
+///
+/// The successor is read from the unit's metadata, where {@link SpectasticReader} put it
+/// (`superseded_by`), following up to {@value #HOPS} hops. On a superseded page, the successor is
+/// the element with the same id on the new page or, failing that, the new page's best match for the
+/// question. Whatever was superseded is then dropped, applied changes included. A requirement can
+/// be rewritten by several applied changes in turn, and each one left a proposal in the archive
+/// saying it rewrote that requirement; nothing on those proposals says which rewrite is the live
+/// one, so keeping them puts three versions of the same rule in front of a reader, which was
+/// measured.
 public final class SupersessionRedirect implements DocumentPostProcessor {
 
   static final int HOPS = 3;
@@ -49,7 +49,7 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
     return List.copyOf(out.values());
   }
 
-  /** The current address for {@code address}: itself, or where its paper trail ends. */
+  /// The current address for `address`: itself, or where its paper trail ends.
   private String follow(String question, String address) {
     String at = address;
     for (int hop = 0; hop < HOPS; hop++) {
@@ -76,9 +76,7 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
     return at;
   }
 
-  /**
-   * The part of a split unit that best matches the question; the unit itself if it has one part.
-   */
+  /// The part of a split unit that best matches the question; the unit itself if it has one part.
   private Document bestPart(String question, String address) {
     List<Document> parts = keywords.units().parts(address);
     if (parts.size() == 1) {
@@ -93,7 +91,7 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
     return live.isEmpty() ? Optional.empty() : keywords.rank(question, live).stream().findFirst();
   }
 
-  /** The units of page {@code source} that are still in force, in archive order. */
+  /// The units of page `source` that are still in force, in archive order.
   private List<Document> liveUnitsOn(String source) {
     return keywords.units().all().stream()
         .filter(unit -> source.equals(unit.getMetadata().get(Units.SOURCE)))
@@ -101,7 +99,7 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
         .toList();
   }
 
-  /** The successor, saying which result it replaced: provenance for the redirect itself. */
+  /// The successor, saying which result it replaced: provenance for the redirect itself.
   private static Document redirected(Document successor, String from) {
     var copy = ElementUnits.scored(successor, successor.getScore());
     copy.getMetadata().put("redirected_from", from);

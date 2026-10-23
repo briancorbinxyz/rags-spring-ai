@@ -10,17 +10,15 @@ import java.util.Locale;
 import java.util.Set;
 import org.springframework.core.io.ClassPathResource;
 
-/**
- * Words a question can spare before it reaches the keyword index.
- *
- * <p>A list, not a constant, and more than one of them: a language contributes words that carry
- * nothing in any archive, and an archive contributes words it says so often that they carry nothing
- * in it. They are unioned, so neither list has to know about the other, and adding an archive is a
- * file rather than an edit.
- *
- * <p>Each file is one word per line; blank lines and lines starting with {@code #} are comments, so
- * a list can say why a word is on it.
- */
+/// Words a question can spare before it reaches the keyword index.
+///
+/// A list, not a constant, and more than one of them: a language contributes words that carry
+/// nothing in any archive, and an archive contributes words it says so often that they carry
+/// nothing in it. They are unioned, so neither list has to know about the other, and adding an
+/// archive is a file rather than an edit.
+///
+/// Each file is one word per line; blank lines and lines starting with `#` are comments, so a list
+/// can say why a word is on it.
 public final class StopWords {
 
   private final Set<String> words;
@@ -29,7 +27,7 @@ public final class StopWords {
     this.words = words;
   }
 
-  /** The union of the named classpath resources, in the order given. */
+  /// The union of the named classpath resources, in the order given.
   public static StopWords of(String... resources) {
     var words = new LinkedHashSet<String>();
     for (String resource : resources) {
@@ -38,7 +36,7 @@ public final class StopWords {
     return new StopWords(Set.copyOf(words));
   }
 
-  /** Nothing is a stop word: every word in the question reaches the index. */
+  /// Nothing is a stop word: every word in the question reaches the index.
   public static StopWords none() {
     return new StopWords(Set.of());
   }

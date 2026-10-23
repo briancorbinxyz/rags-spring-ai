@@ -23,35 +23,31 @@ import org.springframework.ai.document.DocumentReader;
 import xyz.briancorbin.rags.search.Successors;
 import xyz.briancorbin.rags.units.Units;
 
-/**
- * Reads a spectastic checkout one element at a time.
- *
- * <p>Every element with an {@code id} is a unit: a requirement, a decision, a task, a success
- * criterion, a section. Its text is its own text only; an element inside it with an id of its own,
- * a requirement inside its section say, is a unit of its own. Units of fewer than three words are
- * left out. Each unit's heading path (page title › the headings of the sections around it) is kept
- * in its metadata, and {@link Units#passage(Document)} puts it in front of the text, so {@code
- * FR-001} on its own still says which spec's requirements it belongs to. A unit over {@value
- * #PART_WORDS} words is split into parts at sentence ends, and every part carries the unit's
- * address.
- *
- * <p>The metadata is the provenance: {@code source}, {@code anchor}, {@code spec}, {@code title},
- * {@code heading_path}, {@code heading}, {@code lifecycle}, {@code part} and {@code parts}, and,
- * for a record that something newer replaced, {@code superseded_by} or {@code page_superseded_by}
- * (see {@link Supersession}).
- */
+/// Reads a spectastic checkout one element at a time.
+///
+/// Every element with an `id` is a unit: a requirement, a decision, a task, a success criterion, a
+/// section. Its text is its own text only; an element inside it with an id of its own, a
+/// requirement inside its section say, is a unit of its own. Units of fewer than three words are
+/// left out. Each unit's heading path (page title › the headings of the sections around it) is kept
+/// in its metadata, and {@link Units#passage(Document)} puts it in front of the text, so `FR-001`
+/// on its own still says which spec's requirements it belongs to. A unit over {@value #PART_WORDS}
+/// words is split into parts at sentence ends, and every part carries the unit's address.
+///
+/// The metadata is the provenance: `source`, `anchor`, `spec`, `title`, `heading_path`, `heading`,
+/// `lifecycle`, `part` and `parts`, and, for a record that something newer replaced,
+/// `superseded_by` or `page_superseded_by` (see {@link Supersession}).
 public final class SpectasticReader implements DocumentReader {
 
-  /** Units shorter than this many words are labels, not passages. */
+  /// Units shorter than this many words are labels, not passages.
   static final int MIN_WORDS = 3;
 
-  /** Longer units are split: about 350 tokens a part, so a question and a part fit a reranker. */
+  /// Longer units are split: about 350 tokens a part, so a question and a part fit a reranker.
   static final int PART_WORDS = 250;
 
   private static final Pattern WHITESPACE =
       Pattern.compile("\\s+", Pattern.UNICODE_CHARACTER_CLASS);
 
-  /** One space: a constant so the split is not recompiled per unit, and has no regex surprises. */
+  /// One space: a constant so the split is not recompiled per unit, and has no regex surprises.
   private static final Pattern SPACE = Pattern.compile(" ", Pattern.LITERAL);
 
   private static final Pattern SENTENCE_END =
@@ -59,14 +55,12 @@ public final class SpectasticReader implements DocumentReader {
   private static final Set<String> HEADINGS = Set.of("h1", "h2", "h3", "h4", "h5", "h6");
   private static final Set<String> RAW = Set.of("script", "style");
 
-  /** One page of the archive, parsed. */
+  /// One page of the archive, parsed.
   record Page(String source, org.jsoup.nodes.Document html, Element body) {}
 
   private final Path checkout;
 
-  /**
-   * @param checkout a spectastic checkout: the folder that holds {@code specs/}
-   */
+  /// @param checkout a spectastic checkout: the folder that holds `specs/`
   public SpectasticReader(Path checkout) {
     this.checkout = checkout;
   }
@@ -86,7 +80,7 @@ public final class SpectasticReader implements DocumentReader {
     return documents;
   }
 
-  /** One part of one unit, as the search and the reader will see it. */
+  /// One part of one unit, as the search and the reader will see it.
   private static Document document(Unit unit, int part, Successors successors) {
     return Document.builder()
         .id(unit.parts().size() == 1 ? unit.address() : unit.address() + "@" + (part + 1))
@@ -95,7 +89,7 @@ public final class SpectasticReader implements DocumentReader {
         .build();
   }
 
-  /** Everything the search filters, pins, redirects or shows a reader, read once here. */
+  /// Everything the search filters, pins, redirects or shows a reader, read once here.
   private static Map<String, Object> metadata(Unit unit, int part, Successors successors) {
     var metadata = new LinkedHashMap<String, Object>();
     metadata.put(Units.SOURCE, unit.source());
@@ -131,7 +125,7 @@ public final class SpectasticReader implements DocumentReader {
     }
   }
 
-  /** What a page says about itself, read once rather than once per element. */
+  /// What a page says about itself, read once rather than once per element.
   private record Meta(String title, boolean superseded) {
     static Meta of(Page page) {
       Element title = page.html().selectFirst("title");
@@ -167,7 +161,7 @@ public final class SpectasticReader implements DocumentReader {
     return units;
   }
 
-  /** One element as a unit: where it sits, what it reads as, and what state it is in. */
+  /// One element as a unit: where it sits, what it reads as, and what state it is in.
   private static Unit unit(Page page, Element el, String text, Meta meta) {
     var lifecycle = Lifecycle.read(page.source(), el);
     if (meta.superseded() && lifecycle == Lifecycle.CURRENT) {
@@ -185,7 +179,7 @@ public final class SpectasticReader implements DocumentReader {
         parts(text));
   }
 
-  /** Page title › the heading of each section with an id around the element, outermost first. */
+  /// Page title › the heading of each section with an id around the element, outermost first.
   static String headingPath(String title, Element el) {
     var path = new ArrayList<String>();
     if (!title.isEmpty()) {
@@ -205,10 +199,8 @@ public final class SpectasticReader implements DocumentReader {
     return String.join(" › ", path);
   }
 
-  /**
-   * Splits a long unit into parts of at most {@code max} words, ending at a sentence where it can:
-   * as many parts as the length needs, each about the same size.
-   */
+  /// Splits a long unit into parts of at most `max` words, ending at a sentence where it can: as
+  /// many parts as the length needs, each about the same size.
   static List<String> parts(String text, int max) {
     String[] words = SPACE.split(text, -1);
     if (words.length <= max) {
@@ -218,10 +210,8 @@ public final class SpectasticReader implements DocumentReader {
     return join(sentences(text, max), max, words.length / (double) wanted);
   }
 
-  /**
-   * The text as runs of words that each fit {@code max}: one per sentence, except that a single
-   * very long "sentence" — a table, say — is cut by word count instead.
-   */
+  /// The text as runs of words that each fit `max`: one per sentence, except that a single very
+  /// long "sentence" — a table, say — is cut by word count instead.
   private static List<List<String>> sentences(String text, int max) {
     var pieces = new ArrayList<List<String>>();
     for (String sentence : SENTENCE_END.split(text, -1)) {
@@ -237,7 +227,7 @@ public final class SpectasticReader implements DocumentReader {
     return pieces;
   }
 
-  /** Runs gathered into parts of about {@code target} words, never more than {@code max}. */
+  /// Runs gathered into parts of about `target` words, never more than `max`.
   private static List<String> join(List<List<String>> pieces, int max, double target) {
     var parts = new ArrayList<String>();
     var current = new ArrayList<String>();
@@ -260,24 +250,22 @@ public final class SpectasticReader implements DocumentReader {
 
   // --- reading text --------------------------------------------------------------------------
 
-  /**
-   * An element's text: every text node, joined by a space and collapsed, leaving out scripts,
-   * styles and any element {@code skip} matches.
-   */
+  /// An element's text: every text node, joined by a space and collapsed, leaving out scripts,
+  /// styles and any element `skip` matches.
   static String text(Element el, Predicate<Element> skip) {
     var out = new StringBuilder();
     collect(el, skip, false, out);
     return collapse(out.toString());
   }
 
-  /** All the element's text, each text node trimmed: for titles and headings. */
+  /// All the element's text, each text node trimmed: for titles and headings.
   static String strippedText(Element el) {
     var out = new StringBuilder();
     collect(el, nothing -> false, true, out);
     return collapse(out.toString());
   }
 
-  /** Text nodes joined by one space, untrimmed: what surrounds a link. */
+  /// Text nodes joined by one space, untrimmed: what surrounds a link.
   static String rawText(Element el) {
     var out = new StringBuilder();
     collect(el, nothing -> false, false, out);
@@ -308,9 +296,7 @@ public final class SpectasticReader implements DocumentReader {
     return collapsed.isEmpty() ? 0 : SPACE.split(collapsed, -1).length;
   }
 
-  /**
-   * The first element inside {@code el} (not {@code el} itself), in document order, that matches.
-   */
+  /// The first element inside `el` (not `el` itself), in document order, that matches.
   @SuppressWarnings("ReferenceEquality") // the node itself is excluded, not one equal to it
   static Element first(Element el, Predicate<Element> test) {
     for (Element inside : el.getAllElements()) {
@@ -323,7 +309,7 @@ public final class SpectasticReader implements DocumentReader {
 
   // --- pages ---------------------------------------------------------------------------------
 
-  /** Every page under {@code specs/}, in path order. */
+  /// Every page under `specs/`, in path order.
   List<Page> pages() {
     try (Stream<Path> files = Files.walk(checkout.resolve("specs"))) {
       var pages = new ArrayList<Page>();
@@ -337,7 +323,7 @@ public final class SpectasticReader implements DocumentReader {
     }
   }
 
-  /** An element's own heading, as a reader sees it; empty if it has none of its own. */
+  /// An element's own heading, as a reader sees it; empty if it has none of its own.
   private static String headingOf(Element element) {
     return element.children().stream()
         .filter(child -> HEADINGS.contains(child.normalName()))
@@ -346,7 +332,7 @@ public final class SpectasticReader implements DocumentReader {
         .orElse("");
   }
 
-  /** The HTML files among {@code files}, ordered by their '/' path so a run is reproducible. */
+  /// The HTML files among `files`, ordered by their '/' path so a run is reproducible.
   private static List<Path> sortedHtmlFilesIn(Stream<Path> files) {
     return files
         .filter(

@@ -4,11 +4,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/**
- * A three-page archive in spectastic's shape, small enough to reason about by hand. FR-002 is
- * superseded by its status attribute; D-001 only by a status element inside it, as spec 004's D-005
- * is, so the lifecycle filter can't see it and the redirect has to.
- */
+/// A three-page archive in spectastic's shape, small enough to reason about by hand. FR-002 is
+/// superseded by its status attribute; D-001 only by a status element inside it, as spec 004's
+/// D-005 is, so the lifecycle filter can't see it and the redirect has to.
 public final class Archives {
 
   private Archives() {}
@@ -59,10 +57,8 @@ public final class Archives {
     return dir;
   }
 
-  /**
-   * Two specs numbered past 999, each holding the same id. The archive is three digits wide today,
-   * so nothing here is read from spectastic; it exists to keep the lookup honest if that changes.
-   */
+  /// Two specs numbered past 999, each holding the same id. The archive is three digits wide today,
+  /// so nothing here is read from spectastic; it exists to keep the lookup honest if that changes.
   public static Path pastNineNinetyNine(Path dir) throws IOException {
     write(
         dir,

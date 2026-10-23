@@ -21,7 +21,7 @@ class GoldenScorerTest {
   private static final String FILE = "specs/001-demo/spec.html";
   private final GoldenScorer scorer = new GoldenScorer(ROOT);
 
-  /** The page text exactly as the archive reads it. */
+  /// The page text exactly as the archive reads it.
   private static String page() throws Exception {
     return Jsoup.parse(Files.readString(ROOT.resolve(FILE))).body().text();
   }

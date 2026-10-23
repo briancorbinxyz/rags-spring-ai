@@ -15,20 +15,18 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.HexFormat;
 
-/**
- * Vectors on disk, so a corpus is embedded once per model.
- *
- * <p>Keyed by the SHA-256 of the model id and the exact text that was sent, prefix included: a new
- * model, a new prefix or an edited unit is a new key, and so a new vector, with no way to serve a
- * stale one by mistake. The model id carries the model's digest, not just its name, so re-pulling a
- * tag that changed underneath does not quietly reuse the old vectors.
- *
- * <p>The file is a SQLite table of {@code (hash, dimensions, little-endian float32 blob)} — the
- * same table, the same keys and the same bytes as the prototype's {@code ratchet/embed.py}, so both
- * implementations can share one cache file. That is what makes the parity check mean anything: when
- * the Java and the prototype read the same vectors, a difference in their results is a difference
- * in the search, not in the arithmetic.
- */
+/// Vectors on disk, so a corpus is embedded once per model.
+///
+/// Keyed by the SHA-256 of the model id and the exact text that was sent, prefix included: a new
+/// model, a new prefix or an edited unit is a new key, and so a new vector, with no way to serve a
+/// stale one by mistake. The model id carries the model's digest, not just its name, so re-pulling
+/// a tag that changed underneath does not quietly reuse the old vectors.
+///
+/// The file is a SQLite table of `(hash, dimensions, little-endian float32 blob)` — the same table,
+/// the same keys and the same bytes as the prototype's `ratchet/embed.py`, so both implementations
+/// can share one cache file. That is what makes the parity check mean anything: when the Java and
+/// the prototype read the same vectors, a difference in their results is a difference in the
+/// search, not in the arithmetic.
 public final class VectorCache implements AutoCloseable {
 
   private final Connection db;
@@ -55,7 +53,7 @@ public final class VectorCache implements AutoCloseable {
     }
   }
 
-  /** The cached vector for this text under this model, or null. */
+  /// The cached vector for this text under this model, or null.
   public float[] get(String modelId, String text) {
     try {
       select.setString(1, key(modelId, text));
@@ -67,7 +65,7 @@ public final class VectorCache implements AutoCloseable {
     }
   }
 
-  /** Remembers one vector. Call {@link #commit()} when a batch is done. */
+  /// Remembers one vector. Call {@link #commit()} when a batch is done.
   public void put(String modelId, String text, float[] vector) {
     try {
       insert.setString(1, key(modelId, text));
@@ -89,7 +87,7 @@ public final class VectorCache implements AutoCloseable {
     }
   }
 
-  /** The cache key: {@code sha256(modelId + NUL + text)}, as the prototype computes it. */
+  /// The cache key: `sha256(modelId + NUL + text)`, as the prototype computes it.
   static String key(String modelId, String text) {
     try {
       var sha = MessageDigest.getInstance("SHA-256");

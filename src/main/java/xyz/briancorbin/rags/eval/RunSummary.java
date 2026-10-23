@@ -11,17 +11,17 @@ import xyz.briancorbin.rags.answer.FactChecker.Tally;
 import xyz.briancorbin.rags.eval.GoldenRun.Row;
 import xyz.briancorbin.rags.eval.GoldenRun.Setup;
 
-/** The markdown table the article prints: one row per stratum, then the whole set. */
+/// The markdown table the article prints: one row per stratum, then the whole set.
 final class RunSummary {
 
   private RunSummary() {}
 
-  /** The table the article prints: one row per stratum, then the whole set. */
+  /// The table the article prints: one row per stratum, then the whole set.
   static String summary(List<Row> rows, Setup setup) {
     return provenance(setup) + table(rows) + abstentions(rows) + quotations(rows) + timings(rows);
   }
 
-  /** What the numbers were measured on, so a table is never read without its conditions. */
+  /// What the numbers were measured on, so a table is never read without its conditions.
   private static String provenance(Setup setup) {
     return """
         Commit %s · chat %s · embeddings %s · %d files, %d chunks · ingest %.1f min · \
@@ -36,7 +36,7 @@ final class RunSummary {
             setup.corpus().largestChunkTokens());
   }
 
-  /** One row per stratum that has questions, then the whole set. */
+  /// One row per stratum that has questions, then the whole set.
   private static String table(List<Row> rows) {
     var out = new StringBuilder();
     out.append("| Stratum | Questions | Hit@4 | All@4 | Partial@4 | MRR ");
@@ -46,7 +46,7 @@ final class RunSummary {
     return out.append(line("all", rows)).toString();
   }
 
-  /** Every stratum the golden set declares, in its order, so an empty one is visibly empty. */
+  /// Every stratum the golden set declares, in its order, so an empty one is visibly empty.
   private static SequencedMap<String, List<Row>> byStratum(List<Row> rows) {
     var byStratum = new LinkedHashMap<String, List<Row>>();
     GoldenSet.STRATA.forEach(stratum -> byStratum.put(stratum, new ArrayList<>()));
@@ -106,7 +106,7 @@ final class RunSummary {
             count(rows, Row::staleAsCurrent));
   }
 
-  /** Share of answerable rows that pass; unanswerable questions have nothing to retrieve. */
+  /// Share of answerable rows that pass; unanswerable questions have nothing to retrieve.
   private static double share(List<Row> rows, java.util.function.Predicate<Row> test) {
     var answerable = rows.stream().filter(row -> row.question().answerable()).toList();
     return answerable.isEmpty() ? 0 : (double) count(answerable, test) / answerable.size();
@@ -116,7 +116,7 @@ final class RunSummary {
     return (int) rows.stream().filter(test).count();
   }
 
-  /** Nearest-rank percentile of a sorted list. */
+  /// Nearest-rank percentile of a sorted list.
   static long percentile(List<Long> sorted, int p) {
     if (sorted.isEmpty()) {
       return 0;
@@ -130,7 +130,7 @@ final class RunSummary {
         .formatted(t.supported(), t.contradicted(), t.unsupported(), t.unchecked());
   }
 
-  /** Quoter's quotations that traced word for word, as a share; empty if none were checked. */
+  /// Quoter's quotations that traced word for word, as a share; empty if none were checked.
   private static OptionalDouble shareOfQuotationsTraced(List<Row> rows) {
     return rows.stream()
         .map(Row::quoterVerified)
@@ -139,7 +139,7 @@ final class RunSummary {
         .average();
   }
 
-  /** Every question's wall time, ascending, so a percentile can be read straight off it. */
+  /// Every question's wall time, ascending, so a percentile can be read straight off it.
   private static List<Long> sortedMillis(List<Row> rows) {
     return rows.stream()
         .map(row -> row.ruling().millis())
@@ -147,12 +147,12 @@ final class RunSummary {
         .toList();
   }
 
-  /** Every verdict on every claim Answerer made, across the run. */
+  /// Every verdict on every claim Answerer made, across the run.
   private static List<FactChecker.Verdict> allAnswererVerdicts(List<Row> rows) {
     return rows.stream().flatMap(row -> row.ruling().answerer().verdicts().stream()).toList();
   }
 
-  /** Mean reciprocal rank over the answerable questions; 0 if there are none. */
+  /// Mean reciprocal rank over the answerable questions; 0 if there are none.
   private static double meanReciprocalRank(List<Row> rows) {
     return rows.stream()
         .filter(row -> row.question().answerable())

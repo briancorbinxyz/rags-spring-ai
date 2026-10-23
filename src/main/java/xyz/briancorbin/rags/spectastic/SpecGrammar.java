@@ -5,18 +5,14 @@ import java.util.SequencedSet;
 import java.util.regex.Pattern;
 import xyz.briancorbin.rags.search.IdentifierGrammar;
 
-/**
- * Spectastic's names, and nothing else in the search knows them.
- *
- * <ul>
- *   <li>an <b>id</b> is anything shaped like one — {@code FR-012}, {@code NFR-001}, {@code T-100},
- *       {@code REQ-TOOL-001}, {@code US5}. Ids are written in capitals, so this is case-sensitive:
- *       "d-001" in prose is not an id;
- *   <li>a <b>scope</b> is a spec: "spec 040", "Spec 058's" or "slice 040" in any case, or a slug
- *       like {@code 040-run-budget}. Three digits throughout the archive today, but the number is
- *       read as written, so a thousandth spec needs nothing changed here.
- * </ul>
- */
+/// Spectastic's names, and nothing else in the search knows them.
+///
+/// - an **id** is anything shaped like one — `FR-012`, `NFR-001`, `T-100`, `REQ-TOOL-001`, `US5`.
+///   Ids are written in capitals, so this is case-sensitive: "d-001" in prose is not an id;
+///
+/// - a **scope** is a spec: "spec 040", "Spec 058's" or "slice 040" in any case, or a slug like
+///   `040-run-budget`. Three digits throughout the archive today, but the number is read as
+///   written, so a thousandth spec needs nothing changed here.
 public final class SpecGrammar implements IdentifierGrammar {
 
   private static final Pattern ID =
@@ -54,11 +50,9 @@ public final class SpecGrammar implements IdentifierGrammar {
     return specs;
   }
 
-  /**
-   * The number of the spec an address belongs to, however many digits it has: {@code specs/045-…}
-   * is "045" and {@code specs/1000-…} is "1000". Read to the slug's first dash rather than to a
-   * fixed width, so that a thousandth spec cannot read as the hundredth.
-   */
+  /// The number of the spec an address belongs to, however many digits it has: `specs/045-…` is
+  /// "045" and `specs/1000-…` is "1000". Read to the slug's first dash rather than to a fixed
+  /// width, so that a thousandth spec cannot read as the hundredth.
   @Override
   public String scopeOf(String address) {
     String slug = address.split("/", -1)[1];

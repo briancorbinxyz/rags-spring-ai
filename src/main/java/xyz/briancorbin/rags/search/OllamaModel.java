@@ -12,21 +12,19 @@ import java.util.Optional;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * What model Ollama actually has, and which build of it.
- *
- * <p>A tag is not a version: {@code nomic-embed-text:v1.5} can be re-pulled and be different bytes.
- * The digest is the build, so the digest is what a vector cache key and a published number have to
- * carry. {@link #id} is the form the prototype keys its cache by, so the two share one cache file.
- */
+/// What model Ollama actually has, and which build of it.
+///
+/// A tag is not a version: `nomic-embed-text:v1.5` can be re-pulled and be different bytes. The
+/// digest is the build, so the digest is what a vector cache key and a published number have to
+/// carry. {@link #id} is the form the prototype keys its cache by, so the two share one cache file.
 public final class OllamaModel {
 
-  /** Where Ollama listens unless told otherwise. */
+  /// Where Ollama listens unless told otherwise.
   public static final String DEFAULT_URL = "http://localhost:11434";
 
   private OllamaModel() {}
 
-  /** The model's digest, or empty if Ollama is not answering or does not have it. */
+  /// The model's digest, or empty if Ollama is not answering or does not have it.
   public static Optional<String> digest(String baseUrl, String model) {
     try {
       HttpResponse<String> response = tags(baseUrl);
@@ -52,7 +50,7 @@ public final class OllamaModel {
         .send(request, HttpResponse.BodyHandlers.ofString());
   }
 
-  /** The digest Ollama lists for {@code model}, matched on either the name or the model field. */
+  /// The digest Ollama lists for `model`, matched on either the name or the model field.
   private static Optional<String> digestIn(String body, String model) {
     var parsed = JsonMapper.shared().readValue(body, new TypeReference<Map<String, Object>>() {});
     @SuppressWarnings("unchecked")
@@ -67,12 +65,12 @@ public final class OllamaModel {
         .findFirst();
   }
 
-  /** {@code ollama:<model>@<first twelve of the digest>}: what the vector cache is keyed by. */
+  /// `ollama:<model>@<first twelve of the digest>`: what the vector cache is keyed by.
   public static String id(String model, String digest) {
     return "ollama:" + model + "@" + digest.substring(0, Math.min(12, digest.length()));
   }
 
-  /** The cache file for a model id, named as the prototype names it. */
+  /// The cache file for a model id, named as the prototype names it.
   public static String cacheFile(String modelId) {
     return modelId.replaceAll("[^A-Za-z0-9.-]+", "_") + ".sqlite";
   }

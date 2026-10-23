@@ -3,36 +3,34 @@ package xyz.briancorbin.rags.answer;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Checks claims against evidence and returns a verdict for each.
- *
- * <p>There is a checker for each kind of evidence, and what counts as evidence changes: a game's
- * own history, a file a persona was told to quote from, or what the retriever brought back ({@link
- * QuoteResolver}) and the quotations Answerer was shown ({@link CitationChecker}). Both are still
- * plain code. A model could be a checker too, behind this same interface.
- *
- * @param <E> what the claims are checked against
- */
+/// Checks claims against evidence and returns a verdict for each.
+///
+/// There is a checker for each kind of evidence, and what counts as evidence changes: a game's own
+/// history, a file a persona was told to quote from, or what the retriever brought back ({@link
+/// QuoteResolver}) and the quotations Answerer was shown ({@link CitationChecker}). Both are still
+/// plain code. A model could be a checker too, behind this same interface.
+///
+/// @param <E> what the claims are checked against
 public interface FactChecker<E> {
 
-  /** How a claim stands against the evidence. */
+  /// How a claim stands against the evidence.
   enum Status {
-    /** Every check that applied passed. */
+    /// Every check that applied passed.
     SUPPORTED,
-    /** The evidence says otherwise. */
+    /// The evidence says otherwise.
     CONTRADICTED,
-    /** Nothing the commentator could see backs it. */
+    /// Nothing the commentator could see backs it.
     UNSUPPORTED,
-    /** Nothing in it was checkable by this checker. */
+    /// Nothing in it was checkable by this checker.
     UNCHECKED
   }
 
-  /** The outcome for one claim, with the reason in words. */
+  /// The outcome for one claim, with the reason in words.
   record Verdict(Claim claim, Status status, String reason) {}
 
   Verdict check(Claim claim, E evidence);
 
-  /** Checks every claim in a reply. Checkers may add verdicts about the reply as a whole. */
+  /// Checks every claim in a reply. Checkers may add verdicts about the reply as a whole.
   default List<Verdict> checkAll(Commentary commentary, E evidence) {
     var verdicts = new ArrayList<Verdict>();
     for (Claim claim : commentary.claims()) {
@@ -41,7 +39,7 @@ public interface FactChecker<E> {
     return List.copyOf(verdicts);
   }
 
-  /** Counts per status, and the reasons for anything that is not supported or unchecked. */
+  /// Counts per status, and the reasons for anything that is not supported or unchecked.
   record Tally(
       int claims,
       int supported,

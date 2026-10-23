@@ -16,37 +16,35 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import xyz.briancorbin.rags.answer.FactChecker.Verdict;
 
-/**
- * One question, one hand-off: Quoter searches the archive and quotes it, the program traces the
- * quotations to their chunks, and Answerer answers from the traced quotations only.
- *
- * <p>Quoter's {@link ChatClient} carries {@link QuestionAnswerAdvisor}, so every call to Quoter is
- * a vector search followed by a prompt with the chunk texts pasted in. Answerer's carries no
- * retriever: Answerer never touches the archive, and it never sees a chunk, only quotations that
- * {@link QuoteResolver} found word for word in one.
- *
- * <p>In solo mode the retriever moves to Answerer, which searches, quotes and answers in one call,
- * and its quotations go through the same resolver.
- */
+/// One question, one hand-off: Quoter searches the archive and quotes it, the program traces the
+/// quotations to their chunks, and Answerer answers from the traced quotations only.
+///
+/// Quoter's {@link ChatClient} carries {@link QuestionAnswerAdvisor}, so every call to Quoter is a
+/// vector search followed by a prompt with the chunk texts pasted in. Answerer's carries no
+/// retriever: Answerer never touches the archive, and it never sees a chunk, only quotations that
+/// {@link QuoteResolver} found word for word in one.
+///
+/// In solo mode the retriever moves to Answerer, which searches, quotes and answers in one call,
+/// and its quotations go through the same resolver.
 public final class Archive {
 
   private static final Logger log = LoggerFactory.getLogger(Archive.class);
 
   public enum Mode {
-    /** Quote first, then answer only from what was traced. */
+    /// Quote first, then answer only from what was traced.
     QUOTED,
-    /** One model answers straight from what the retriever returned. */
+    /// One model answers straight from what the retriever returned.
     DIRECT
   }
 
-  /** One model call: the reply if there was one, and what came with it. */
+  /// One model call: the reply if there was one, and what came with it.
   public record Reply(
       Optional<Commentary> commentary,
       List<Document> retrieved,
       Integer promptTokens,
       long millis) {}
 
-  /** What one model call cost: what it was charged for, and how long it took. */
+  /// What one model call cost: what it was charged for, and how long it took.
   public record Cost(Integer promptTokens, long millis) {
 
     static Cost none() {
@@ -54,10 +52,8 @@ public final class Archive {
     }
   }
 
-  /**
-   * What one role did on one question: what it said, the verdicts on what it said, and what the
-   * call cost. The two roles are measured the same way, so they are the same shape.
-   */
+  /// What one role did on one question: what it said, the verdicts on what it said, and what the
+  /// call cost. The two roles are measured the same way, so they are the same shape.
   public record Turn(Optional<Commentary> said, List<Verdict> verdicts, Cost cost) {
 
     static Turn silent() {
@@ -65,16 +61,14 @@ public final class Archive {
     }
   }
 
-  /**
-   * Everything that happened for one question, so it can be checked and written down.
-   *
-   * @param retrieved the chunks the search returned, best first; whichever role did the searching
-   * @param quoter what the quoter said and what it cost; silent in direct mode
-   * @param answerer what the answerer said and what it cost
-   * @param quotes the quotations traced to a chunk, as the answerer was shown them
-   * @param abstained the answerer said the answer is not in the archive and cited nothing
-   * @param answererPrompt the prompt the answerer was given, kept so a run can be read back
-   */
+  /// Everything that happened for one question, so it can be checked and written down.
+  ///
+  /// @param retrieved the chunks the search returned, best first; whichever role did the searching
+  /// @param quoter what the quoter said and what it cost; silent in direct mode
+  /// @param answerer what the answerer said and what it cost
+  /// @param quotes the quotations traced to a chunk, as the answerer was shown them
+  /// @param abstained the answerer said the answer is not in the archive and cited nothing
+  /// @param answererPrompt the prompt the answerer was given, kept so a run can be read back
   public record Ruling(
       String question,
       Mode mode,
@@ -89,7 +83,7 @@ public final class Archive {
       return quoter.cost().millis() + answerer.cost().millis();
     }
 
-    /** Named rather than positional: eight components in a row is a mistake waiting to happen. */
+    /// Named rather than positional: eight components in a row is a mistake waiting to happen.
     public static Builder of(String question, Mode mode) {
       return new Builder(question, mode);
     }
@@ -155,13 +149,11 @@ public final class Archive {
   private final CitationChecker citations;
   private final Mode mode;
 
-  /**
-   * The models that play each part, and which arrangement of them to use. {@code soloAnswerer} is
-   * the answerer with a retriever of its own, for {@link Mode#DIRECT}.
-   */
+  /// The models that play each part, and which arrangement of them to use. `soloAnswerer` is the
+  /// answerer with a retriever of its own, for {@link Mode#DIRECT}.
   public record Roles(Mode mode, ChatClient quoter, ChatClient answerer, ChatClient soloAnswerer) {}
 
-  /** What the program checks for itself, rather than taking a model's word for it. */
+  /// What the program checks for itself, rather than taking a model's word for it.
   public record Checks(QuoteResolver quotations, CitationChecker citations) {}
 
   public Archive(Roles roles, Checks checks, VectorStore store) {
@@ -178,11 +170,9 @@ public final class Archive {
     return mode;
   }
 
-  /**
-   * Answers one question. The conversation id keeps each commentator's memory separate, as in One
-   * conversation per persona: {@code <id>:quoter} and {@code <id>:answerer}. A golden run uses a
-   * fresh id per question, so no question's memory leaks into the next.
-   */
+  /// Answers one question. The conversation id keeps each commentator's memory separate, as in One
+  /// conversation per persona: `<id>:quoter` and `<id>:answerer`. A golden run uses a fresh id per
+  /// question, so no question's memory leaks into the next.
   public Ruling ask(String question, String conversationId) {
     log.info("Q: {}", question);
     return mode == Mode.DIRECT
@@ -244,7 +234,7 @@ public final class Archive {
         .build();
   }
 
-  /** What Answerer is given: the question, and each traced quotation with its label and address. */
+  /// What Answerer is given: the question, and each traced quotation with its label and address.
   static String answererPrompt(String question, List<Quote> quotes) {
     if (quotes.isEmpty()) {
       return "Question: %s%n%nQuotations Beta traced to the archive: none.".formatted(question);
@@ -257,11 +247,9 @@ public final class Archive {
                 .collect(Collectors.joining(System.lineSeparator())));
   }
 
-  /**
-   * Calls a commentator and asks for a {@link Commentary}. A failure costs the answer, not the run.
-   * The retrieved chunks come back in the response metadata, where {@link QuestionAnswerAdvisor}
-   * puts them under {@code qa_retrieved_documents}.
-   */
+  /// Calls a commentator and asks for a {@link Commentary}. A failure costs the answer, not the
+  /// run. The retrieved chunks come back in the response metadata, where {@link
+  /// QuestionAnswerAdvisor} puts them under `qa_retrieved_documents`.
   private static Cost cost(Reply reply) {
     return new Cost(reply.promptTokens(), reply.millis());
   }
@@ -292,10 +280,8 @@ public final class Archive {
     }
   }
 
-  /**
-   * The advisor's own search, run directly. Used only when a chat call failed before the advisor
-   * could report what it found, so a model failure is not counted as a retrieval miss.
-   */
+  /// The advisor's own search, run directly. Used only when a chat call failed before the advisor
+  /// could report what it found, so a model failure is not counted as a retrieval miss.
   private List<Document> search(String question) {
     return store.similaritySearch(SearchRequest.builder().query(question).build());
   }

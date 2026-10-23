@@ -9,20 +9,17 @@ import xyz.briancorbin.rags.units.Standing;
 import xyz.briancorbin.rags.units.StandingFilter;
 import xyz.briancorbin.rags.units.Units;
 
-/**
- * Dense search over the element units: the same units BM25 indexes, as vectors.
- *
- * <p>A unit is embedded as {@link Units#passage}, the heading path in front of the text, so {@code
- * FR-001} on its own still carries which spec's requirements it belongs to — the same text a reader
- * would be given, and the same text the reranker scores. Each part of a split unit is its own
- * vector.
- *
- * <p>Every vector is scaled to length one, so the cosine of two of them is their dot product, and a
- * search is an exact scan over all of them. There is no approximate index here on purpose: ten
- * thousand units is small, the scan takes milliseconds, and an exact answer means a difference in
- * the results is never the index's fault. The lifecycle filter is applied during the scan, before
- * the depth cut, the way a vector store applies a metadata filter.
- */
+/// Dense search over the element units: the same units BM25 indexes, as vectors.
+///
+/// A unit is embedded as {@link Units#passage}, the heading path in front of the text, so `FR-001`
+/// on its own still carries which spec's requirements it belongs to — the same text a reader would
+/// be given, and the same text the reranker scores. Each part of a split unit is its own vector.
+///
+/// Every vector is scaled to length one, so the cosine of two of them is their dot product, and a
+/// search is an exact scan over all of them. There is no approximate index here on purpose: ten
+/// thousand units is small, the scan takes milliseconds, and an exact answer means a difference in
+/// the results is never the index's fault. The lifecycle filter is applied during the scan, before
+/// the depth cut, the way a vector store applies a metadata filter.
 public final class VectorSearch {
 
   private final ElementUnits units;
@@ -38,12 +35,10 @@ public final class VectorSearch {
     this.embedder = embedder;
   }
 
-  /**
-   * Embeds every unit through {@code embedder}, which is where the prefixes and the cache live.
-   *
-   * <p>A unit is embedded as its passage — the heading path in front of the text — so {@code
-   * FR-001} on its own still carries which spec's requirements it belongs to.
-   */
+  /// Embeds every unit through `embedder`, which is where the prefixes and the cache live.
+  ///
+  /// A unit is embedded as its passage — the heading path in front of the text — so `FR-001` on its
+  /// own still carries which spec's requirements it belongs to.
   public static VectorSearch of(ElementUnits units, Embedder embedder) {
     List<String> passages = units.all().stream().map(Units::passage).toList();
     float[][] vectors = normalisedAll(embedder.passages(passages));
@@ -51,11 +46,9 @@ public final class VectorSearch {
     return new VectorSearch(units, vectors, standings, embedder);
   }
 
-  /**
-   * The {@code depth} nearest units to a question, nearest first, each carrying its cosine. Only
-   * units whose lifecycle is in {@code filter} are considered, so the cut keeps {@code depth} of
-   * the units the filter allows.
-   */
+  /// The `depth` nearest units to a question, nearest first, each carrying its cosine. Only units
+  /// whose lifecycle is in `filter` are considered, so the cut keeps `depth` of the units the
+  /// filter allows.
   public List<Document> search(String question, int depth, StandingFilter filter) {
     if (depth <= 0) {
       return List.of();
@@ -82,7 +75,7 @@ public final class VectorSearch {
     return out;
   }
 
-  /** A question as a vector of length one. */
+  /// A question as a vector of length one.
   public float[] query(String question) {
     return normalise(embedder.question(question));
   }
@@ -107,7 +100,7 @@ public final class VectorSearch {
     return out;
   }
 
-  /** A copy scaled to length one; a zero vector is left as it is, as the prototype leaves it. */
+  /// A copy scaled to length one; a zero vector is left as it is, as the prototype leaves it.
   private static float[] normalise(float[] v) {
     double sum = 0;
     for (float x : v) {

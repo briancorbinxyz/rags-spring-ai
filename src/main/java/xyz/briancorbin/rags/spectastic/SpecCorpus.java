@@ -19,33 +19,27 @@ import tools.jackson.databind.json.JsonMapper;
 import xyz.briancorbin.rags.search.PrefixedEmbeddingModel;
 import xyz.briancorbin.rags.units.Address;
 
-/**
- * The archive: every HTML file under {@code specs/} in a pinned spectastic checkout, read, split
- * and embedded into a {@link SimpleVectorStore}, once.
- *
- * <p>This is Spring AI's ETL pipeline with its defaults. Extract: {@link JsoupDocumentReader} turns
- * each file into one {@link Document}. Transform: {@link TokenTextSplitter} cuts it into chunks of
- * about 800 tokens. Load: the vector store embeds each chunk and keeps it. The only thing added to
- * the defaults is provenance: the reader records a page's title but not which file it read, so the
- * file path, spec and commit are stamped into each document's metadata here.
- *
- * <p>Embedding a million words takes minutes, so the store is saved to {@code build/archive/} with
- * a manifest, and a later run with the same commit and embedding model loads it instead.
- */
+/// The archive: every HTML file under `specs/` in a pinned spectastic checkout, read, split and
+/// embedded into a {@link SimpleVectorStore}, once.
+///
+/// This is Spring AI's ETL pipeline with its defaults. Extract: {@link JsoupDocumentReader} turns
+/// each file into one {@link Document}. Transform: {@link TokenTextSplitter} cuts it into chunks of
+/// about 800 tokens. Load: the vector store embeds each chunk and keeps it. The only thing added to
+/// the defaults is provenance: the reader records a page's title but not which file it read, so the
+/// file path, spec and commit are stamped into each document's metadata here.
+///
+/// Embedding a million words takes minutes, so the store is saved to `build/archive/` with a
+/// manifest, and a later run with the same commit and embedding model loads it instead.
 public final class SpecCorpus {
 
   private static final Logger log = LoggerFactory.getLogger(SpecCorpus.class);
 
-  /**
-   * Part of the saved store's name. Change it whenever reading, splitting or the embedding prefixes
-   * change, so an old store is rebuilt rather than reused.
-   */
+  /// Part of the saved store's name. Change it whenever reading, splitting or the embedding
+  /// prefixes change, so an old store is rebuilt rather than reused.
   static final String FORMAT = "naive-800-v1";
 
-  /**
-   * What was loaded, for the results file. If the commit or the embedding model differ between two
-   * runs, their numbers are not comparable.
-   */
+  /// What was loaded, for the results file. If the commit or the embedding model differ between two
+  /// runs, their numbers are not comparable.
   public record Manifest(
       String commit,
       String embeddingModel,
@@ -61,15 +55,13 @@ public final class SpecCorpus {
   private final String expectedCommit;
   private final Path storeDir;
 
-  /**
-   * Where the archive is and where its store goes.
-   *
-   * @param expectedCommit the commit the published numbers were measured at, so a different one is
-   *     warned about rather than quietly compared
-   */
+  /// Where the archive is and where its store goes.
+  ///
+  /// @param expectedCommit the commit the published numbers were measured at, so a different one is
+  ///     warned about rather than quietly compared
   public record Checkout(Path checkout, String expectedCommit, Path storeDir) {}
 
-  /** The embedding model, and the name the store file is keyed by so a swap is a new store. */
+  /// The embedding model, and the name the store file is keyed by so a swap is a new store.
   public record Embedding(PrefixedEmbeddingModel embedder, String model) {}
 
   public SpecCorpus(Checkout where, Embedding embedding, SimpleVectorStore store) {
@@ -85,7 +77,7 @@ public final class SpecCorpus {
     return checkout;
   }
 
-  /** Loads the saved store for this commit and model, or builds it. */
+  /// Loads the saved store for this commit and model, or builds it.
   public Manifest open() {
     String commit = commitOf(checkout);
     if (!expectedCommit.isBlank() && !commit.startsWith(expectedCommit)) {
@@ -106,7 +98,7 @@ public final class SpecCorpus {
         : build(commit, storeFile, manifestFile);
   }
 
-  /** A store built earlier for this commit and this model: read it rather than embed again. */
+  /// A store built earlier for this commit and this model: read it rather than embed again.
   private Manifest load(Path storeFile, Path manifestFile) {
     store.load(storeFile.toFile());
     Manifest manifest = read(manifestFile);
@@ -114,7 +106,7 @@ public final class SpecCorpus {
     return manifest;
   }
 
-  /** Read the archive, embed it, and save both the store and what it was made from. */
+  /// Read the archive, embed it, and save both the store and what it was made from.
   private Manifest build(String commit, Path storeFile, Path manifestFile) {
     Manifest manifest = ingest(commit);
     try {
@@ -150,10 +142,8 @@ public final class SpecCorpus {
         commit, embeddingModel, files.size(), chunks, millis, embedder.largestDocumentTokens());
   }
 
-  /**
-   * One file as one {@link Document}, with its address stamped in. Everything else is the reader's
-   * default: the whole {@code <body>} as one string of text, whitespace collapsed.
-   */
+  /// One file as one {@link Document}, with its address stamped in. Everything else is the reader's
+  /// default: the whole `<body>` as one string of text, whitespace collapsed.
   List<Document> read(Path file, String commit) {
     String source = checkout.relativize(file).toString().replace('\\', '/');
     var config =
@@ -167,7 +157,7 @@ public final class SpecCorpus {
     return new JsoupDocumentReader(new FileSystemResource(file), config).get();
   }
 
-  /** Every {@code .html} file under {@code specs/}, in a stable order. */
+  /// Every `.html` file under `specs/`, in a stable order.
   List<Path> htmlFiles() {
     try (Stream<Path> walk = Files.walk(checkout.resolve("specs"))) {
       return walk.filter(path -> path.toString().endsWith(".html")).sorted().toList();
@@ -176,20 +166,15 @@ public final class SpecCorpus {
     }
   }
 
-  /**
-   * {@code specs/059-corpus-retrieval-scale/spec.html} is in spec {@code
-   * 059-corpus-retrieval-scale}.
-   */
+  /// `specs/059-corpus-retrieval-scale/spec.html` is in spec `059-corpus-retrieval-scale`.
   static String specOf(String source) {
     // -1 keeps trailing empties, so parts.length means what it looks like it means.
     String[] parts = source.split("/", -1);
     return parts.length > 1 ? parts[1] : "";
   }
 
-  /**
-   * The commit the checkout is at, read from {@code .git} so no git client is needed. Works for a
-   * clone and for a {@code git worktree}, where {@code .git} is a file pointing at the real one.
-   */
+  /// The commit the checkout is at, read from `.git` so no git client is needed. Works for a clone
+  /// and for a `git worktree`, where `.git` is a file pointing at the real one.
   public static String commitOf(Path checkout) {
     try {
       Path git = gitDirOf(checkout);
@@ -203,7 +188,7 @@ public final class SpecCorpus {
     }
   }
 
-  /** A worktree's {@code .git} is a file holding "gitdir: &lt;path&gt;", not a directory. */
+  /// A worktree's `.git` is a file holding "gitdir: <path>", not a directory.
   private static Path gitDirOf(Path checkout) throws IOException {
     Path git = checkout.resolve(".git");
     if (!Files.isRegularFile(git)) {
@@ -213,7 +198,7 @@ public final class SpecCorpus {
     return checkout.resolve(pointer.substring("gitdir:".length()).strip()).normalize();
   }
 
-  /** Where the branch refs live: a worktree's are in the main repository, named by commondir. */
+  /// Where the branch refs live: a worktree's are in the main repository, named by commondir.
   private static Path commonDirOf(Path git) throws IOException {
     Path commondir = git.resolve("commondir");
     return Files.exists(commondir)
@@ -221,7 +206,7 @@ public final class SpecCorpus {
         : git;
   }
 
-  /** A ref as a commit, loose file first, then the packed table. */
+  /// A ref as a commit, loose file first, then the packed table.
   private static String resolve(String ref, Path common) throws IOException {
     Path loose = common.resolve(ref);
     if (Files.exists(loose)) {

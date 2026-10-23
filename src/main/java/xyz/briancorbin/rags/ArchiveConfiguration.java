@@ -21,24 +21,20 @@ import xyz.briancorbin.rags.answer.QuoteResolver;
 import xyz.briancorbin.rags.search.PrefixedEmbeddingModel;
 import xyz.briancorbin.rags.spectastic.SpecCorpus;
 
-/**
- * The archive's parts: the embedding model, the vector store, the corpus, and the two commentators
- * with their advisors.
- */
+/// The archive's parts: the embedding model, the vector store, the corpus, and the two commentators
+/// with their advisors.
 @Configuration
 class ArchiveConfiguration {
 
-  /**
-   * Spring AI's Ollama embedding model with nomic's task prefixes added. Primary, so anything that
-   * asks for an {@code EmbeddingModel} gets the prefixed one.
-   */
+  /// Spring AI's Ollama embedding model with nomic's task prefixes added. Primary, so anything that
+  /// asks for an `EmbeddingModel` gets the prefixed one.
   @Bean
   @Primary
   PrefixedEmbeddingModel nomicEmbeddingModel(OllamaEmbeddingModel ollama) {
     return new PrefixedEmbeddingModel(ollama);
   }
 
-  /** In memory, exact search over every vector, saved to and loaded from a JSON file. */
+  /// In memory, exact search over every vector, saved to and loaded from a JSON file.
   @Bean
   SimpleVectorStore archiveStore(PrefixedEmbeddingModel embeddingModel) {
     return SimpleVectorStore.builder(embeddingModel).build();
@@ -57,11 +53,9 @@ class ArchiveConfiguration {
         store);
   }
 
-  /**
-   * Quoter finds things. Its {@link QuestionAnswerAdvisor} searches the store on every call and
-   * pastes the top four chunks into the prompt. The memory advisor runs first, so it stores the
-   * question as asked, not with four chunks pasted under it.
-   */
+  /// Quoter finds things. Its {@link QuestionAnswerAdvisor} searches the store on every call and
+  /// pastes the top four chunks into the prompt. The memory advisor runs first, so it stores the
+  /// question as asked, not with four chunks pasted under it.
   @Bean
   ChatClient quoterChatClient(
       ChatClient.Builder builder,
@@ -78,7 +72,7 @@ class ArchiveConfiguration {
         .build();
   }
 
-  /** Answerer answers. No retriever: Answerer sees only the quotations the program traced. */
+  /// Answerer answers. No retriever: Answerer sees only the quotations the program traced.
   @Bean
   ChatClient answererChatClient(
       ChatClient.Builder builder,
@@ -91,7 +85,7 @@ class ArchiveConfiguration {
         .build();
   }
 
-  /** The answerer alone, for {@code archive.mode=direct}: it searches and answers in one call. */
+  /// The answerer alone, for `archive.mode=direct`: it searches and answers in one call.
   @Bean
   ChatClient soloAnswererChatClient(
       ChatClient.Builder builder,
@@ -117,10 +111,8 @@ class ArchiveConfiguration {
     return new CitationChecker();
   }
 
-  /**
-   * {@code archive.mode=quoted} (the default): the quoter finds and quotes, the answerer answers
-   * only from what was traced. {@code direct}: the answerer alone.
-   */
+  /// `archive.mode=quoted` (the default): the quoter finds and quotes, the answerer answers only
+  /// from what was traced. `direct`: the answerer alone.
   @Bean
   Archive archive(
       @Qualifier("quoterChatClient") ChatClient quoter,

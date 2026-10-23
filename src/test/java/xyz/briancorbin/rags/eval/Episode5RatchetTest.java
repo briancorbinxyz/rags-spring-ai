@@ -41,26 +41,24 @@ import xyz.briancorbin.rags.spectastic.SpectasticReader;
 import xyz.briancorbin.rags.units.ElementUnits;
 import xyz.briancorbin.rags.units.StandingFilter;
 
-/**
- * Episode 5's two steps on the laptop tier, through the ratchet, and both of them lose.
- *
- * <p>Step 5 fuses dense search into Episode 4's step 4, and step 6 reranks what comes back. The
- * numbers asserted here are the ones the article prints: step 5 finds four more questions and still
- * fails, because the relation questions lose two; step 6 is worse than step 5 outright. A step that
- * fails the ratchet is a result, so it is asserted like one. A change here is a new result, not a
- * test to update quietly.
- *
- * <p>Needs, and skips cleanly without: the spectastic checkout at the pinned commit; Ollama serving
- * {@code nomic-embed-text:v1.5} at the pinned digest; and, for step 6 only, {@code
- * tools/rerank-service/serve.py}. Vectors come from the cache shared with the prototype ({@code
- * -Dvectors.cache=…}); with a cold cache the first run embeds all 11,492 passages, which takes
- * about ten minutes.
- */
+/// Episode 5's two steps on the laptop tier, through the ratchet, and both of them lose.
+///
+/// Step 5 fuses dense search into Episode 4's step 4, and step 6 reranks what comes back. The
+/// numbers asserted here are the ones the article prints: step 5 finds four more questions and
+/// still fails, because the relation questions lose two; step 6 is worse than step 5 outright. A
+/// step that fails the ratchet is a result, so it is asserted like one. A change here is a new
+/// result, not a test to update quietly.
+///
+/// Needs, and skips cleanly without: the spectastic checkout at the pinned commit; Ollama serving
+/// `nomic-embed-text:v1.5` at the pinned digest; and, for step 6 only,
+/// `tools/rerank-service/serve.py`. Vectors come from the cache shared with the prototype
+/// (`-Dvectors.cache=…`); with a cold cache the first run embeds all 11,492 passages, which takes
+/// about ten minutes.
 class Episode5RatchetTest {
 
   static final String MODEL = "nomic-embed-text:v1.5";
 
-  /** The build of the model the published numbers were measured with. */
+  /// The build of the model the published numbers were measured with.
   static final String DIGEST = "0a109f422b47";
 
   static final Path VECTORS =
@@ -218,13 +216,11 @@ class Episode5RatchetTest {
     return tally;
   }
 
-  /**
-   * Every question's whole ranking, one line each, for the diff against the prototype.
-   *
-   * <p>The run file can't serve: TREC keeps one line per passage, and a split unit's parts share an
-   * address, so a ranking that names a unit twice comes out one line shorter. Parity is about the
-   * items, duplicates and all, so the items are written as they are.
-   */
+  /// Every question's whole ranking, one line each, for the diff against the prototype.
+  ///
+  /// The run file can't serve: TREC keeps one line per passage, and a split unit's parts share an
+  /// address, so a ranking that names a unit twice comes out one line shorter. Parity is about the
+  /// items, duplicates and all, so the items are written as they are.
   private static void parity(Step step, List<RetrievalRun.Result> results, Path out) {
     var lines = new ArrayList<String>();
     for (RetrievalRun.Result r : results) {

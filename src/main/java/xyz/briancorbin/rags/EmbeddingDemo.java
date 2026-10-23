@@ -6,16 +6,13 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SimpleVectorStore.EmbeddingMath;
 import xyz.briancorbin.rags.search.PrefixedEmbeddingModel;
 
-/**
- * Embeds a handful of sentences and prints how alike each pair is, before anything bigger is
- * trusted to the same numbers.
- *
- * <p>Run it with {@code --archive.run=demo}. It needs Ollama and the embedding model, not the
- * archive.
- */
+/// Embeds a handful of sentences and prints how alike each pair is, before anything bigger is
+/// trusted to the same numbers.
+///
+/// Run it with `--archive.run=demo`. It needs Ollama and the embedding model, not the archive.
 public final class EmbeddingDemo {
 
-  /** Two that mean the same thing, one that is related, one that is not, and two near-twin ids. */
+  /// Two that mean the same thing, one that is related, one that is not, and two near-twin ids.
   static final List<String> SENTENCES =
       List.of(
           "The index is never the source of record.",
@@ -40,13 +37,13 @@ public final class EmbeddingDemo {
     return shape(vectors.getFirst()) + pairs(vectors) + againstTheQuestion(vectors);
   }
 
-  /** What one embedding looks like: how many numbers, and the first few of them. */
+  /// What one embedding looks like: how many numbers, and the first few of them.
   private static String shape(float[] vector) {
     return "\"%s\" is %d numbers. The first five: %s%n%n"
         .formatted(SENTENCES.getFirst(), vector.length, Arrays.toString(Arrays.copyOf(vector, 5)));
   }
 
-  /** Every sentence against every other, which is what "similar" means to a model. */
+  /// Every sentence against every other, which is what "similar" means to a model.
   private static String pairs(List<float[]> vectors) {
     var out = new StringBuilder("Cosine similarity, 1.00 = same direction:\n\n");
     for (int i = 0; i < SENTENCES.size(); i++) {
@@ -62,7 +59,7 @@ public final class EmbeddingDemo {
     return out.toString();
   }
 
-  /** The question against each sentence: the same arithmetic a search does. */
+  /// The question against each sentence: the same arithmetic a search does.
   private String againstTheQuestion(List<float[]> vectors) {
     float[] question = embedder.embed(QUESTION);
     var out =
