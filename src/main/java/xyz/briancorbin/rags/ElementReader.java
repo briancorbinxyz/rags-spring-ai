@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,7 +152,7 @@ public final class ElementReader implements DocumentReader {
       if (el == page.body() || el.id().isEmpty()) {
         continue;
       }
-      String text = text(el, e -> !e.id().isEmpty()); // its own text: an element with an id is its own unit
+      String text = text(el, inner -> !inner.id().isEmpty()); // an element with an id is its own unit
       if (words(text) < MIN_WORDS) {
         continue; // a heading on its own is a label, not a passage
       }
@@ -164,7 +165,7 @@ public final class ElementReader implements DocumentReader {
         lifecycle = Lifecycle.SUPERSEDED;
       }
       String spec = page.source().split("/")[1];
-      var ownHeading = first(el, e -> Set.of("h2", "h3", "h4").contains(e.normalName()));
+      var ownHeading = first(el, inner -> Set.of("h2", "h3", "h4").contains(inner.normalName()));
       String heading = ownHeading == null ? "" : strippedText(ownHeading);
       units.put(address, new Unit(page.source(), el.id(), spec, title,
           headingPath(title, el), heading, lifecycle, parts(text)));
@@ -184,12 +185,7 @@ public final class ElementReader implements DocumentReader {
           || Set.of("body", "main", "html").contains(ancestor.normalName())) {
         continue;
       }
-      String heading =
-          ancestor.children().stream()
-              .filter(child -> HEADINGS.contains(child.normalName()))
-              .findFirst()
-              .map(ElementReader::strippedText)
-              .orElse("");
+      String heading = headingOf(ancestor);
       if (!heading.isEmpty() && (path.isEmpty() || !path.getLast().equals(heading))) {
         path.add(heading);
       }
@@ -253,14 +249,14 @@ public final class ElementReader implements DocumentReader {
   /** All the element's text, each text node trimmed: for titles and headings. */
   static String strippedText(Element el) {
     var out = new StringBuilder();
-    collect(el, e -> false, true, out);
+    collect(el, nothing -> false, true, out);
     return collapse(out.toString());
   }
 
   /** Text nodes joined by one space, untrimmed: what surrounds a link. */
   static String rawText(Element el) {
     var out = new StringBuilder();
-    collect(el, e -> false, false, out);
+    collect(el, nothing -> false, false, out);
     return out.isEmpty() ? "" : out.substring(1);
   }
 
@@ -303,18 +299,31 @@ public final class ElementReader implements DocumentReader {
   List<Page> pages() {
     try (Stream<Path> files = Files.walk(checkout.resolve("specs"))) {
       var pages = new ArrayList<Page>();
-      for (Path f :
-          files
-              .filter(p -> p.getFileName().toString().endsWith(".html") && Files.isRegularFile(p))
-              .sorted((a, b) -> slash(a).compareTo(slash(b)))
-              .toList()) {
-        var html = Jsoup.parse(Files.readString(f, StandardCharsets.UTF_8));
-        pages.add(new Page(slash(checkout.relativize(f)), html, html.body()));
+      for (Path file : sortedHtmlFilesIn(files)) {
+        var html = Jsoup.parse(Files.readString(file, StandardCharsets.UTF_8));
+        pages.add(new Page(slash(checkout.relativize(file)), html, html.body()));
       }
       return pages;
     } catch (IOException e) {
       throw new UncheckedIOException("Cannot read the archive at " + checkout, e);
     }
+  }
+
+  /** An element's own heading, as a reader sees it; empty if it has none of its own. */
+  private static String headingOf(Element element) {
+    return element.children().stream()
+        .filter(child -> HEADINGS.contains(child.normalName()))
+        .findFirst()
+        .map(ElementReader::strippedText)
+        .orElse("");
+  }
+
+  /** The HTML files among {@code files}, ordered by their '/' path so a run is reproducible. */
+  private static List<Path> sortedHtmlFilesIn(Stream<Path> files) {
+    return files
+        .filter(path -> path.getFileName().toString().endsWith(".html") && Files.isRegularFile(path))
+        .sorted(Comparator.comparing(ElementReader::slash))
+        .toList();
   }
 
   private static String slash(Path p) {

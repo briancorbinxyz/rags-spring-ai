@@ -1,6 +1,5 @@
 package xyz.briancorbin.rags;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -12,7 +11,9 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.SequencedMap;
 import java.util.Set;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import tools.jackson.databind.json.JsonMapper;
 import xyz.briancorbin.rags.GoldenSet.Question;
 
@@ -54,22 +55,37 @@ public final class TrecFiles {
    */
   public static List<String> qrels(List<Question> questions, List<Decision> audit) {
     var lines = new ArrayList<String>();
-    questions.stream()
+    for (Question question : answerableById(questions)) {
+      judgmentsFor(question, audit)
+          .forEach(
+              (passage, relevance) ->
+                  lines.add(question.id() + " 0 " + passage + " " + relevance));
+    }
+    return lines;
+  }
+
+  /** The answerable questions by id, so a qrels file comes out the same every time. */
+  private static List<Question> answerableById(List<Question> questions) {
+    return questions.stream()
         .filter(Question::answerable)
         .sorted(Comparator.comparing(Question::id))
-        .forEach(
-            q -> {
-              var judged = new LinkedHashMap<String, Integer>();
-              q.expected().forEach(e -> judged.putIfAbsent(e, 1));
-              q.accept().forEach(a -> judged.putIfAbsent(a.address(), 1));
-              q.stale().forEach(s -> judged.putIfAbsent(s, 0));
-              audit.stream()
-                  .filter(d -> d.id().equals(q.id()))
-                  .sorted(Comparator.comparing(Decision::candidate))
-                  .forEach(d -> judged.putIfAbsent(d.candidate(), d.accepted() ? 1 : 0));
-              judged.forEach((p, rel) -> lines.add(q.id() + " 0 " + p + " " + rel));
-            });
-    return lines;
+        .toList();
+  }
+
+  /**
+   * One question's judgments, in the order they are written: expected, then accepted, then stale,
+   * then whatever else the audit decided. A passage is judged once, by the first rule that names it.
+   */
+  private static SequencedMap<String, Integer> judgmentsFor(Question question, List<Decision> audit) {
+    var judged = new LinkedHashMap<String, Integer>();
+    question.expected().forEach(expected -> judged.putIfAbsent(expected, 1));
+    question.accept().forEach(accepted -> judged.putIfAbsent(accepted.address(), 1));
+    question.stale().forEach(stale -> judged.putIfAbsent(stale, 0));
+    audit.stream()
+        .filter(decision -> decision.id().equals(question.id()))
+        .sorted(Comparator.comparing(Decision::candidate))
+        .forEach(decision -> judged.putIfAbsent(decision.candidate(), decision.accepted() ? 1 : 0));
+    return judged;
   }
 
   /**

@@ -85,12 +85,16 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
   }
 
   private Optional<Document> bestOnPage(String question, String source) {
-    List<Document> live =
-        keywords.units().all().stream()
-            .filter(u -> source.equals(u.getMetadata().get(ElementReader.SOURCE)))
-            .filter(u -> !ElementReader.lifecycle(u).excluded())
-            .toList();
+    var live = liveUnitsOn(source);
     return live.isEmpty() ? Optional.empty() : keywords.rank(question, live).stream().findFirst();
+  }
+
+  /** The units of page {@code source} that are still in force, in archive order. */
+  private List<Document> liveUnitsOn(String source) {
+    return keywords.units().all().stream()
+        .filter(unit -> source.equals(unit.getMetadata().get(ElementReader.SOURCE)))
+        .filter(unit -> !ElementReader.lifecycle(unit).excluded())
+        .toList();
   }
 
   /** The successor, saying which result it replaced: provenance for the redirect itself. */

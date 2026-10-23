@@ -68,7 +68,7 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
       order.add(i);
     }
     // Best first; equal scores keep the order the fusion gave them.
-    order.sort(Comparator.comparingDouble(i -> -scores.get(i)));
+    order.sort(Comparator.comparingDouble(position -> -scores.get(position)));
 
     var out = new ArrayList<Document>(documents.size());
     out.addAll(pinned);

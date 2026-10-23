@@ -60,7 +60,7 @@ public final class PrefixedEmbeddingModel implements EmbeddingModel {
     var out = new ArrayList<float[]>(documents.size());
     for (List<Document> batch : batchingStrategy.batch(documents)) {
       var texts = batch.stream().map(PrefixedEmbeddingModel::text).toList();
-      delegate.call(prefixed(DOCUMENT, texts)).getResults().forEach(r -> out.add(r.getOutput()));
+      delegate.call(prefixed(DOCUMENT, texts)).getResults().forEach(result -> out.add(result.getOutput()));
     }
     return out;
   }
@@ -93,7 +93,7 @@ public final class PrefixedEmbeddingModel implements EmbeddingModel {
    * only the model name and dimensions from generic options, and {@code truncate=false} is lost.
    */
   private static EmbeddingRequest prefixed(String prefix, List<String> texts) {
-    return new EmbeddingRequest(texts.stream().map(t -> prefix + t).toList(), null);
+    return new EmbeddingRequest(texts.stream().map(text -> prefix + text).toList(), null);
   }
 
   private static String text(Document document) {

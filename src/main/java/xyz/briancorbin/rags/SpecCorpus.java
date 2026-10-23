@@ -153,7 +153,7 @@ public final class SpecCorpus {
   /** Every {@code .html} file under {@code specs/}, in a stable order. */
   List<Path> htmlFiles() {
     try (Stream<Path> walk = Files.walk(checkout.resolve("specs"))) {
-      return walk.filter(p -> p.toString().endsWith(".html")).sorted().toList();
+      return walk.filter(path -> path.toString().endsWith(".html")).sorted().toList();
     } catch (IOException e) {
       throw new UncheckedIOException("No spectastic checkout at " + checkout, e);
     }

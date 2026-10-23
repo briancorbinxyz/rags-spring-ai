@@ -35,8 +35,8 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
 
     /** Share of Beta's quoting claims whose every quotation was found, or null with none. */
     public Double verifiedShare() {
-      long quoting = verdicts.stream().filter(v -> !v.claim().sources().isEmpty()).count();
-      long supported = verdicts.stream().filter(v -> v.status() == Status.SUPPORTED).count();
+      long quoting = verdicts.stream().filter(verdict -> !verdict.claim().sources().isEmpty()).count();
+      long supported = verdicts.stream().filter(verdict -> verdict.status() == Status.SUPPORTED).count();
       return quoting == 0 ? null : (double) supported / quoting;
     }
   }

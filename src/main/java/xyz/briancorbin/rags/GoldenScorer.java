@@ -221,17 +221,17 @@ public final class GoldenScorer {
   private Page page(String file) {
     return pages.computeIfAbsent(
         file,
-        f -> {
+        missing -> {
           try {
-            var html = Jsoup.parse(Files.readString(checkout.resolve(f)));
+            var html = Jsoup.parse(Files.readString(checkout.resolve(missing)));
             return new Page(normalise(html.body().text()), html);
           } catch (IOException e) {
-            throw new UncheckedIOException("No such file in the archive: " + f, e);
+            throw new UncheckedIOException("No such file in the archive: " + missing, e);
           }
         });
   }
 
-  static String normalise(String s) {
-    return s == null ? "" : s.replaceAll("\\s+", " ").strip();
+  static String normalise(String text) {
+    return text == null ? "" : text.replaceAll("\\s+", " ").strip();
   }
 }

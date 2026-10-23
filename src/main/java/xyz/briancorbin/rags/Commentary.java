@@ -41,7 +41,7 @@ public record Commentary(
   public String answer() {
     return claims.stream()
         .map(Claim::text)
-        .filter(t -> !t.isEmpty())
+        .filter(text -> !text.isEmpty())
         .collect(Collectors.joining(" "));
   }
 

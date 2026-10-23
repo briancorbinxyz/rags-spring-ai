@@ -101,7 +101,10 @@ public final class KeywordSearch implements AutoCloseable {
 
   /** Ranks the given units, and only them, for a question; units with no matching word are left out. */
   public List<Document> rank(String question, Collection<Document> scope) {
-    String ids = scope.stream().map(d -> String.valueOf(units.row(d))).collect(Collectors.joining(",", "[", "]"));
+    String ids =
+        scope.stream()
+            .map(unit -> String.valueOf(units.row(unit)))
+            .collect(Collectors.joining(",", "[", "]"));
     String sql =
         "select rowid, bm25(units, %s) as score from units where units match ? and rowid in (select value from json_each(?)) order by score, rowid limit ?"
             .formatted(weights());

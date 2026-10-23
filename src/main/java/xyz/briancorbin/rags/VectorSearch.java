@@ -53,7 +53,8 @@ public final class VectorSearch {
    */
   public static VectorSearch of(ElementUnits units, EmbeddingModel model, String modelId,
       EmbeddingPrefix prefix, VectorCache cache) {
-    var texts = units.all().stream().map(u -> prefix.document(ElementReader.passage(u))).toList();
+    var texts =
+        units.all().stream().map(unit -> prefix.document(ElementReader.passage(unit))).toList();
     var vectors = new float[units.size()][];
     var missing = new ArrayList<Integer>();
     for (int i = 0; i < texts.size(); i++) {
@@ -100,7 +101,8 @@ public final class VectorSearch {
       similarity[i] = dot(vectors[i], query);
     }
     // Best first; equal scores keep archive order, as the prototype's stable argsort does.
-    allowed.sort(Comparator.comparingDouble((Integer i) -> -similarity[i]).thenComparingInt(i -> i));
+    allowed.sort(
+        Comparator.comparingDouble((Integer row) -> -similarity[row]).thenComparingInt(row -> row));
     var out = new ArrayList<Document>(Math.min(depth, allowed.size()));
     for (int i = 0; i < Math.min(depth, allowed.size()); i++) {
       int row = allowed.get(i);

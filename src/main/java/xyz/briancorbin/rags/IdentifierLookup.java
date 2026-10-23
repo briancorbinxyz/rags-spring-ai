@@ -3,8 +3,11 @@ package xyz.briancorbin.rags;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.SequencedCollection;
+import java.util.SequencedSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.ai.document.Document;
@@ -46,56 +49,68 @@ public final class IdentifierLookup {
     this.units = units;
     this.anchors = units.anchors();
     for (String address : units.addresses()) {
-      byAnchor.computeIfAbsent(address.substring(address.indexOf('#') + 1), a -> new ArrayList<>()).add(address);
+      byAnchor
+          .computeIfAbsent(address.substring(address.indexOf('#') + 1), id -> new ArrayList<>())
+          .add(address);
     }
   }
 
-  /** What the question names. */
-  record Named(List<String> ids, List<String> specs) {}
+  /** What the question names: each id and each spec once, in the order the question said them. */
+  record Named(SequencedSet<String> ids, SequencedSet<String> specs) {}
 
   Named parse(String question) {
-    var ids = new ArrayList<String>();
+    var ids = new LinkedHashSet<String>();
     var matchingIds = ID.matcher(question);
     while (matchingIds.find()) {
       String id = matchingIds.group();
-      if (anchors.contains(id) && !ids.contains(id)) {
+      if (anchors.contains(id)) {
         ids.add(id);
       }
     }
-    var specs = new ArrayList<String>();
+    var specs = new LinkedHashSet<String>();
     var matchingSpecs = SPEC.matcher(question);
     while (matchingSpecs.find()) {
       String inProse = matchingSpecs.group("inProse"); // one branch matched, so one of the two is set
-      String spec = inProse != null ? inProse : matchingSpecs.group("inSlug");
-      if (!specs.contains(spec)) {
-        specs.add(spec);
-      }
+      specs.add(inProse != null ? inProse : matchingSpecs.group("inSlug"));
     }
     return new Named(ids, specs);
   }
 
   /** The addresses of the units the question names, in the order they should be pinned. */
-  public List<String> lookup(String question) {
+  public SequencedCollection<String> lookup(String question) {
     Named named = parse(question);
-    var out = new ArrayList<String>();
+    var pinned = new LinkedHashSet<String>(); // two ids can name one address; it is pinned once
     for (String id : named.ids()) {
-      List<String> addresses = byAnchor.getOrDefault(id, List.of());
-      if (!named.specs().isEmpty()) {
-        addresses = addresses.stream().filter(a -> named.specs().contains(spec(a).substring(0, 3))).toList();
-      } else if (addresses.stream().map(IdentifierLookup::spec).distinct().count() != 1) {
-        addresses = List.of(); // FR-001 alone would pin over a hundred units
-      }
-      addresses.stream().filter(a -> !out.contains(a)).forEach(out::add);
+      pinned.addAll(addressesNamedBy(id, named.specs()));
     }
-    out.sort(
-        Comparator.<String>comparingInt(a -> rank(ElementReader.lifecycle(first(a))))
-            .thenComparing(a -> a.contains("/changes/"))
-            .thenComparingInt(a -> units.row(first(a))));
-    return out;
+    return pinned.stream().sorted(pinOrder()).toList();
   }
 
-  private Document first(String address) {
+  /** Every address carrying {@code id}, narrowed to {@code specs} if the question named any. */
+  private List<String> addressesNamedBy(String id, Set<String> specs) {
+    List<String> addresses = byAnchor.getOrDefault(id, List.of());
+    if (!specs.isEmpty()) {
+      return addresses.stream().filter(address -> specs.contains(specOf(address))).toList();
+    }
+    if (addresses.stream().map(IdentifierLookup::specOf).distinct().count() != 1) {
+      return List.of(); // FR-001 alone would pin over a hundred units
+    }
+    return addresses;
+  }
+
+  /** Current first, then applied history; pages outside {@code changes/} first; then archive order. */
+  private Comparator<String> pinOrder() {
+    return Comparator.<String>comparingInt(address -> rank(lifecycleOf(address)))
+        .thenComparing(address -> address.contains("/changes/"))
+        .thenComparingInt(address -> units.row(firstPart(address)));
+  }
+
+  private Document firstPart(String address) {
     return units.parts(address).getFirst();
+  }
+
+  private Lifecycle lifecycleOf(String address) {
+    return ElementReader.lifecycle(firstPart(address));
   }
 
   private static int rank(Lifecycle lifecycle) {
@@ -106,7 +121,8 @@ public final class IdentifierLookup {
     };
   }
 
-  private static String spec(String address) {
-    return address.split("/")[1];
+  /** The three-digit number of the spec an address belongs to: {@code specs/045-…/…} is "045". */
+  private static String specOf(String address) {
+    return address.split("/")[1].substring(0, 3);
   }
 }

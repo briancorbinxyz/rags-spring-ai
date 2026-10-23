@@ -35,7 +35,7 @@ public final class EmbeddingDemo {
   public String run() {
     // Stored text gets the document prefix, a question gets the query prefix, as in the archive.
     List<float[]> vectors =
-        SENTENCES.stream().map(s -> embedder.embed(new Document(s))).toList();
+        SENTENCES.stream().map(sentence -> embedder.embed(new Document(sentence))).toList();
     float[] question = embedder.embed(QUESTION);
 
     var out = new StringBuilder();

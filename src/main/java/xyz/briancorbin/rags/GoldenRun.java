@@ -7,9 +7,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.SequencedCollection;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -97,31 +100,55 @@ public final class GoldenRun {
     return List.copyOf(rows);
   }
 
-  Row row(Question q, Archive.Ruling ruling) {
+  /** The quotations the answer leaned on: Alpha's citations in duo mode, all of them in solo. */
+  private SequencedCollection<Quote> citedBy(Archive.Ruling ruling) {
+    if (ruling.mode() != Archive.Mode.DUO) {
+      return ruling.quotes();
+    }
+    return ruling
+        .alpha()
+        .map(reply -> citations.cited(reply, ruling.quotes()))
+        .orElseGet(LinkedHashSet::new);
+  }
+
+  /** Whether any of the question's stale records is in the top four Beta was handed. */
+  private boolean anyStaleAmong(Question question, List<Document> top) {
+    return top.stream()
+        .anyMatch(
+            chunk ->
+                question.stale().stream().anyMatch(stale -> scorer.hit(stale, chunk) != Hit.NONE));
+  }
+
+  /**
+   * Whether a quotation Alpha relied on came from a stale element itself, rather than merely from a
+   * chunk that also happens to hold it.
+   */
+  private boolean anyStaleQuotedIn(Question question, SequencedCollection<Quote> cited) {
+    List<String> staleTexts =
+        question.stale().stream()
+            .map(stale -> scorer.elementText(stale).map(QuoteResolver::normalise).orElse(""))
+            .toList();
+    return cited.stream()
+        .map(quote -> QuoteResolver.normalise(quote.text()))
+        .anyMatch(
+            quoted ->
+                staleTexts.stream().anyMatch(text -> !text.isEmpty() && text.contains(quoted)));
+  }
+
+  Row row(Question question, Archive.Ruling ruling) {
     List<Document> top = ruling.retrieved().subList(0, Math.min(K, ruling.retrieved().size()));
-    Score score = scorer.score(q, top);
+    Score score = scorer.score(question, top);
     Double verified =
         ruling.mode() == Archive.Mode.DUO
             ? new QuoteResolver.Resolution(ruling.betaVerdicts(), ruling.quotes()).verifiedShare()
             : null;
-    boolean staleRetrieved =
-        top.stream().anyMatch(d -> q.stale().stream().anyMatch(a -> scorer.hit(a, d) != Hit.NONE));
-    List<Quote> cited =
-        ruling.mode() == Archive.Mode.DUO
-            ? ruling.alpha().map(a -> citations.cited(a, ruling.quotes())).orElse(List.of())
-            : ruling.quotes();
-    // Stale only if a quotation Alpha relied on comes from the stale element itself, not merely
-    // from a chunk that also happens to hold it.
-    List<String> staleTexts =
-        q.stale().stream().map(a -> scorer.elementText(a).map(QuoteResolver::normalise).orElse("")).toList();
-    boolean staleCited =
-        cited.stream()
-            .map(quote -> QuoteResolver.normalise(quote.text()))
-            .anyMatch(t -> staleTexts.stream().anyMatch(st -> !st.isEmpty() && st.contains(t)));
+    boolean staleRetrieved = anyStaleAmong(question, top);
+    var cited = citedBy(ruling);
+    boolean staleCited = anyStaleQuotedIn(question, cited);
     boolean staleFlagged =
-        ruling.alpha().map(a -> FLAGS_STALE.matcher(a.answer()).find()).orElse(false);
+        ruling.alpha().map(reply -> FLAGS_STALE.matcher(reply.answer()).find()).orElse(false);
     return new Row(
-        q,
+        question,
         ruling,
         score,
         verified,
@@ -266,26 +293,20 @@ public final class GoldenRun {
     out.append(line("all", rows));
     var answerable = rows.stream().filter(row -> row.question().answerable()).toList();
     var unanswerable = rows.stream().filter(row -> !row.question().answerable()).toList();
-    var verified =
-        rows.stream()
-            .map(Row::betaVerified)
-            .filter(score -> score != null)
-            .mapToDouble(Double::doubleValue)
-            .average();
-    var millis =
-        rows.stream().map(row -> row.ruling().millis()).sorted(Comparator.naturalOrder()).toList();
+    var verified = shareOfQuotationsTraced(rows);
+    var millis = sortedMillis(rows);
     out.append(
         "%nAbstained correctly on %d of %d unanswerable questions; abstained wrongly on %d of %d answerable ones.%n"
             .formatted(
-                count(unanswerable, r -> r.ruling().abstained()),
+                count(unanswerable, row -> row.ruling().abstained()),
                 unanswerable.size(),
-                count(answerable, r -> r.ruling().abstained()),
+                count(answerable, row -> row.ruling().abstained()),
                 answerable.size()));
     out.append(
         "Beta's quotations traced word for word: %s. Alpha's claims: %s.%n"
             .formatted(
                 verified.isPresent() ? "%.0f%%".formatted(verified.getAsDouble() * 100) : "n/a",
-                words(Tally.of(rows.stream().flatMap(r -> r.ruling().alphaVerdicts().stream()).toList()))));
+                words(Tally.of(allAlphaVerdicts(rows)))));
     out.append(
         "Prompt tokens per question, mean %.0f. Time per question, p50 %.1f s, p95 %.1f s.%n"
             .formatted(
@@ -295,17 +316,40 @@ public final class GoldenRun {
     return out.toString();
   }
 
+  /** Beta's quotations that traced word for word, as a share; empty if none were checked. */
+  private static OptionalDouble shareOfQuotationsTraced(List<Row> rows) {
+    return rows.stream()
+        .map(Row::betaVerified)
+        .filter(share -> share != null)
+        .mapToDouble(Double::doubleValue)
+        .average();
+  }
+
+  /** Every question's wall time, ascending, so a percentile can be read straight off it. */
+  private static List<Long> sortedMillis(List<Row> rows) {
+    return rows.stream().map(row -> row.ruling().millis()).sorted(Comparator.naturalOrder()).toList();
+  }
+
+  /** Every verdict on every claim Alpha made, across the run. */
+  private static List<CitationChecker.Verdict> allAlphaVerdicts(List<Row> rows) {
+    return rows.stream().flatMap(row -> row.ruling().alphaVerdicts().stream()).toList();
+  }
+
+  /** Mean reciprocal rank over the answerable questions; 0 if there are none. */
+  private static double meanReciprocalRank(List<Row> rows) {
+    return rows.stream()
+        .filter(row -> row.question().answerable())
+        .mapToDouble(row -> row.score().reciprocalRank())
+        .average()
+        .orElse(0);
+  }
+
   private static String line(String name, List<Row> rows) {
-    double hit = share(rows, r -> r.score().hitAt(K));
-    double partial = share(rows, r -> r.score().partialAt(K));
-    double all = share(rows, r -> r.score().allAt(K));
-    double mrr =
-        rows.stream()
-            .filter(r -> r.question().answerable())
-            .mapToDouble(r -> r.score().reciprocalRank())
-            .average()
-            .orElse(0);
-    boolean none = rows.stream().noneMatch(r -> r.question().answerable());
+    double hit = share(rows, row -> row.score().hitAt(K));
+    double partial = share(rows, row -> row.score().partialAt(K));
+    double all = share(rows, row -> row.score().allAt(K));
+    double mrr = meanReciprocalRank(rows);
+    boolean none = rows.stream().noneMatch(row -> row.question().answerable());
     return "| %s | %d | %s | %s | %s | %s | %d | %d |%n"
         .formatted(
             name,
@@ -314,13 +358,13 @@ public final class GoldenRun {
             none ? "n/a" : "%.0f%%".formatted(all * 100),
             none ? "n/a" : "%.0f%%".formatted(partial * 100),
             none ? "n/a" : "%.2f".formatted(mrr),
-            count(rows, r -> r.ruling().abstained()),
+            count(rows, row -> row.ruling().abstained()),
             count(rows, Row::staleAsCurrent));
   }
 
   /** Share of answerable rows that pass; unanswerable questions have nothing to retrieve. */
   private static double share(List<Row> rows, java.util.function.Predicate<Row> test) {
-    var answerable = rows.stream().filter(r -> r.question().answerable()).toList();
+    var answerable = rows.stream().filter(row -> row.question().answerable()).toList();
     return answerable.isEmpty() ? 0 : (double) count(answerable, test) / answerable.size();
   }
 

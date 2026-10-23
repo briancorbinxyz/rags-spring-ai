@@ -60,7 +60,9 @@ public enum Lifecycle {
     if (filter.isEmpty()) {
       return "1 = 0"; // asked for no lifecycle at all: match nothing, rather than write "in ()"
     }
-    return filter.stream().map(l -> "'" + l.value() + "'").collect(Collectors.joining(", ", "lifecycle in (", ")"));
+    return filter.stream()
+        .map(lifecycle -> "'" + lifecycle.value() + "'")
+        .collect(Collectors.joining(", ", "lifecycle in (", ")"));
   }
 
   /** Withdrawn, superseded or rejected: the search leaves these out. */

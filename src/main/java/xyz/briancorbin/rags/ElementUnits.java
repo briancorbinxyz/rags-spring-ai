@@ -1,11 +1,11 @@
 package xyz.briancorbin.rags;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SequencedSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.ai.document.Document;
@@ -24,14 +24,14 @@ public final class ElementUnits {
 
   private final List<Document> units;
   private final Map<String, Integer> rows = new HashMap<>(); // document id -> archive position
-  private final Map<String, List<Document>> parts = new LinkedHashMap<>(); // address -> its parts
+  private final LinkedHashMap<String, List<Document>> parts = new LinkedHashMap<>(); // address -> parts
 
   public ElementUnits(List<Document> units) {
     this.units = List.copyOf(units);
     for (int row = 0; row < this.units.size(); row++) {
       Document unit = this.units.get(row);
       rows.put(unit.getId(), row);
-      parts.computeIfAbsent(ElementReader.address(unit), a -> new ArrayList<>()).add(unit);
+      parts.computeIfAbsent(ElementReader.address(unit), address -> new ArrayList<>()).add(unit);
     }
   }
 
@@ -46,13 +46,15 @@ public final class ElementUnits {
   }
 
   /** Addresses in archive order, each once: one per unit, however many parts it has. */
-  public Collection<String> addresses() {
-    return parts.keySet();
+  public SequencedSet<String> addresses() {
+    return parts.sequencedKeySet();
   }
 
   /** The units' element ids, for the identifier lookup. */
   public Set<String> anchors() {
-    return units.stream().map(d -> String.valueOf(d.getMetadata().get(ElementReader.ANCHOR))).collect(Collectors.toSet());
+    return units.stream()
+        .map(unit -> String.valueOf(unit.getMetadata().get(ElementReader.ANCHOR)))
+        .collect(Collectors.toSet());
   }
 
   /** A unit's position in the archive, which is how ties are broken. */

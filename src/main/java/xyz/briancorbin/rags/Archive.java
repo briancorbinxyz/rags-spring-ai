@@ -199,7 +199,7 @@ public final class Archive {
           client
               .prompt()
               .user(user)
-              .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+              .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
               .call()
               .responseEntity(
                   Commentary.class, spec -> spec.useProviderStructuredOutput().validateSchema());

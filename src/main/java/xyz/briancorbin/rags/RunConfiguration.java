@@ -107,7 +107,7 @@ class RunConfiguration {
     for (Quote q : ruling.quotes()) {
       log.info("  {} {} (rank {})", q.label(), q.address(), q.rank());
     }
-    ruling.alphaVerdicts().forEach(v -> log.info("  [{}] {}", v.status(), v.reason()));
+    ruling.alphaVerdicts().forEach(verdict -> log.info("  [{}] {}", verdict.status(), verdict.reason()));
   }
 
   /**

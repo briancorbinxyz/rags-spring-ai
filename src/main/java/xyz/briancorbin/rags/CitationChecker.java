@@ -1,9 +1,12 @@
 package xyz.briancorbin.rags;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.SequencedSet;
 import java.util.regex.Pattern;
 
 /**
@@ -47,26 +50,26 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
     return new Verdict(
         claim,
         Status.SUPPORTED,
-        "cites " + String.join(", ", cited.stream().map(q -> q.label() + " (" + q.address() + ")").toList()));
+        "cites " + String.join(", ", cited.stream().map(quote -> quote.label() + " (" + quote.address() + ")").toList()));
   }
 
   /** True when the reply says the answer is not in the archive and backs no claim with a quote. */
   public boolean abstained(Commentary reply, List<Quote> given) {
     var verdicts = checkAll(reply, given);
     boolean says = reply.claims().stream().anyMatch(CitationChecker::abstains);
-    boolean cites = verdicts.stream().anyMatch(v -> v.status() == Status.SUPPORTED);
+    boolean cites = verdicts.stream().anyMatch(verdict -> verdict.status() == Status.SUPPORTED);
     return says && !cites;
   }
 
   /** The quotations a reply cites, in the order first cited, for the results file. */
-  public List<Quote> cited(Commentary reply, List<Quote> given) {
-    var out = new ArrayList<Quote>();
-    for (Claim c : reply.claims()) {
-      for (String s : c.sources()) {
-        find(s, given).filter(q -> !out.contains(q)).ifPresent(out::add);
+  public SequencedSet<Quote> cited(Commentary reply, List<Quote> given) {
+    var cited = new LinkedHashSet<Quote>(); // a quotation cited twice is still cited once
+    for (Claim claim : reply.claims()) {
+      for (String source : claim.sources()) {
+        find(source, given).ifPresent(cited::add);
       }
     }
-    return List.copyOf(out);
+    return Collections.unmodifiableSequencedSet(cited);
   }
 
   static boolean abstains(Claim claim) {
@@ -76,6 +79,6 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
   /** Accepts "Q2", "q2" and "[Q2]"; nothing looser. */
   private static Optional<Quote> find(String source, List<Quote> given) {
     String label = source.strip().replaceAll("^\\[(?<label>.*)]$", "${label}").toUpperCase(Locale.ROOT);
-    return given.stream().filter(q -> q.label().equals(label)).findFirst();
+    return given.stream().filter(quote -> quote.label().equals(label)).findFirst();
   }
 }

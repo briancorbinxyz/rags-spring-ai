@@ -48,9 +48,9 @@ public final class OllamaModel {
         return Optional.empty();
       }
       return models.stream()
-          .filter(m -> model.equals(m.get("name")) || model.equals(m.get("model")))
-          .map(m -> (String) m.get("digest"))
-          .filter(d -> d != null && !d.isBlank())
+          .filter(listed -> model.equals(listed.get("name")) || model.equals(listed.get("model")))
+          .map(listed -> (String) listed.get("digest"))
+          .filter(digest -> digest != null && !digest.isBlank())
           .findFirst();
     } catch (IOException | RuntimeException e) {
       return Optional.empty();
