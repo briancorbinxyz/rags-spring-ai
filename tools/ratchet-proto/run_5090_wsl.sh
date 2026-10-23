@@ -121,7 +121,7 @@ if ! command -v llama-server >/dev/null; then
     rm -rf ~/llama.cpp/build   # if you have configured before: cmake caches a failed CURL lookup
     cmake -S ~/llama.cpp -B ~/llama.cpp/build -DGGML_CUDA=ON -DLLAMA_CURL=ON
     cmake --build ~/llama.cpp/build --config Release -j\$(nproc)
-    echo 'export PATH=\$HOME/llama.cpp/build/bin:\$PATH' >> ~/.bashrc && source ~/.bashrc
+    echo 'export PATH=\$HOME/llama.cpp/build/bin:\$PATH' >> ~/.zshrc   # or ~/.bashrc; then open a new shell
   -DLLAMA_CURL=ON matters: the lineup fetches models with -hf."
 fi
 CACHE_DIR="${LLAMA_CACHE:-$HOME/.cache/huggingface/hub}"

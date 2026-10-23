@@ -26,6 +26,14 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# The login shell decides which rc file a PATH line belongs in; a zsh user never reads .bashrc.
+case "$(basename "${SHELL:-bash}")" in
+  zsh)  RC="$HOME/.zshrc" ;;
+  bash) RC="$HOME/.bashrc" ;;
+  fish) RC="" ;;                       # fish syntax differs; tell, do not write
+  *)    RC="$HOME/.profile" ;;
+esac
+
 say()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 note() { printf '   %s\n' "$*"; }
 die()  { printf '\n\033[31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -81,7 +89,7 @@ if command -v nvcc >/dev/null; then
   note "$(nvcc --version | tail -2 | head -1)"
 elif [[ -x /usr/local/cuda/bin/nvcc ]]; then
   note "found at /usr/local/cuda/bin/nvcc, but not on PATH"
-  note "add it:  echo 'export PATH=/usr/local/cuda/bin:\$PATH' >> ~/.bashrc && source ~/.bashrc"
+  note "add it:  echo 'export PATH=/usr/local/cuda/bin:\$PATH' >> ${RC:-~/.profile} && source ${RC:-~/.profile}"
   export PATH=/usr/local/cuda/bin:$PATH
 else
   REPO=$([[ "$KIND" == wsl ]] && echo "wsl-ubuntu" || echo "$DISTRO_ID")
@@ -92,7 +100,7 @@ else
     sudo dpkg -i cuda-keyring_1.1-1_all.deb
     sudo apt-get update
     sudo apt-get install -y cuda-toolkit          # NOT 'cuda', which pulls a driver
-    echo 'export PATH=/usr/local/cuda/bin:\$PATH' >> ~/.bashrc && source ~/.bashrc
+    echo 'export PATH=/usr/local/cuda/bin:\$PATH' >> ${RC:-~/.profile} && source ${RC:-~/.profile}
 
   The repo above is the ${KIND} one$([[ "$KIND" == wsl ]] && echo ", which ships no kernel driver — that is the point" || echo ""). Then run this script again."
 fi
@@ -137,11 +145,14 @@ if command -v llama-server >/dev/null && [[ "$(command -v llama-server)" == "$BI
   note "llama-server already resolves to the build"
 else
   LINE="export PATH=\"$LLAMA_DIR/build/bin:\$PATH\""
-  if grep -qF "$LLAMA_DIR/build/bin" "$HOME/.bashrc" 2>/dev/null; then
-    note "~/.bashrc already has it; open a new shell (or: source ~/.bashrc)"
+  if [[ -z "$RC" ]]; then
+    note "your shell is $(basename "$SHELL"); add this yourself, in its own syntax:"
+    note "  set -gx PATH $LLAMA_DIR/build/bin \$PATH      # fish"
+  elif grep -qF "$LLAMA_DIR/build/bin" "$RC" 2>/dev/null; then
+    note "$RC already has it; open a new shell (or: source $RC)"
   else
-    run "echo '$LINE' >> '$HOME/.bashrc'"
-    note "added to ~/.bashrc; open a new shell (or: source ~/.bashrc)"
+    run "echo '$LINE' >> '$RC'"
+    note "added to $RC; open a new shell (or: source $RC)"
   fi
 fi
 
