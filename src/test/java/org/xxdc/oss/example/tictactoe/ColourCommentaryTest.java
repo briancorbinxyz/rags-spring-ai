@@ -12,19 +12,19 @@ class ColourCommentaryTest {
 
   @Test
   void theQuotationBecomesTheColourClaimsOnlySourceAndTheReactionHasNone() {
-    var c = new ColourCommentary("", "As every scholar knows.", LINE, "Alpha seems thrilled.");
-    var claims = c.asCommentary().claims();
+    var colour = new ColourCommentary("", "As every scholar knows.", LINE, "Alpha seems thrilled.");
+    var claims = colour.asCommentary().claims();
     assertEquals(2, claims.size());
     assertEquals(List.of(LINE), claims.get(0).sources());
     assertEquals(List.of(), claims.get(1).sources());
     var quotes = new QuoteChecker(new ColourLines(List.of(LINE)));
-    assertTrue(quotes.quotesExactly(c.asCommentary(), LINE));
-    assertEquals(0, quotes.straySources(c.asCommentary(), LINE));
+    assertTrue(quotes.quotesExactly(colour.asCommentary(), LINE));
+    assertEquals(0, quotes.straySources(colour.asCommentary(), LINE));
   }
 
   @Test
   void anEmptyReactionAddsNoClaim() {
-    var c = new ColourCommentary("", "As every scholar knows.", LINE, "");
-    assertEquals(1, c.asCommentary().claims().size());
+    var colour = new ColourCommentary("", "As every scholar knows.", LINE, "");
+    assertEquals(1, colour.asCommentary().claims().size());
   }
 }

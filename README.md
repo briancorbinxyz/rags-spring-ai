@@ -65,12 +65,12 @@ tests do not start Spring.
 
 | File | What it does |
 |---|---|
-| `persona/alpha.md` | Alpha's system prompt: voice, truth rules, output format |
-| `persona/beta.md` | Beta's system prompt |
+| `persona/play-by-play.md` | Alpha's system prompt: voice, truth rules, output format |
+| `persona/colour.md` | Beta's system prompt |
 | `colour/quiet-moves.md` | Hand-written lines offered on quiet moves |
 | `MoveReport` | The facts about one move, written as the user message |
-| `AlphaCommentaryPersona` | Episode 1's decorator, plus a per-game `Broadcast` with memory |
-| `BetaColourCommentator` | Beta: colour on quiet moves, with its quotation checked against the file |
+| `PlayByPlayPersona` | Episode 1's decorator, plus a per-game `Broadcast` with memory |
+| `ColourCommentator` | Beta: colour on quiet moves, with its quotation checked against the file |
 | `Claim`, `Commentary` | What Alpha says: an unchecked aside, and claims each with its own sources |
 | `ColourCommentary` | What Beta says: a sentence of colour, the quoted line, and an optional reaction |
 | `FactChecker` | Checks claims against evidence and returns a verdict for each |
@@ -78,5 +78,5 @@ tests do not start Spring.
 | `BoardVocabulary` | The words for squares and lines ("the centre", "the top row") and the squares they mean |
 | `QuoteChecker` | Checks Beta's quotation against the colour file, word for word |
 | `EchoCheck` | Counts claims that only read the move report back |
-| `AlphaConfiguration` | Both `ChatClient`s, memory window, temperatures, solo or duo |
+| `CommentaryConfiguration` | Both `ChatClient`s, memory window, temperatures, solo or duo |
 | `AppConfiguration` | Plays one game and writes the CSV |

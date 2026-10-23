@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 class BoardVocabularyTest {
 
-  /** The one square a phrase names, or a failure if it names none or several. */
+  /// The one square a phrase names, or a failure if it names none or several.
   private static Set<Integer> square(String text) {
     var found = BoardVocabulary.squares(text);
     assertEquals(1, found.size(), "squares in \"" + text + "\": " + found);
@@ -81,12 +81,15 @@ class BoardVocabularyTest {
   @Test
   void aLineThatCannotExistIsReported() {
     assertEquals(
-        List.of("calls top-right to bottom-right a diagonal, but those corners are the right column"),
-        BoardVocabulary.impossibleLines("O has completed a diagonal from top-right to bottom-right"));
+        List.of(
+            "calls top-right to bottom-right a diagonal, but those corners are the right column"),
+        BoardVocabulary.impossibleLines(
+            "O has completed a diagonal from top-right to bottom-right"));
     assertEquals(
         List.of("a diagonal cannot run along the bottom row"),
         BoardVocabulary.impossibleLines("a diagonal line across the bottom row"));
-    assertTrue(BoardVocabulary.impossibleLines("a diagonal from top-left to bottom-right").isEmpty());
+    assertTrue(
+        BoardVocabulary.impossibleLines("a diagonal from top-left to bottom-right").isEmpty());
     assertTrue(BoardVocabulary.impossibleLines("from top-right to bottom-right").isEmpty());
   }
 }

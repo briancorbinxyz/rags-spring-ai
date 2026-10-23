@@ -3,8 +3,8 @@ package org.xxdc.oss.example.tictactoe;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.springframework.core.io.ClassPathResource;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 
 class ColourLinesTest {
 

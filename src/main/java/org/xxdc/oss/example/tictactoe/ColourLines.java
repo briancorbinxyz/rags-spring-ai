@@ -7,13 +7,11 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.core.io.Resource;
 
-/**
- * Lines of colour for quiet moves, read from a hand-written file.
- *
- * <p>The program picks the line, in order, and never repeats one within a game. Nothing is
- * searched and nothing is ranked. That is the point: Episode 3 replaces this with retrieval, and
- * this is the baseline it has to beat for relevance.
- */
+/// Lines of colour for quiet moves, read from a hand-written file.
+///
+/// The program picks the line, in order, and never repeats one within a game. Nothing is searched
+/// and nothing is ranked. That is the point: Episode 3 replaces this with retrieval, and this is
+/// the baseline it has to beat for relevance.
 public final class ColourLines {
 
   private final List<String> lines;
@@ -22,7 +20,7 @@ public final class ColourLines {
     this.lines = List.copyOf(lines);
   }
 
-  /** Reads lines starting with "- " and ignores everything else. */
+  /// Reads lines starting with "- " and ignores everything else.
   public static ColourLines from(Resource resource) {
     try {
       var text = resource.getContentAsString(StandardCharsets.UTF_8);
@@ -33,17 +31,15 @@ public final class ColourLines {
     }
   }
 
-  /**
-   * The line for the n-th quiet move of a game, counting from 0, or empty once the file has run
-   * out. Running out is deliberate: a 3x3 game has at most nine moves.
-   */
+  /// The line for the n-th quiet move of a game, counting from 0, or empty once the file has run
+  /// out. Running out is deliberate: a 3x3 game has at most nine moves.
   public Optional<String> forQuietMove(int quietMoveIndex) {
     return quietMoveIndex >= 0 && quietMoveIndex < lines.size()
         ? Optional.of(lines.get(quietMoveIndex))
         : Optional.empty();
   }
 
-  /** True when the line is in the file, exactly. */
+  /// True when the line is in the file, exactly.
   public boolean contains(String line) {
     return lines.contains(line);
   }
@@ -51,8 +47,7 @@ public final class ColourLines {
   static String unquote(String s) {
     var t = s.strip();
     if (t.length() >= 2
-        && ((t.startsWith("\"") && t.endsWith("\""))
-            || (t.startsWith("“") && t.endsWith("”")))) {
+        && ((t.startsWith("\"") && t.endsWith("\"")) || (t.startsWith("“") && t.endsWith("”")))) {
       t = t.substring(1, t.length() - 1).strip();
     }
     return t;

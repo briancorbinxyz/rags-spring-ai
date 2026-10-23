@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+  "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+  "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+  <!-- A @Bean method's parameters are its dependencies, and Spring decides how many there are.
+       A builder cannot help: there is no call site to make readable. -->
+  <suppress files=".*Configuration\.java$" checks="ParameterNumber"/>
+
+  <!-- Builds a GoldenSet.Question, whose components are the keys of a frozen file: the same
+       exemption the record itself has in ArchitectureTest. -->
+  <suppress files="TrecFilesTest\.java$" checks="ParameterNumber"/>
+</suppressions>

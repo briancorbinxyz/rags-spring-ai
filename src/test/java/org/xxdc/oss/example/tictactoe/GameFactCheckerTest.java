@@ -15,7 +15,7 @@ class GameFactCheckerTest {
 
   private final GameFactChecker checker = new GameFactChecker();
 
-  /** The board after each move, starting from empty: index m is the board after move m. */
+  /// The board after each move, starting from empty: index m is the board after move m.
   private static List<GameState> play(int... squares) {
     var history = new ArrayList<GameState>();
     var state = new GameState(GameBoard.withDimension(3), List.of("X", "O"), 0);
@@ -44,64 +44,65 @@ class GameFactCheckerTest {
 
   @Test
   void aCorrectBackReferenceIsSupported() {
-    var v = check("O blocks, much as X opened in the corner on move 1.", List.of("move 1"), 4);
-    assertEquals(Status.SUPPORTED, v.status(), v.reason());
+    var verdict =
+        check("O blocks, much as X opened in the corner on move 1.", List.of("move 1"), 4);
+    assertEquals(Status.SUPPORTED, verdict.status(), verdict.reason());
   }
 
   @Test
   void aMoveNotYetPlayedIsContradicted() {
-    var v = check("As on move 7, nothing happens.", List.of("move 7"), 4);
-    assertEquals(Status.CONTRADICTED, v.status());
+    var verdict = check("As on move 7, nothing happens.", List.of("move 7"), 4);
+    assertEquals(Status.CONTRADICTED, verdict.status());
   }
 
   @Test
   void aMoveOutsideTheWindowIsUnsupported() {
-    var v = checker.check(new Claim("X opened on move 1.", List.of("move 1")), at(8, 5));
-    assertEquals(Status.UNSUPPORTED, v.status());
-    assertTrue(v.reason().contains("memory window"));
+    var verdict = checker.check(new Claim("X opened on move 1.", List.of("move 1")), at(8, 5));
+    assertEquals(Status.UNSUPPORTED, verdict.status());
+    assertTrue(verdict.reason().contains("memory window"));
   }
 
   @Test
   void theWrongPlayerForAMoveIsContradicted() {
     // Move 2 is O's in a game that X starts.
-    var v = check("X took the corner on move 2.", List.of("move 2"), 5);
-    assertEquals(Status.CONTRADICTED, v.status());
-    assertEquals("move 2 was O's, not X's", v.reason());
+    var verdict = check("X took the corner on move 2.", List.of("move 2"), 5);
+    assertEquals(Status.CONTRADICTED, verdict.status());
+    assertEquals("move 2 was O's, not X's", verdict.reason());
   }
 
   @Test
   void aMentionWithoutACitationIsUnsupported() {
-    var v = check("Unlike move 3, this one matters.", List.of(), 6);
-    assertEquals(Status.UNSUPPORTED, v.status());
+    var verdict = check("Unlike move 3, this one matters.", List.of(), 6);
+    assertEquals(Status.UNSUPPORTED, verdict.status());
   }
 
   @Test
   void anInventedWinIsContradicted() {
     // What qwen3:8b said at move 8 of a game that went on to a draw.
-    var v =
+    var verdict =
         check(
             "O has completed a diagonal from top-left to bottom-right, securing a win.",
             List.of(),
             8);
-    assertEquals(Status.CONTRADICTED, v.status());
-    assertEquals("says O has won, but after move 8 nobody has", v.reason());
+    assertEquals(Status.CONTRADICTED, verdict.status());
+    assertEquals("says O has won, but after move 8 nobody has", verdict.reason());
   }
 
   @Test
   void anInventedWinRepeatedInThePostGameSummaryIsContradicted() {
-    var v = check("Turning point move 8: O secures a diagonal win.", List.of("move 8"), 9);
-    assertEquals(Status.CONTRADICTED, v.status());
+    var verdict = check("Turning point move 8: O secures a diagonal win.", List.of("move 8"), 9);
+    assertEquals(Status.CONTRADICTED, verdict.status());
   }
 
   @Test
   void aRealWinIsSupported() {
     // X takes the top row on move 5.
     var won = play(0, 4, 1, 8, 2);
-    var v =
+    var verdict =
         checker.check(
             new Claim("X wins with the top row.", List.of()),
             new GameFactChecker.Evidence(won, 5, 1));
-    assertEquals(Status.SUPPORTED, v.status(), v.reason());
+    assertEquals(Status.SUPPORTED, verdict.status(), verdict.reason());
   }
 
   @Test
@@ -142,9 +143,11 @@ class GameFactCheckerTest {
   void inThePostGameSummaryAClaimWithTheMoveOnlyInItsSourcesIsAboutThatMove() {
     // mistral's habit: the move number in sources, never in the text. Move 4 was O's.
     var summary = new GameFactChecker.Evidence(DRAWN, 9, 1, true);
-    var right = checker.check(new Claim("O blocked an immediate loss.", List.of("move 4")), summary);
+    var right =
+        checker.check(new Claim("O blocked an immediate loss.", List.of("move 4")), summary);
     assertEquals(Status.SUPPORTED, right.status(), right.reason());
-    var wrong = checker.check(new Claim("X blocked an immediate loss.", List.of("move 4")), summary);
+    var wrong =
+        checker.check(new Claim("X blocked an immediate loss.", List.of("move 4")), summary);
     assertEquals(Status.CONTRADICTED, wrong.status());
     assertEquals("move 4 was O's, not X's", wrong.reason());
   }
@@ -152,20 +155,22 @@ class GameFactCheckerTest {
   @Test
   void duringTheGameASourceIsWhatTheMoveRespondsToNotWhatItIsAbout() {
     // A claim about move 8 (O's), citing the X move it answers. Not a claim about move 7.
-    var v = check("O answers with a block of its own.", List.of("move 7"), 8);
-    assertEquals(Status.SUPPORTED, v.status(), v.reason());
+    var verdict = check("O answers with a block of its own.", List.of("move 7"), 8);
+    assertEquals(Status.SUPPORTED, verdict.status(), verdict.reason());
   }
 
   @Test
   void denyingAWinIsNotAWinClaim() {
-    assertFalse(GameFactChecker.isWinClaim("X fills the last square, completing the board without securing a win."));
+    assertFalse(
+        GameFactChecker.isWinClaim(
+            "X fills the last square, completing the board without securing a win."));
     assertFalse(GameFactChecker.isWinClaim("No win for O tonight."));
   }
 
   @Test
   void aSquareThePlayerHoldsIsSupported() {
-    var v = check("X opened in the top-left corner on move 1.", List.of("move 1"), 4);
-    assertEquals(Status.SUPPORTED, v.status(), v.reason());
+    var verdict = check("X opened in the top-left corner on move 1.", List.of("move 1"), 4);
+    assertEquals(Status.SUPPORTED, verdict.status(), verdict.reason());
   }
 
   @Test
@@ -187,8 +192,7 @@ class GameFactCheckerTest {
         checker.check(
             new Claim("X wins along the top-left to bottom-right diagonal.", List.of()), evidence);
     assertEquals(Status.CONTRADICTED, wrongLine.status());
-    assertEquals(
-        "X won, but not with the top-left to bottom-right diagonal", wrongLine.reason());
+    assertEquals("X won, but not with the top-left to bottom-right diagonal", wrongLine.reason());
     var rightLine = checker.check(new Claim("X wins on the anti-diagonal.", List.of()), evidence);
     assertEquals(Status.SUPPORTED, rightLine.status(), rightLine.reason());
     var anyDiagonal = checker.check(new Claim("X wins with a diagonal.", List.of()), evidence);
@@ -197,14 +201,14 @@ class GameFactCheckerTest {
 
   @Test
   void aClaimWithNothingCheckableIsUnchecked() {
-    var v = check("A tidy move.", List.of(), 3);
-    assertEquals(Status.UNCHECKED, v.status());
+    var verdict = check("A tidy move.", List.of(), 3);
+    assertEquals(Status.UNCHECKED, verdict.status());
   }
 
   @Test
   void anAsideThatMakesAClaimIsFlagged() {
-    var c = new Commentary("O wins this one, mark my words.", List.of());
-    var verdicts = checker.checkAll(c, at(4, 1));
+    var commentary = new Commentary("O wins this one, mark my words.", List.of());
+    var verdicts = checker.checkAll(commentary, at(4, 1));
     assertEquals(1, verdicts.size());
     assertEquals(Status.UNSUPPORTED, verdicts.getFirst().status());
   }
@@ -229,7 +233,8 @@ class GameFactCheckerTest {
   @Test
   void tooLateIsNotAWinClaim() {
     assertFalse(
-        GameFactChecker.isWinClaim("X has played the bottom-centre square, but it's too late to win."));
+        GameFactChecker.isWinClaim(
+            "X has played the bottom-centre square, but it's too late to win."));
   }
 
   @Test
@@ -242,14 +247,14 @@ class GameFactCheckerTest {
             "Turning point move 8: O secures a diagonal win.")) {
       assertTrue(GameFactChecker.isWinClaim(claim), claim);
     }
-    var v =
+    var verdict =
         check(
             "O has completed a diagonal from top-right to bottom-right, securing a win.",
             List.of(),
             8);
-    assertEquals(Status.CONTRADICTED, v.status());
-    assertTrue(v.reason().contains("nobody has"), v.reason());
-    assertTrue(v.reason().contains("the right column"), v.reason());
+    assertEquals(Status.CONTRADICTED, verdict.status());
+    assertTrue(verdict.reason().contains("nobody has"), verdict.reason());
+    assertTrue(verdict.reason().contains("the right column"), verdict.reason());
   }
 
   // The fixed sequences from round 6.
@@ -259,37 +264,38 @@ class GameFactCheckerTest {
   @Test
   void aCorrectBottomCentreClaimIsSupported() {
     // mistral, round 6, move 9 of SEQ_DEF: square 7 is bottom-centre, and X is on it.
-    var v =
+    var verdict =
         checker.check(
-            new Claim("X has played the bottom-centre square, but it's too late to win.", List.of()),
+            new Claim(
+                "X has played the bottom-centre square, but it's too late to win.", List.of()),
             new GameFactChecker.Evidence(SEQ_DEF, 9, 1));
-    assertEquals(Status.SUPPORTED, v.status(), v.reason());
+    assertEquals(Status.SUPPORTED, verdict.status(), verdict.reason());
   }
 
   @Test
   void callingBottomCentreTheCentreIsStillCaught() {
     // qwen and mistral, move 1 of SEQ_RND: X took square 7, not the centre.
-    var v =
+    var verdict =
         checker.check(
             new Claim("X has taken the center square.", List.of()),
             new GameFactChecker.Evidence(SEQ_RND, 1, 1));
-    assertEquals(Status.CONTRADICTED, v.status(), v.reason());
+    assertEquals(Status.CONTRADICTED, verdict.status(), verdict.reason());
   }
 
   @Test
   void aWinningLineAcrossTheWrongRowIsStillCaught() {
     // O wins SEQ_RND on move 6 with the anti-diagonal, not the top row.
-    var v =
+    var verdict =
         checker.check(
             new Claim("O completes a winning line across the top row.", List.of()),
             new GameFactChecker.Evidence(SEQ_RND, 6, 1));
-    assertEquals(Status.CONTRADICTED, v.status(), v.reason());
-    assertEquals("O won, but not with the top row", v.reason());
+    assertEquals(Status.CONTRADICTED, verdict.status(), verdict.reason());
+    assertEquals("O won, but not with the top row", verdict.reason());
   }
 
   @Test
   void anImpossibleLineIsContradictedWithoutAnyWin() {
-    var v = check("O lines up a diagonal from top-right to bottom-right.", List.of(), 6);
-    assertEquals(Status.CONTRADICTED, v.status(), v.reason());
+    var verdict = check("O lines up a diagonal from top-right to bottom-right.", List.of(), 6);
+    assertEquals(Status.CONTRADICTED, verdict.status(), verdict.reason());
   }
 }

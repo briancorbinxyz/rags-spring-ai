@@ -8,7 +8,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -23,27 +25,22 @@ import org.xxdc.oss.example.GameState;
 import org.xxdc.oss.example.PlayerNode;
 import org.xxdc.oss.example.bot.BotStrategy;
 
-/**
- * Plays one bot-versus-bot game with Alpha commentating, then writes two files to {@code build/},
- * named {@code episode-2-<model>-<mode>-window-<N>}:
- *
- * <ul>
- *   <li>{@code .csv}: one row per move, with prompt tokens, Alpha's claims counted by verdict and
- *       the reasons for any that failed, how many claims only echo the move report, and whether
- *       Beta quoted its colour line exactly;
- *   <li>{@code .jsonl}: the same rows in full, with every prompt, claim and source, so a failure
- *       can be diagnosed from the run itself.
- * </ul>
- */
+/// Plays one bot-versus-bot game with Alpha commentating, then writes two files to `build/`, named
+/// `episode-2-<model>-<mode>-window-<N>`:
+///
+/// - `.csv`: one row per move, with prompt tokens, Alpha's claims counted by verdict and the
+///   reasons for any that failed, how many claims only echo the move report, and whether Beta
+///   quoted its colour line exactly;
+///
+/// - `.jsonl`: the same rows in full, with every prompt, claim and source, so a failure can be
+///   diagnosed from the run itself.
 @Configuration
 public class AppConfiguration {
 
   private static final Logger log = LoggerFactory.getLogger(AppConfiguration.class);
 
-  /**
-   * AlphaBeta plays perfectly, so against MCTS almost every game is a draw. Set {@code
-   * game.x-strategy=RANDOM} to see wins, and with them real win commentary for the checks.
-   */
+  /// AlphaBeta plays perfectly, so against MCTS almost every game is a draw. Set
+  /// `game.x-strategy=RANDOM` to see wins, and with them real win commentary for the checks.
   Game newGame(ToIntFunction<GameState> x, ToIntFunction<GameState> o) {
     return new Game(
         3,
@@ -52,11 +49,9 @@ public class AppConfiguration {
         new PlayerNode.Local<>("O", new BotPlayer(o)));
   }
 
-  /**
-   * A strategy that replays a fixed game: the n-th move of the game is {@code moves[n]}, whichever
-   * player makes it. Models commentate different games when MCTS chooses the moves, so two models
-   * can only be compared like for like on a replayed game. Every run logs its moves in this form.
-   */
+  /// A strategy that replays a fixed game: the n-th move of the game is `moves[n]`, whichever
+  /// player makes it. Models commentate different games when MCTS chooses the moves, so two models
+  /// can only be compared like for like on a replayed game. Every run logs its moves in this form.
   static ToIntFunction<GameState> replay(int[] moves) {
     return state -> {
       int played = 0;
@@ -72,7 +67,7 @@ public class AppConfiguration {
     };
   }
 
-  /** The named strategies are static fields on {@link BotStrategy}, not enum constants. */
+  /// The named strategies are static fields on {@link BotStrategy}, not enum constants.
   static ToIntFunction<GameState> strategy(String name) {
     return switch (name.strip().toUpperCase(Locale.ROOT)) {
       case "RANDOM" -> BotStrategy.RANDOM;
@@ -88,7 +83,7 @@ public class AppConfiguration {
 
   @Bean
   CommandLineRunner playOneGame(
-      AlphaCommentaryPersona alpha,
+      PlayByPlayPersona alpha,
       @Value("${alpha.memory.max-messages:20}") int window,
       @Value("${alpha.play-on-startup:true}") boolean play,
       @Value("${commentary.mode:duo}") String mode,
@@ -96,112 +91,199 @@ public class AppConfiguration {
       @Value("${game.x-strategy:ALPHABETA}") String xStrategy,
       @Value("${game.o-strategy:MCTS}") String oStrategy,
       @Value("${game.moves:}") String fixedMoves) {
-    boolean replaying = !fixedMoves.isBlank();
-    int[] moves =
-        replaying
-            ? Arrays.stream(fixedMoves.split(","))
-                .map(String::strip)
-                .mapToInt(Integer::parseInt)
-                .toArray()
-            : new int[0];
-    var x = replaying ? replay(moves) : strategy(xStrategy);
-    var o = replaying ? replay(moves) : strategy(oStrategy);
+    var bots = bots(fixedMoves, xStrategy, oStrategy);
+    // The model is in the name so runs on different models sit side by side.
+    String name =
+        "episode-2-%s-%s-window-%d"
+            .formatted(model.replaceAll("[^A-Za-z0-9.]+", "-"), mode, window);
     return _ -> {
-      if (!play) {
-        return;
-      }
-      try (var game = newGame(x, o)) {
-        var broadcast = alpha.broadcast(game);
-        game.playWithAction(broadcast::onMove);
-        var summary = broadcast.postGame(game);
-        // The moves in the form game.moves takes, so this game can be replayed on another model.
-        String played =
-            game.history().stream()
-                .skip(1)
-                .map(st -> String.valueOf(st.lastMove()))
-                .collect(Collectors.joining(","));
-        log.info("Replay this game with --game.moves={}", played);
-
-        var rows = new ArrayList<>(broadcast.moves());
-        rows.add(summary);
-        // The model is in the name so runs on different models sit side by side.
-        String name =
-            "episode-2-%s-%s-window-%d"
-                .formatted(model.replaceAll("[^A-Za-z0-9.]+", "-"), mode, window);
-        writeCsv(Path.of("build", name + ".csv"), rows);
-        writeJsonLines(Path.of("build", name + ".jsonl"), rows);
+      if (play) {
+        commentateOneGame(alpha, bots, name);
       }
     };
   }
 
-  private static void writeCsv(Path path, List<AlphaCommentaryPersona.MoveCommentary> rows)
+  /// The two bots that will play the game.
+  private record Bots(ToIntFunction<GameState> x, ToIntFunction<GameState> o) {}
+
+  /// Both bots replay the fixed game when there is one, so the whole game is settled in advance.
+  private static Bots bots(String fixedMoves, String xStrategy, String oStrategy) {
+    if (fixedMoves.isBlank()) {
+      return new Bots(strategy(xStrategy), strategy(oStrategy));
+    }
+    int[] moves =
+        Arrays.stream(fixedMoves.split(","))
+            .map(String::strip)
+            .mapToInt(Integer::parseInt)
+            .toArray();
+    return new Bots(replay(moves), replay(moves));
+  }
+
+  /// `Game.playWithAction` lets the action throw, so this does too, as the runner does.
+  private void commentateOneGame(PlayByPlayPersona alpha, Bots bots, String name) throws Exception {
+    try (var game = newGame(bots.x(), bots.o())) {
+      var broadcast = alpha.broadcast(game);
+      game.playWithAction(broadcast::onMove);
+      var summary = broadcast.postGame(game);
+      logHowToReplayThisGame(game);
+
+      var rows = new ArrayList<>(broadcast.moves());
+      rows.add(summary);
+      writeCsv(Path.of("build", name + ".csv"), rows);
+      writeJsonLines(Path.of("build", name + ".jsonl"), rows);
+    }
+  }
+
+  /// The moves in the form `game.moves` takes, so another model can commentate this game.
+  private static void logHowToReplayThisGame(Game game) {
+    String played =
+        game.history().stream()
+            .skip(1)
+            .map(state -> String.valueOf(state.lastMove()))
+            .collect(Collectors.joining(","));
+    log.info("Replay this game with --game.moves={}", played);
+  }
+
+  private static void writeCsv(Path path, List<PlayByPlayPersona.MoveCommentary> rows)
       throws IOException {
+    var file = new MeasurementFile();
     var lines = new ArrayList<String>();
-    lines.add(
-        "move,from_model,prompt_tokens,claims,over_limit,echoes,claim_repeats,checked_share,"
-            + "supported,contradicted,unsupported,unchecked,problems,aside,aside_repeat,answer,"
-            + "beta_answer,beta_quote_verified,beta_stray_sources,beta_echoes,beta_aside_repeat");
-    var alphaAsides = new Repeats();
-    var alphaClaims = new Repeats();
-    var betaAsides = new Repeats();
-    for (var r : rows) {
-      var t = FactChecker.Tally.of(r.verdicts());
-      int claims = r.commentary().claims().size();
-      int repeatedClaims = 0;
-      for (var c : r.commentary().claims()) {
-        repeatedClaims += alphaClaims.repeats(c.text()) ? 1 : 0;
-      }
-      // A clean sheet means little if most claims had nothing checkable in them.
-      String checkedShare =
-          claims == 0 ? "" : "%.2f".formatted((double) (claims - t.unchecked()) / claims);
-      boolean alphaRepeat = alphaAsides.repeats(r.commentary().aside());
-      lines.add(
-          String.join(
-              ",",
-              String.valueOf(r.move()),
-              String.valueOf(r.fromModel()),
-              r.promptTokens() == null ? "" : r.promptTokens().toString(),
-              String.valueOf(claims),
-              String.valueOf(claims > Commentary.MAX_CLAIMS),
-              String.valueOf(EchoCheck.count(r.commentary(), r.prompt())),
-              String.valueOf(repeatedClaims),
-              checkedShare,
-              String.valueOf(t.supported()),
-              String.valueOf(t.contradicted()),
-              String.valueOf(t.unsupported()),
-              String.valueOf(t.unchecked()),
-              quote(String.join(" | ", t.problems())),
-              quote(r.commentary().aside()),
-              String.valueOf(alphaRepeat),
-              quote(r.commentary().answer()),
-              quote(r.colour().map(b -> b.commentary().answer()).orElse("")),
-              r.colour().map(b -> String.valueOf(b.quoteVerified())).orElse(""),
-              r.colour().map(b -> String.valueOf(b.straySources())).orElse(""),
-              r.colour().map(b -> String.valueOf(EchoCheck.count(b.commentary(), b.report())))
-                  .orElse(""),
-              r.colour()
-                  .map(b -> String.valueOf(betaAsides.repeats(b.commentary().aside())))
-                  .orElse("")));
+    lines.add(file.header());
+    for (var row : rows) {
+      lines.add(file.lineFor(row));
     }
     Files.createDirectories(path.getParent());
     Files.write(path, lines);
-    log.info(
-        "Asides: Alpha {}, Beta {}. Alpha's claims: {}",
-        alphaAsides.summary(),
-        betaAsides.summary(),
-        alphaClaims.summary());
+    file.logWhoRepeatedThemselves();
   }
 
-  /**
-   * Lines one commentator has already used in a game: asides or claims. A joke told twice is a
-   * weaker joke, a claim made twice is filler, and a model with a memory of the game can still
-   * repeat itself; nothing else in the run would notice.
-   */
+  /// One column: its name in the header, and how to read its cell from a row.
+  record Column(String header, Function<Row, String> cell) {}
+
+  /// One row's inputs, read once.
+  ///
+  /// `repeatedClaims` and `asideRepeat` are settled before any column asks for them, because they
+  /// come from watchers that carry state from row to row: a column that called a watcher itself
+  /// would change what the next row says about itself.
+  record Row(
+      PlayByPlayPersona.MoveCommentary move,
+      FactChecker.Tally tally,
+      int repeatedClaims,
+      boolean asideRepeat) {
+
+    int claims() {
+      return move.commentary().claims().size();
+    }
+
+    /// A clean sheet means little if most claims had nothing checkable in them.
+    String checkedShare() {
+      return claims() == 0
+          ? ""
+          : "%.2f".formatted((double) (claims() - tally.unchecked()) / claims());
+    }
+
+    /// Beta's half of a row, which is empty in a solo broadcast.
+    String fromColour(Function<ColourCommentator.Colour, String> cell) {
+      return move.colour().map(cell).orElse("");
+    }
+  }
+
+  /// The measurement file: one column per thing worth counting, and the three watchers that can
+  /// only answer by remembering the rows before this one.
+  ///
+  /// Twenty-one columns are a lot to read as one `String.join`, and the names have to match the
+  /// header exactly, so each column carries its own name and is written on its own line. The names
+  /// are published: the article's numbers are read from this file by column.
+  static final class MeasurementFile {
+
+    private final Repeats playByPlayAsides = new Repeats();
+    private final Repeats playByPlayClaims = new Repeats();
+    private final Repeats colourAsides = new Repeats();
+
+    private final List<Column> columns =
+        List.of(
+            new Column("move", row -> String.valueOf(row.move().move())),
+            new Column("from_model", row -> String.valueOf(row.move().fromModel())),
+            new Column("prompt_tokens", MeasurementFile::promptTokens),
+            new Column("claims", row -> String.valueOf(row.claims())),
+            new Column("over_limit", row -> String.valueOf(row.claims() > Commentary.MAX_CLAIMS)),
+            new Column("echoes", MeasurementFile::echoes),
+            new Column("claim_repeats", row -> String.valueOf(row.repeatedClaims())),
+            new Column("checked_share", Row::checkedShare),
+            new Column("supported", row -> String.valueOf(row.tally().supported())),
+            new Column("contradicted", row -> String.valueOf(row.tally().contradicted())),
+            new Column("unsupported", row -> String.valueOf(row.tally().unsupported())),
+            new Column("unchecked", row -> String.valueOf(row.tally().unchecked())),
+            new Column("problems", row -> quote(String.join(" | ", row.tally().problems()))),
+            new Column("aside", row -> quote(row.move().commentary().aside())),
+            new Column("aside_repeat", row -> String.valueOf(row.asideRepeat())),
+            new Column("answer", row -> quote(row.move().commentary().answer())),
+            new Column(
+                "beta_answer", row -> quote(row.fromColour(beta -> beta.commentary().answer()))),
+            new Column(
+                "beta_quote_verified",
+                row -> row.fromColour(beta -> String.valueOf(beta.quoteVerified()))),
+            new Column(
+                "beta_stray_sources",
+                row -> row.fromColour(beta -> String.valueOf(beta.straySources()))),
+            new Column(
+                "beta_echoes",
+                row ->
+                    row.fromColour(
+                        beta -> String.valueOf(EchoCheck.count(beta.commentary(), beta.report())))),
+            new Column(
+                "beta_aside_repeat",
+                row ->
+                    row.fromColour(
+                        beta -> String.valueOf(colourAsides.repeats(beta.commentary().aside())))));
+
+    String header() {
+      return columns.stream().map(Column::header).collect(Collectors.joining(","));
+    }
+
+    String lineFor(PlayByPlayPersona.MoveCommentary move) {
+      var row = read(move);
+      return columns.stream()
+          .map(column -> column.cell().apply(row))
+          .collect(Collectors.joining(","));
+    }
+
+    /// Asks the watchers about this row, before any column can.
+    private Row read(PlayByPlayPersona.MoveCommentary move) {
+      int repeatedClaims = 0;
+      for (var claim : move.commentary().claims()) {
+        repeatedClaims += playByPlayClaims.repeats(claim.text()) ? 1 : 0;
+      }
+      boolean asideRepeat = playByPlayAsides.repeats(move.commentary().aside());
+      return new Row(move, FactChecker.Tally.of(move.verdicts()), repeatedClaims, asideRepeat);
+    }
+
+    void logWhoRepeatedThemselves() {
+      log.info(
+          "Asides: Alpha {}, Beta {}. Alpha's claims: {}",
+          playByPlayAsides.summary(),
+          colourAsides.summary(),
+          playByPlayClaims.summary());
+    }
+
+    private static String promptTokens(Row row) {
+      var tokens = row.move().promptTokens();
+      return tokens == null ? "" : tokens.toString();
+    }
+
+    private static String echoes(Row row) {
+      return String.valueOf(EchoCheck.count(row.move().commentary(), row.move().prompt()));
+    }
+  }
+
+  /// Lines one commentator has already used in a game: asides or claims. A joke told twice is a
+  /// weaker joke, a claim made twice is filler, and a model with a memory of the game can still
+  /// repeat itself; nothing else in the run would notice.
   static final class Repeats {
     private final Set<String> seen = new HashSet<>();
     private int told;
 
-    /** True when this line, ignoring case, spacing and punctuation, was already used. */
+    /// True when this line, ignoring case, spacing and punctuation, was already used.
     boolean repeats(String line) {
       String key =
           line == null ? "" : line.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").strip();
@@ -217,58 +299,72 @@ public class AppConfiguration {
     }
   }
 
-  /** One JSON object per row, written by hand so the episode needs no JSON library of its own. */
-  private static void writeJsonLines(Path path, List<AlphaCommentaryPersona.MoveCommentary> rows)
+  /// One JSON object per row, written by hand so the episode needs no JSON library of its own.
+  private static void writeJsonLines(Path path, List<PlayByPlayPersona.MoveCommentary> rows)
       throws IOException {
     var lines = new ArrayList<String>();
-    for (var r : rows) {
-      var verdicts =
-          r.verdicts().stream()
-              .map(
-                  v ->
-                      "{\"claim\":%s,\"status\":%s,\"reason\":%s}"
-                          .formatted(json(v.claim().text()), json(v.status().name()), json(v.reason())))
-              .collect(Collectors.joining(",", "[", "]"));
-      String beta =
-          r.colour()
-              .map(
-                  b ->
-                      "{\"prompt\":%s,\"offered\":%s,\"reply\":%s,\"quote_verified\":%s}"
-                          .formatted(
-                              json(b.prompt()),
-                              json(b.offered()),
-                              json(b.commentary()),
-                              b.quoteVerified()))
-              .orElse("null");
+    for (var row : rows) {
       lines.add(
           "{\"move\":%d,\"prompt\":%s,\"reply\":%s,\"verdicts\":%s,\"beta\":%s}"
-              .formatted(r.move(), json(r.prompt()), json(r.commentary()), verdicts, beta));
+              .formatted(
+                  row.move(),
+                  json(row.prompt()),
+                  json(row.commentary()),
+                  jsonVerdicts(row.verdicts()),
+                  jsonColour(row.colour())));
     }
     Files.createDirectories(path.getParent());
     Files.write(path, lines);
   }
 
-  private static String json(Commentary c) {
+  private static String jsonVerdicts(List<FactChecker.Verdict> verdicts) {
+    return verdicts.stream()
+        .map(
+            verdict ->
+                "{\"claim\":%s,\"status\":%s,\"reason\":%s}"
+                    .formatted(
+                        json(verdict.claim().text()),
+                        json(verdict.status().name()),
+                        json(verdict.reason())))
+        .collect(Collectors.joining(",", "[", "]"));
+  }
+
+  /// Beta's half of a row, or JSON `null` in a solo broadcast.
+  private static String jsonColour(Optional<ColourCommentator.Colour> colour) {
+    return colour
+        .map(
+            beta ->
+                "{\"prompt\":%s,\"offered\":%s,\"reply\":%s,\"quote_verified\":%s}"
+                    .formatted(
+                        json(beta.prompt()),
+                        json(beta.offered()),
+                        json(beta.commentary()),
+                        beta.quoteVerified()))
+        .orElse("null");
+  }
+
+  private static String json(Commentary commentary) {
     var claims =
-        c.claims().stream()
+        commentary.claims().stream()
             .map(
-                cl ->
+                claim ->
                     "{\"text\":%s,\"sources\":%s}"
                         .formatted(
-                            json(cl.text()),
-                            cl.sources().stream()
+                            json(claim.text()),
+                            claim.sources().stream()
                                 .map(AppConfiguration::json)
                                 .collect(Collectors.joining(",", "[", "]"))))
             .collect(Collectors.joining(",", "[", "]"));
-    return "{\"aside\":%s,\"claims\":%s}".formatted(json(c.aside()), claims);
+    return "{\"aside\":%s,\"claims\":%s}".formatted(json(commentary.aside()), claims);
   }
 
-  static String json(String s) {
-    if (s == null) {
+  static String json(String text) {
+    if (text == null) {
       return "null";
     }
     var out = new StringBuilder("\"");
-    for (char ch : s.toCharArray()) {
+    for (int at = 0; at < text.length(); at++) {
+      char ch = text.charAt(at);
       switch (ch) {
         case '"' -> out.append("\\\"");
         case '\\' -> out.append("\\\\");
@@ -287,7 +383,7 @@ public class AppConfiguration {
     return out.append('"').toString();
   }
 
-  private static String quote(String s) {
-    return "\"" + (s == null ? "" : s.replace("\"", "\"\"")) + "\"";
+  private static String quote(String cell) {
+    return "\"" + (cell == null ? "" : cell.replace("\"", "\"\"")) + "\"";
   }
 }

@@ -3,36 +3,33 @@ package org.xxdc.oss.example.tictactoe;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Checks claims against evidence and returns a verdict for each.
- *
- * <p>The series adds a checker each time the evidence changes. In this episode the evidence is
- * the game's own history ({@link GameFactChecker}) and the colour file ({@link QuoteChecker}), and
- * both checkers are plain code. Later episodes check quotations against retrieved documents, and
- * finally use a model as the checker, behind this same interface.
- *
- * @param <E> what the claims are checked against
- */
+/// Checks claims against evidence and returns a verdict for each.
+///
+/// The series adds a checker each time the evidence changes. In this episode the evidence is the
+/// game's own history ({@link GameFactChecker}) and the colour file ({@link QuoteChecker}), and
+/// both checkers are plain code. Later episodes check quotations against retrieved documents, and
+/// finally use a model as the checker, behind this same interface.
+/// @param <E> what the claims are checked against
 public interface FactChecker<E> {
 
-  /** How a claim stands against the evidence. */
+  /// How a claim stands against the evidence.
   enum Status {
-    /** Every check that applied passed. */
+    /// Every check that applied passed.
     SUPPORTED,
-    /** The evidence says otherwise. */
+    /// The evidence says otherwise.
     CONTRADICTED,
-    /** Nothing the commentator could see backs it. */
+    /// Nothing the commentator could see backs it.
     UNSUPPORTED,
-    /** Nothing in it was checkable by this checker. */
+    /// Nothing in it was checkable by this checker.
     UNCHECKED
   }
 
-  /** The outcome for one claim, with the reason in words. */
+  /// The outcome for one claim, with the reason in words.
   record Verdict(Claim claim, Status status, String reason) {}
 
   Verdict check(Claim claim, E evidence);
 
-  /** Checks every claim in a reply. Checkers may add verdicts about the reply as a whole. */
+  /// Checks every claim in a reply. Checkers may add verdicts about the reply as a whole.
   default List<Verdict> checkAll(Commentary commentary, E evidence) {
     var verdicts = new ArrayList<Verdict>();
     for (Claim claim : commentary.claims()) {
@@ -41,31 +38,37 @@ public interface FactChecker<E> {
     return List.copyOf(verdicts);
   }
 
-  /** Counts per status, and the reasons for anything that is not supported or unchecked. */
-  record Tally(int claims, int supported, int contradicted, int unsupported, int unchecked,
+  /// Counts per status, and the reasons for anything that is not supported or unchecked.
+  record Tally(
+      int claims,
+      int supported,
+      int contradicted,
+      int unsupported,
+      int unchecked,
       List<String> problems) {
 
     public static Tally of(List<Verdict> verdicts) {
-      int s = 0;
-      int c = 0;
-      int u = 0;
-      int n = 0;
+      int supported = 0;
+      int contradicted = 0;
+      int unsupported = 0;
+      int unchecked = 0;
       var problems = new ArrayList<String>();
-      for (Verdict v : verdicts) {
-        switch (v.status()) {
-          case SUPPORTED -> s++;
+      for (Verdict verdict : verdicts) {
+        switch (verdict.status()) {
+          case SUPPORTED -> supported++;
           case CONTRADICTED -> {
-            c++;
-            problems.add(v.reason());
+            contradicted++;
+            problems.add(verdict.reason());
           }
           case UNSUPPORTED -> {
-            u++;
-            problems.add(v.reason());
+            unsupported++;
+            problems.add(verdict.reason());
           }
-          case UNCHECKED -> n++;
+          case UNCHECKED -> unchecked++;
         }
       }
-      return new Tally(verdicts.size(), s, c, u, n, List.copyOf(problems));
+      return new Tally(
+          verdicts.size(), supported, contradicted, unsupported, unchecked, List.copyOf(problems));
     }
 
     public boolean clean() {

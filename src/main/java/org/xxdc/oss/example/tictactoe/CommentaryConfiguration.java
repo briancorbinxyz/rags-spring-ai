@@ -15,12 +15,10 @@ import org.springframework.core.io.Resource;
 import org.xxdc.oss.example.commentary.EsportsLiveCommentaryPersona;
 
 @Configuration
-class AlphaConfiguration {
+class CommentaryConfiguration {
 
-  /**
-   * Spring AI auto-configures a 20-message window. Declaring our own lets the window size be a
-   * property, so the same game can be replayed with less memory.
-   */
+  /// Spring AI auto-configures a 20-message window. Declaring our own lets the window size be a
+  /// property, so the same game can be replayed with less memory.
   @Bean
   ChatMemory chatMemory(
       ChatMemoryRepository repository, @Value("${alpha.memory.max-messages:20}") int maxMessages) {
@@ -31,10 +29,10 @@ class AlphaConfiguration {
   }
 
   @Bean
-  ChatClient alphaChatClient(
+  ChatClient playByPlayChatClient(
       ChatClient.Builder builder,
       ChatMemory chatMemory,
-      @Value("classpath:persona/alpha.md") Resource persona) {
+      @Value("classpath:persona/play-by-play.md") Resource persona) {
     return builder
         .defaultSystem(persona)
         // 2.0 takes a builder here, and no longer picks a temperature for you.
@@ -43,15 +41,13 @@ class AlphaConfiguration {
         .build();
   }
 
-  /**
-   * Beta, the colour commentator. Its own system prompt and a warmer temperature; it shares the
-   * memory store with Alpha but always under its own conversation id.
-   */
+  /// Beta, the colour commentator. Its own system prompt and a warmer temperature; it shares the
+  /// memory store with Alpha but always under its own conversation id.
   @Bean
-  ChatClient betaChatClient(
+  ChatClient colourChatClient(
       ChatClient.Builder builder,
       ChatMemory chatMemory,
-      @Value("classpath:persona/beta.md") Resource persona) {
+      @Value("classpath:persona/colour.md") Resource persona) {
     return builder
         .defaultSystem(persona)
         .defaultOptions(ChatOptions.builder().temperature(0.7))
@@ -64,22 +60,22 @@ class AlphaConfiguration {
     return ColourLines.from(colour);
   }
 
-  /**
-   * {@code commentary.mode=duo} (the default) puts Beta in the booth for colour on quiet moves;
-   * {@code solo} leaves Alpha alone, with the colour lines offered to Alpha instead.
-   */
+  /// `commentary.mode=duo` (the default) puts Beta in the booth for colour on quiet moves; `solo`
+  /// leaves Alpha alone, with the colour lines offered to Alpha instead.
   @Bean
-  AlphaCommentaryPersona alpha(
-      @Qualifier("alphaChatClient") ChatClient alphaChatClient,
-      @Qualifier("betaChatClient") ChatClient betaChatClient,
+  PlayByPlayPersona alpha(
+      @Qualifier("playByPlayChatClient") ChatClient playByPlayChatClient,
+      @Qualifier("colourChatClient") ChatClient colourChatClient,
       ColourLines colourLines,
       @Value("${alpha.memory.max-messages:20}") int maxMessages,
       @Value("${commentary.mode:duo}") String mode) {
-    Optional<BetaColourCommentator> beta =
+    Optional<ColourCommentator> colourCommentator =
         "solo".equalsIgnoreCase(mode)
             ? Optional.empty()
-            : Optional.of(new BetaColourCommentator(betaChatClient, colourLines));
-    return new AlphaCommentaryPersona(
-        alphaChatClient, new EsportsLiveCommentaryPersona(), colourLines, maxMessages, beta);
+            : Optional.of(new ColourCommentator(colourChatClient, colourLines));
+    var booth =
+        new PlayByPlayPersona.Booth(
+            playByPlayChatClient, new EsportsLiveCommentaryPersona(), colourCommentator);
+    return new PlayByPlayPersona(booth, colourLines, maxMessages);
   }
 }

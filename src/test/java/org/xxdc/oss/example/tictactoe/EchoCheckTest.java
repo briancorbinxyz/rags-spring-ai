@@ -10,9 +10,14 @@ import org.junit.jupiter.api.Test;
 class EchoCheckTest {
 
   private static final String REPORT =
-      "Move 4: O played row 1, column 2.\n"
-          + "Turning point: O blocks an immediate loss.\n"
-          + "Board:\nX O .\n. X .\n. . .\n";
+      """
+      Move 4: O played row 1, column 2.
+      Turning point: O blocks an immediate loss.
+      Board:
+      X O .
+      . X .
+      . . .
+      """;
 
   @Test
   void readingTheReportBackIsAnEcho() {
@@ -34,12 +39,12 @@ class EchoCheckTest {
 
   @Test
   void countsEchoesInAReply() {
-    var c =
+    var commentary =
         new Commentary(
             "",
             List.of(
                 new Claim("O played row 1, column 2.", List.of()),
                 new Claim("A late answer to X's opening gambit on move 1.", List.of("move 1"))));
-    assertEquals(1, EchoCheck.count(c, REPORT));
+    assertEquals(1, EchoCheck.count(commentary, REPORT));
   }
 }
