@@ -11,7 +11,7 @@ import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
  * Follows the paper trail (Episode 4, Step 4): a result that something newer replaced gives its
  * place to its successor.
  *
- * <p>The successor is read from the unit's metadata, where {@link ElementReader} put it ({@code
+ * <p>The successor is read from the unit's metadata, where {@link SpectasticReader} put it ({@code
  * superseded_by}), following up to {@value #HOPS} hops. On a superseded page, the successor is the
  * element with the same id on the new page or, failing that, the new page's best match for the
  * question. Whatever was superseded is then dropped, applied changes included. A requirement can be
@@ -33,7 +33,7 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
   public List<Document> process(Query query, List<Document> documents) {
     var out = new LinkedHashMap<String, Document>(); // by id, in order, each once
     for (Document doc : documents) {
-      String address = ElementReader.address(doc);
+      String address = Units.address(doc);
       String current = follow(query.text(), address); // superseded_by, up to three hops
       if (current.equals(address)) {
         out.putIfAbsent(doc.getId(), doc);
@@ -52,12 +52,12 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
     String at = address;
     for (int hop = 0; hop < HOPS; hop++) {
       var marks = keywords.units().parts(at).getFirst().getMetadata();
-      Object next = marks.get(ElementReader.SUPERSEDED_BY);
-      Object page = marks.get(ElementReader.PAGE_SUPERSEDED_BY);
+      Object next = marks.get(Units.SUPERSEDED_BY);
+      Object page = marks.get(Units.PAGE_SUPERSEDED_BY);
       if (next != null) {
         at = next.toString();
       } else if (page != null) {
-        String sameId = page + "#" + marks.get(ElementReader.ANCHOR);
+        String sameId = page + "#" + marks.get(Units.ANCHOR);
         if (!keywords.units().parts(sameId).isEmpty()) {
           at = sameId;
         } else {
@@ -65,7 +65,7 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
           if (best.isEmpty()) {
             break;
           }
-          at = ElementReader.address(best.get());
+          at = Units.address(best.get());
         }
       } else {
         break;
@@ -94,8 +94,8 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
   /** The units of page {@code source} that are still in force, in archive order. */
   private List<Document> liveUnitsOn(String source) {
     return keywords.units().all().stream()
-        .filter(unit -> source.equals(unit.getMetadata().get(ElementReader.SOURCE)))
-        .filter(unit -> !ElementReader.lifecycle(unit).outOfDate())
+        .filter(unit -> source.equals(unit.getMetadata().get(Units.SOURCE)))
+        .filter(unit -> !Units.standing(unit).outOfDate())
         .toList();
   }
 

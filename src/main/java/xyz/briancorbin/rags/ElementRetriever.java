@@ -100,7 +100,7 @@ public final class ElementRetriever implements DocumentRetriever {
     var out = new ArrayList<Document>();
     for (String address : identifiers.lookup(question)) {
       for (Document part : keywords.units().parts(address)) {
-        if (filter.contains(ElementReader.lifecycle(part))) {
+        if (filter.contains(Units.standing(part))) {
           out.add(mark(part));
         }
       }

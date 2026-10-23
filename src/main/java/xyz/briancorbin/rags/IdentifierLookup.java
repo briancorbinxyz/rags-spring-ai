@@ -88,6 +88,6 @@ public final class IdentifierLookup {
   }
 
   private Standing standingOf(String address) {
-    return ElementReader.lifecycle(firstPart(address));
+    return Units.standing(firstPart(address));
   }
 }

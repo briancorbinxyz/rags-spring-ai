@@ -35,7 +35,7 @@ class RatchetTest {
         SpecCorpus.commitOf(checkout).equals(COMMIT), "the golden set is frozen at " + COMMIT);
 
     var questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));
-    try (var keywords = KeywordSearch.of(new ElementUnits(new ElementReader(checkout).get()))) {
+    try (var keywords = KeywordSearch.of(new ElementUnits(new SpectasticReader(checkout).get()))) {
       assertEquals(10_540, keywords.units().addresses().size());
       var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       // The retriever hands on everything a top 50 could need; cutting to 50 is a step of its own,

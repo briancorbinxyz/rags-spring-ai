@@ -13,7 +13,7 @@ class IdentifierLookupTest {
   @Test
   void anIdWithASpecNamesThatIdInThatSpec(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
       var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       assertEquals(
           List.of("specs/002-other/spec.html#FR-001"),
@@ -28,7 +28,7 @@ class IdentifierLookupTest {
   @Test
   void anIdInMoreThanOneSpecNamesNothingWithoutASpec(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
       assertEquals(
           List.of(),
           new IdentifierLookup(keywords.units(), new SpecGrammar())
@@ -39,7 +39,7 @@ class IdentifierLookupTest {
   @Test
   void anIdInOneSpecNamesEveryPageOfItCurrentFirst(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
       assertEquals(
           List.of(
               "specs/001-demo/spec.html#FR-003",
@@ -62,7 +62,7 @@ class IdentifierLookupTest {
   void aSpecNumberedPastNineNinetyNineIsStillOneSpec(@TempDir Path dir) throws Exception {
     try (var keywords =
         KeywordSearch.of(
-            new ElementUnits(new ElementReader(Archives.pastNineNinetyNine(dir)).get()))) {
+            new ElementUnits(new SpectasticReader(Archives.pastNineNinetyNine(dir)).get()))) {
       var ids = new IdentifierLookup(keywords.units(), new SpecGrammar());
       assertEquals(
           List.of("specs/1000-alpha/spec.html#FR-009"),
@@ -78,7 +78,7 @@ class IdentifierLookupTest {
   @Test
   void aNamedUnitIsPinnedAboveTheSearch(@TempDir Path dir) throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
       var retriever =
           ElementRetriever.builder()
               .keywords(keywords)
@@ -88,7 +88,7 @@ class IdentifierLookupTest {
       var found =
           retriever.retrieve(
               new Query("Does the other service in spec 002 log requests, per FR-001?"));
-      assertEquals("specs/002-other/spec.html#FR-001", ElementReader.address(found.getFirst()));
+      assertEquals("specs/002-other/spec.html#FR-001", Units.address(found.getFirst()));
       assertEquals(null, found.getFirst().getScore()); // pinned, not scored
     }
   }

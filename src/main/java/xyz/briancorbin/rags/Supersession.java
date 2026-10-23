@@ -10,8 +10,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.jsoup.nodes.Element;
-import xyz.briancorbin.rags.ElementReader.Page;
-import xyz.briancorbin.rags.ElementReader.Unit;
+import xyz.briancorbin.rags.SpectasticReader.Page;
+import xyz.briancorbin.rags.SpectasticReader.Unit;
 
 /**
  * The paper trail: which current element replaced each out-of-date one (Episode 4, Step 4).
@@ -105,8 +105,8 @@ public final class Supersession implements Successors {
   /** Whether the forty characters before the link say "superseded ... by". */
   private static boolean saysSupersededBy(Element link) {
     String context =
-        link.parent() == null ? "" : lower(head(ElementReader.rawText(link.parent()), 200));
-    String linkText = lower(ElementReader.rawText(link));
+        link.parent() == null ? "" : lower(head(SpectasticReader.rawText(link.parent()), 200));
+    String linkText = lower(SpectasticReader.rawText(link));
     String before = "";
     if (!linkText.isEmpty()) {
       int at = context.indexOf(linkText);
@@ -123,7 +123,7 @@ public final class Supersession implements Successors {
         continue;
       }
       var copy =
-          ElementReader.first(
+          SpectasticReader.first(
               delta,
               inside -> !inside.id().isEmpty() && units.containsKey(source + "#" + inside.id()));
       String from = copy != null ? source + "#" + copy.id() : unitAround(source, delta, units);
@@ -158,7 +158,7 @@ public final class Supersession implements Successors {
         continue;
       }
       var mark =
-          ElementReader.first(
+          SpectasticReader.first(
               element,
               status ->
                   status.normalName().equals("spec-status")

@@ -26,9 +26,9 @@ import tools.jackson.databind.json.JsonMapper;
  * better and why it costs so much more. So it is used as a second pass over the first {@value
  * ElementRetriever#DEPTH} results, not as a search.
  *
- * <p>It reads exactly what a reader would be given, {@link ElementReader#passage}: the heading
- * path, then the unit's text. Pinned units are never reranked — they were looked up by name, and a
- * model's opinion does not outrank an identifier — so they keep their place at the front.
+ * <p>It reads exactly what a reader would be given, {@link Units#passage}: the heading path, then
+ * the unit's text. Pinned units are never reranked — they were looked up by name, and a model's
+ * opinion does not outrank an identifier — so they keep their place at the front.
  *
  * <p>Spring AI 2.0.1 has no reranking abstraction, so this is a plain {@link
  * DocumentPostProcessor}. The model itself is {@code cross-encoder/ms-marco-MiniLM-L-6-v2} run by
@@ -61,7 +61,7 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
     if (head.isEmpty()) {
       return documents;
     }
-    List<Double> scores = scores(query.text(), head.stream().map(ElementReader::passage).toList());
+    List<Double> scores = scores(query.text(), head.stream().map(Units::passage).toList());
 
     var order = new ArrayList<Integer>();
     for (int i = 0; i < head.size(); i++) {

@@ -33,12 +33,21 @@ public final class KeywordSearch implements AutoCloseable {
   /** One space: declared above STOP_WORDS, which splits on it while the class initialises. */
   private static final Pattern SPACE = Pattern.compile(" ", Pattern.LITERAL);
 
+  /** English a question can spare. */
+  private static final String COMMON =
+      "a an the of in on for to and or is are was were be by with what which how does do did "
+          + "that this it its as at from when who whom why where after before into than then "
+          + "there their they them should must can could would will say says about";
+
+  /**
+   * Words this archive says so often they carry nothing: every question is about a spec. The one
+   * piece of the corpus's vocabulary still sitting in the search — a second archive would hand its
+   * own in, and this would be a parameter.
+   */
+  private static final String OF_THE_ARCHIVE = "spec spectastic";
+
   private static final Set<String> STOP_WORDS =
-      Set.of(
-          SPACE.split(
-              "a an the of in on for to and or is are was were be by with what which how does do did that this "
-                  + "it its as at from when who whom why where after before into than then there their they them "
-                  + "should must can could would will spec spectastic say says about"));
+      Set.of(SPACE.split(COMMON + " " + OF_THE_ARCHIVE, -1));
 
   private static final Pattern WORD = Pattern.compile("[A-Za-z0-9][A-Za-z0-9\\-]*");
 
@@ -92,16 +101,13 @@ public final class KeywordSearch implements AutoCloseable {
   /** One unit's columns: what a reader sees in front of the text, the id, the text, the state. */
   private static void bind(PreparedStatement insert, int row, Document unit) throws SQLException {
     var marks = unit.getMetadata();
-    String path = String.valueOf(marks.get(ElementReader.HEADING_PATH));
+    String path = String.valueOf(marks.get(Units.HEADING_PATH));
     insert.setInt(1, row);
     insert.setString(
-        2,
-        join(
-            path.isEmpty() ? marks.get(ElementReader.TITLE) : path,
-            marks.get(ElementReader.HEADING)));
-    insert.setString(3, String.valueOf(marks.get(ElementReader.ANCHOR)));
+        2, join(path.isEmpty() ? marks.get(Units.TITLE) : path, marks.get(Units.HEADING)));
+    insert.setString(3, String.valueOf(marks.get(Units.ANCHOR)));
     insert.setString(4, unit.getText());
-    insert.setString(5, String.valueOf(marks.get(ElementReader.LIFECYCLE)));
+    insert.setString(5, String.valueOf(marks.get(Units.STANDING)));
   }
 
   /** The units this searches. */

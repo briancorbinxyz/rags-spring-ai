@@ -57,7 +57,7 @@ public final class RetrievalRun {
   public static List<Result> run(Step step, List<Question> questions) {
     var results = new ArrayList<Result>();
     for (Question q : questions) {
-      List<String> ranked = step.search(q.question()).stream().map(ElementReader::address).toList();
+      List<String> ranked = step.search(q.question()).stream().map(Units::address).toList();
       results.add(new Result(q, ranked, GoldenScorer.byAddress(q, ranked), firstStale(q, ranked)));
     }
     return results;

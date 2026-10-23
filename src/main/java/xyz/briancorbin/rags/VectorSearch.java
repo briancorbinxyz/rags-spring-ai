@@ -9,10 +9,10 @@ import org.springframework.ai.document.Document;
 /**
  * Dense search over the element units: the same units BM25 indexes, as vectors.
  *
- * <p>A unit is embedded as {@link ElementReader#passage}, the heading path in front of the text, so
- * {@code FR-001} on its own still carries which spec's requirements it belongs to — the same text a
- * reader would be given, and the same text the reranker scores. Each part of a split unit is its
- * own vector.
+ * <p>A unit is embedded as {@link Units#passage}, the heading path in front of the text, so {@code
+ * FR-001} on its own still carries which spec's requirements it belongs to — the same text a reader
+ * would be given, and the same text the reranker scores. Each part of a split unit is its own
+ * vector.
  *
  * <p>Every vector is scaled to length one, so the cosine of two of them is their dot product, and a
  * search is an exact scan over all of them. There is no approximate index here on purpose: ten
@@ -42,9 +42,9 @@ public final class VectorSearch {
    * FR-001} on its own still carries which spec's requirements it belongs to.
    */
   public static VectorSearch of(ElementUnits units, Embedder embedder) {
-    List<String> passages = units.all().stream().map(ElementReader::passage).toList();
+    List<String> passages = units.all().stream().map(Units::passage).toList();
     float[][] vectors = normalisedAll(embedder.passages(passages));
-    var lifecycles = units.all().stream().map(ElementReader::lifecycle).toArray(Lifecycle[]::new);
+    var lifecycles = units.all().stream().map(Units::standing).toArray(Lifecycle[]::new);
     return new VectorSearch(units, vectors, lifecycles, embedder);
   }
 

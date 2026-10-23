@@ -28,28 +28,17 @@ import org.springframework.ai.document.DocumentReader;
  * criterion, a section. Its text is its own text only; an element inside it with an id of its own,
  * a requirement inside its section say, is a unit of its own. Units of fewer than three words are
  * left out. Each unit's heading path (page title › the headings of the sections around it) is kept
- * in its metadata, and {@link #passage(Document)} puts it in front of the text, so {@code FR-001}
- * on its own still says which spec's requirements it belongs to. A unit over {@value #PART_WORDS}
- * words is split into parts at sentence ends, and every part carries the unit's address.
+ * in its metadata, and {@link Units#passage(Document)} puts it in front of the text, so {@code
+ * FR-001} on its own still says which spec's requirements it belongs to. A unit over {@value
+ * #PART_WORDS} words is split into parts at sentence ends, and every part carries the unit's
+ * address.
  *
  * <p>The metadata is the provenance: {@code source}, {@code anchor}, {@code spec}, {@code title},
  * {@code heading_path}, {@code heading}, {@code lifecycle}, {@code part} and {@code parts}, and,
  * for a record that something newer replaced, {@code superseded_by} or {@code page_superseded_by}
  * (see {@link Supersession}).
  */
-public final class ElementReader implements DocumentReader {
-
-  public static final String SOURCE = Address.SOURCE;
-  public static final String SPEC = Address.SPEC;
-  public static final String ANCHOR = "anchor";
-  public static final String TITLE = "title";
-  public static final String HEADING_PATH = "heading_path";
-  public static final String HEADING = "heading";
-  public static final String LIFECYCLE = "lifecycle";
-  public static final String PART = "part";
-  public static final String PARTS = "parts";
-  public static final String SUPERSEDED_BY = "superseded_by";
-  public static final String PAGE_SUPERSEDED_BY = "page_superseded_by";
+public final class SpectasticReader implements DocumentReader {
 
   /** Units shorter than this many words are labels, not passages. */
   static final int MIN_WORDS = 3;
@@ -76,7 +65,7 @@ public final class ElementReader implements DocumentReader {
   /**
    * @param checkout a spectastic checkout: the folder that holds {@code specs/}
    */
-  public ElementReader(Path checkout) {
+  public SpectasticReader(Path checkout) {
     this.checkout = checkout;
   }
 
@@ -107,33 +96,20 @@ public final class ElementReader implements DocumentReader {
   /** Everything the search filters, pins, redirects or shows a reader, read once here. */
   private static Map<String, Object> metadata(Unit unit, int part, Successors successors) {
     var metadata = new LinkedHashMap<String, Object>();
-    metadata.put(SOURCE, unit.source());
-    metadata.put(ANCHOR, unit.anchor());
-    metadata.put(SPEC, unit.spec());
-    metadata.put(TITLE, unit.title());
-    metadata.put(HEADING_PATH, unit.headingPath());
-    metadata.put(HEADING, unit.heading());
-    metadata.put(LIFECYCLE, unit.lifecycle().label());
-    metadata.put(PART, part + 1);
-    metadata.put(PARTS, unit.parts().size());
-    successors.successor(unit.address()).ifPresent(to -> metadata.put(SUPERSEDED_BY, to));
-    successors.pageSuccessor(unit.source()).ifPresent(to -> metadata.put(PAGE_SUPERSEDED_BY, to));
+    metadata.put(Units.SOURCE, unit.source());
+    metadata.put(Units.ANCHOR, unit.anchor());
+    metadata.put(Units.SCOPE, unit.spec());
+    metadata.put(Units.TITLE, unit.title());
+    metadata.put(Units.HEADING_PATH, unit.headingPath());
+    metadata.put(Units.HEADING, unit.heading());
+    metadata.put(Units.STANDING, unit.lifecycle().label());
+    metadata.put(Units.PART, part + 1);
+    metadata.put(Units.PARTS, unit.parts().size());
+    successors.successor(unit.address()).ifPresent(to -> metadata.put(Units.SUPERSEDED_BY, to));
+    successors
+        .pageSuccessor(unit.source())
+        .ifPresent(to -> metadata.put(Units.PAGE_SUPERSEDED_BY, to));
     return metadata;
-  }
-
-  /** What a reader is given: the heading path, then the unit's text. */
-  public static String passage(Document unit) {
-    String path = String.valueOf(unit.getMetadata().getOrDefault(HEADING_PATH, ""));
-    return path.isEmpty() ? unit.getText() : path + "\n" + unit.getText();
-  }
-
-  /** {@code specs/<spec>/<file>.html#<anchor>}: the address the golden set uses. */
-  public static String address(Document unit) {
-    return unit.getMetadata().get(SOURCE) + "#" + unit.getMetadata().get(ANCHOR);
-  }
-
-  public static Lifecycle lifecycle(Document unit) {
-    return Lifecycle.of(unit.getMetadata().get(LIFECYCLE));
   }
 
   // --- units ---------------------------------------------------------------------------------
@@ -352,7 +328,7 @@ public final class ElementReader implements DocumentReader {
     return element.children().stream()
         .filter(child -> HEADINGS.contains(child.normalName()))
         .findFirst()
-        .map(ElementReader::strippedText)
+        .map(SpectasticReader::strippedText)
         .orElse("");
   }
 
@@ -361,7 +337,7 @@ public final class ElementReader implements DocumentReader {
     return files
         .filter(
             path -> path.getFileName().toString().endsWith(".html") && Files.isRegularFile(path))
-        .sorted(Comparator.comparing(ElementReader::slash))
+        .sorted(Comparator.comparing(SpectasticReader::slash))
         .toList();
   }
 

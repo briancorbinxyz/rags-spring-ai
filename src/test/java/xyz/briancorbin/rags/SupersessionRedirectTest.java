@@ -18,7 +18,7 @@ class SupersessionRedirectTest {
   void aSupersededResultGivesItsPlaceToItsSuccessorAndIsItselfDropped(@TempDir Path dir)
       throws Exception {
     try (var keywords =
-        KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {
+        KeywordSearch.of(new ElementUnits(new SpectasticReader(Archives.tiny(dir)).get()))) {
       var redirect = new SupersessionRedirect(keywords);
       var in =
           List.of(
@@ -31,7 +31,7 @@ class SupersessionRedirectTest {
       // that rewrote it -- so four results come back as three.
       assertEquals(
           List.of(SPEC + "#FR-003", SPEC + "#FR-001", SPEC + "#D-002"),
-          out.stream().map(ElementReader::address).toList());
+          out.stream().map(Units::address).toList());
       assertEquals(SPEC + "#FR-002", out.getFirst().getMetadata().get("redirected_from"));
     }
   }

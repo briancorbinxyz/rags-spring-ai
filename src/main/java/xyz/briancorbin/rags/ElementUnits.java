@@ -14,8 +14,8 @@ import org.springframework.ai.document.Document;
  * The archive as element units: one per element with an id, in archive order.
  *
  * <p>This is what both searches search and what everything else addresses. A unit is a {@link
- * Document} from {@link ElementReader}, and a long one is split into parts that share an address,
- * so {@link #parts} is how you ask for a unit rather than one piece of it.
+ * Document} from {@link SpectasticReader}, and a long one is split into parts that share an
+ * address, so {@link #parts} is how you ask for a unit rather than one piece of it.
  *
  * <p>It holds no index of its own. {@link KeywordSearch} and {@link VectorSearch} each build their
  * own over the same units, which is what lets their results be fused: the same unit, found two
@@ -33,7 +33,7 @@ public final class ElementUnits {
     for (int row = 0; row < this.units.size(); row++) {
       Document unit = this.units.get(row);
       rows.put(unit.getId(), row);
-      parts.computeIfAbsent(ElementReader.address(unit), address -> new ArrayList<>()).add(unit);
+      parts.computeIfAbsent(Units.address(unit), address -> new ArrayList<>()).add(unit);
     }
   }
 
@@ -55,7 +55,7 @@ public final class ElementUnits {
   /** The units' element ids, for the identifier lookup. */
   public Set<String> anchors() {
     return units.stream()
-        .map(unit -> String.valueOf(unit.getMetadata().get(ElementReader.ANCHOR)))
+        .map(unit -> String.valueOf(unit.getMetadata().get(Units.ANCHOR)))
         .collect(Collectors.toSet());
   }
 
