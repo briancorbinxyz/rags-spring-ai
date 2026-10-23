@@ -273,8 +273,8 @@ def main():
                     continue
                 its = []
                 for x in r["retrieved"]:
-                    m = re.match(r"(.*), chunk (\d+) of (\d+)$", x["address"])
-                    f, i, tot_ = m.group(1), int(m.group(2)), int(m.group(3))
+                    m = re.match(r"(?P<file>.*), chunk (?P<chunk>\d+) of (?P<chunks>\d+)$", x["address"])
+                    f, i, tot_ = m["file"], int(m["chunk"]), int(m["chunks"])
                     mism += nchunks.get(f) != tot_
                     its.append(by_addr[(f, i)])
                 replay.append(S.rank_list(its, gq[r["id"]], scorer.hit, tokens, its and r["retrieved"][0]["score"]))

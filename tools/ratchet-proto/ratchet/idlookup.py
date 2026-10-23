@@ -20,8 +20,8 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 
-ID_TOKEN = re.compile(r"(?<![\w-])(?:[A-Z]+-)*[A-Z]+-?\d+(?![\w-])")
-SPEC = re.compile(r"\b(?:spec|specs|slice)\s+(\d{3})\b|(?<![\w-])(\d{3})-[a-z]", re.IGNORECASE)
+ID_TOKEN = re.compile(r"(?<![\w-])(?P<prefix>[A-Z]+-)*[A-Z]+-?\d+(?![\w-])")
+SPEC = re.compile(r"\b(?P<spec_word>spec|specs|slice)\s+(?P<in_prose>\d{3})\b|(?<![\w-])(?P<in_slug>\d{3})-[a-z]", re.IGNORECASE)
 
 _LC_ORDER = {"current": 0, "history": 1}
 
@@ -34,8 +34,8 @@ def parse(question: str, anchors: set) -> tuple[list, list]:
         if t in anchors and t not in ids:
             ids.append(t)
     specs = []
-    for a, b in SPEC.findall(question):
-        s = a or b
+    for m in SPEC.finditer(question):
+        s = m["in_prose"] or m["in_slug"]  # "spec 040" in prose, or the "040-slug" form
         if s not in specs:
             specs.append(s)
     return ids, specs
@@ -78,12 +78,12 @@ class IdIndex:
     def items(self, key: str) -> list:
         return self.first_item.get(key, [])
 
-    _PRIOR_ID = re.compile(r"\b(?:FR|NFR|SC|D|T|US|REQ-[A-Z]+)-\d+\b")
-    _PRIOR_SPEC = re.compile(r"\b(?:spec|specs|slice)\s+(\d{3})\b|\b(\d{3})-[a-z]")
+    _PRIOR_ID = re.compile(r"\b(?P<kind>FR|NFR|SC|D|T|US|REQ-[A-Z]+)-\d+\b")
+    _PRIOR_SPEC = re.compile(r"\b(?P<spec_word>spec|specs|slice)\s+(?P<in_prose>\d{3})\b|\b(?P<in_slug>\d{3})-[a-z]")
 
     def _prior(self, question: str) -> list:
-        found = self._PRIOR_ID.findall(question)
-        specs = [a or b for a, b in self._PRIOR_SPEC.findall(question)]
+        found = [m[0] for m in self._PRIOR_ID.finditer(question)]  # whole ids, not the kind group
+        specs = [m["in_prose"] or m["in_slug"] for m in self._PRIOR_SPEC.finditer(question)]
         keys = [k for k, ns in self.first_item.items()
                 if self.units[ns[0]].anchor in found and (not specs or k.split("/")[1][:3] in specs)]
         keys.sort(key=lambda k: self.units[self.first_item[k][0]].n)
