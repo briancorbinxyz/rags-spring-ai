@@ -21,28 +21,9 @@ class TrecFilesTest {
 
   @Test
   void qrelsJudgeEachPassageOnceInAFixedOrder() {
-    var questions =
-        List.of(
-            q(
-                "G-002",
-                "stale",
-                List.of("a#1"),
-                List.of(new Accept("b#2", "question")),
-                List.of("a#old")),
-            q(
-                "G-001",
-                "relation",
-                List.of("c#1", "d#2"),
-                List.of(new Accept("e#3", "d#2")),
-                List.of()),
-            q("G-009", "unanswerable", List.of(), List.of(), List.of()));
-    var audit =
-        List.of(
-            new Decision("G-001", "z#9", "no"),
-            new Decision("G-001", "e#3", "standin"),
-            new Decision("G-001", "f#4", "partly"),
-            // already judged as stale: the first rule that names a passage wins
-            new Decision("G-002", "a#old", "whole"));
+    var questions = threeQuestionsOutOfOrder();
+    var audit = anAuditThatAlsoNamesAPassageTheQuestionCallsStale();
+
     assertEquals(
         List.of(
             "G-001 0 c#1 1",
@@ -54,6 +35,29 @@ class TrecFilesTest {
             "G-002 0 b#2 1",
             "G-002 0 a#old 0"),
         TrecFiles.qrels(questions, audit));
+  }
+
+  /// Given out of order on purpose: a qrels file is sorted by id so it is byte-for-byte repeatable.
+  private static List<Question> threeQuestionsOutOfOrder() {
+    return List.of(
+        q(
+            "G-002",
+            "stale",
+            List.of("a#1"),
+            List.of(new Accept("b#2", "question")),
+            List.of("a#old")),
+        q("G-001", "relation", List.of("c#1", "d#2"), List.of(new Accept("e#3", "d#2")), List.of()),
+        q("G-009", "unanswerable", List.of(), List.of(), List.of()));
+  }
+
+  /// The last decision is on a passage G-002 already calls stale: the first rule to name a passage
+  /// wins, so the audit does not get to overrule the question.
+  private static List<Decision> anAuditThatAlsoNamesAPassageTheQuestionCallsStale() {
+    return List.of(
+        new Decision("G-001", "z#9", "no"),
+        new Decision("G-001", "e#3", "standin"),
+        new Decision("G-001", "f#4", "partly"),
+        new Decision("G-002", "a#old", "whole"));
   }
 
   @Test

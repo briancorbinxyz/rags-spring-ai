@@ -12,30 +12,53 @@ public final class Archives {
   private Archives() {}
 
   public static Path tiny(Path dir) throws IOException {
-    write(
-        dir,
-        "specs/001-demo/spec.html",
+    demoSpec(dir);
+    aChangeProposalThatApplied(dir);
+    anotherSpecWithTheSameId(dir);
+    return dir;
+  }
+
+  /// FR-002 is superseded by an attribute the filter can read; D-001 only by a status element
+  /// inside it, which the filter cannot see and the redirect has to find.
+  private static void demoSpec(Path dir) throws IOException {
+    write(dir, "specs/001-demo/spec.html", page("001 Demo", REQUIREMENTS + DECISIONS));
+  }
+
+  private static final String REQUIREMENTS =
+      """
+      <spec-meta><b>Status</b> <span><spec-status value="accepted">Accepted</spec-status></span></spec-meta>
+      <section id="requirements"><h2>Requirements</h2>
+      <p>The requirements for the demo service follow.</p>
+      <ul>
+      <li id="FR-001">The service MUST record every request.</li>
+      <li id="FR-002" data-status="superseded">The service MUST log to a file. Superseded by <a href="#FR-003">FR-003</a>.</li>
+      <li id="FR-003">The service MUST log to standard output.</li>
+      <li id="FR-004">Too short</li>
+      </ul>
+      </section>
+      """;
+
+  private static final String DECISIONS =
+      """
+      <section id="decisions"><h2>Decisions</h2>
+      <div id="D-001"><h4>D-001 · Rotate logs daily</h4>
+        <dl><dt>Status</dt><dd><spec-status value="superseded">Superseded</spec-status> by <a href="#D-002">D-002</a></dd></dl>
+        <p>Logs rotate once a day.</p></div>
+      <div id="D-002"><h4>D-002 · Rotate logs by size</h4>
+        <p>Logs rotate when they reach ten megabytes.</p></div>
+      </section>
+      """;
+
+  /// One page in spectastic's shape, so a fixture says what it is testing rather than boilerplate.
+  private static String page(String title, String body) {
+    return """
+        <!doctype html><html><head><title>%s</title></head><body><main>
+        %s</main></body></html>
         """
-        <!doctype html><html><head><title>001 Demo</title></head><body><main>
-        <spec-meta><b>Status</b> <span><spec-status value="accepted">Accepted</spec-status></span></spec-meta>
-        <section id="requirements"><h2>Requirements</h2>
-        <p>The requirements for the demo service follow.</p>
-        <ul>
-        <li id="FR-001">The service MUST record every request.</li>
-        <li id="FR-002" data-status="superseded">The service MUST log to a file. Superseded by <a href="#FR-003">FR-003</a>.</li>
-        <li id="FR-003">The service MUST log to standard output.</li>
-        <li id="FR-004">Too short</li>
-        </ul>
-        </section>
-        <section id="decisions"><h2>Decisions</h2>
-        <div id="D-001"><h4>D-001 · Rotate logs daily</h4>
-          <dl><dt>Status</dt><dd><spec-status value="superseded">Superseded</spec-status> by <a href="#D-002">D-002</a></dd></dl>
-          <p>Logs rotate once a day.</p></div>
-        <div id="D-002"><h4>D-002 · Rotate logs by size</h4>
-          <p>Logs rotate when they reach ten megabytes.</p></div>
-        </section>
-        </main></body></html>
-        """);
+        .formatted(title, body);
+  }
+
+  private static void aChangeProposalThatApplied(Path dir) throws IOException {
     write(
         dir,
         "specs/001-demo/changes/archive/2026-01-01-log-to-stdout/proposal.html",
@@ -44,6 +67,9 @@ public final class Archives {
         <spec-delta target="FR-003"><div id="FR-003">The service MUST log to standard output.</div></spec-delta>
         </body></html>
         """);
+  }
+
+  private static void anotherSpecWithTheSameId(Path dir) throws IOException {
     write(
         dir,
         "specs/002-other/spec.html",
@@ -54,7 +80,6 @@ public final class Archives {
         </section>
         </body></html>
         """);
-    return dir;
   }
 
   /// Two specs numbered past 999, each holding the same id. The archive is three digits wide today,
