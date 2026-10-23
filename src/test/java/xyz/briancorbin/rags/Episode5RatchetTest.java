@@ -87,8 +87,13 @@ class Episode5RatchetTest {
         var cache = new VectorCache(VECTORS.resolve(OllamaModel.cacheFile(modelId)))) {
       assertEquals(10_540, keywords.units().addresses().size());
       var ids = new IdentifierLookup(keywords.units());
-      var vectors =
-          VectorSearch.of(keywords.units(), embedding, modelId, EmbeddingPrefix.of(MODEL), cache);
+      // Three layers, each one thing: add the prefixes the model wants, serve what the cache
+      // already has, call the model. Prefixing is outermost so the cache key is the text sent.
+      Embedder embedder =
+          new PrefixedEmbedder(
+              new CachingEmbedder(new ModelEmbedder(embedding), cache, modelId),
+              EmbeddingPrefix.of(MODEL));
+      var vectors = VectorSearch.of(keywords.units(), embedder);
       assertEquals(768, vectors.dimensions());
 
       var step4 =

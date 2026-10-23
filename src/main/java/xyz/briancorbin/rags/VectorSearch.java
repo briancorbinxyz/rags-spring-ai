@@ -5,8 +5,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.embedding.EmbeddingRequest;
 
 /**
  * Dense search over the element units: the same units BM25 indexes, as vectors.
@@ -24,70 +22,30 @@ import org.springframework.ai.embedding.EmbeddingRequest;
  */
 public final class VectorSearch {
 
-  /** What Ollama's embedding endpoint is sent at once. */
-  static final int BATCH = 32;
-
   private final ElementUnits units;
   private final float[][] vectors; // aligned with units, each of length one
   private final Lifecycle[] lifecycles;
-  private final EmbeddingModel model;
-  private final String modelId;
-  private final EmbeddingPrefix prefix;
-  private final VectorCache cache;
+  private final Embedder embedder;
 
   private VectorSearch(
-      ElementUnits units,
-      float[][] vectors,
-      Lifecycle[] lifecycles,
-      EmbeddingModel model,
-      String modelId,
-      EmbeddingPrefix prefix,
-      VectorCache cache) {
+      ElementUnits units, float[][] vectors, Lifecycle[] lifecycles, Embedder embedder) {
     this.units = units;
     this.vectors = vectors;
     this.lifecycles = lifecycles;
-    this.model = model;
-    this.modelId = modelId;
-    this.prefix = prefix;
-    this.cache = cache;
+    this.embedder = embedder;
   }
 
   /**
-   * Embeds every unit, reading what the cache already has and asking the model only for the rest.
+   * Embeds every unit through {@code embedder}, which is where the prefixes and the cache live.
    *
-   * @param modelId what the cache is keyed by: the model and its digest, never just its name
+   * <p>A unit is embedded as its passage — the heading path in front of the text — so {@code
+   * FR-001} on its own still carries which spec's requirements it belongs to.
    */
-  public static VectorSearch of(
-      ElementUnits units,
-      EmbeddingModel model,
-      String modelId,
-      EmbeddingPrefix prefix,
-      VectorCache cache) {
-    var texts =
-        units.all().stream().map(unit -> prefix.document(ElementReader.passage(unit))).toList();
-    var vectors = new float[units.size()][];
-    var missing = new ArrayList<Integer>();
-    for (int i = 0; i < texts.size(); i++) {
-      float[] cached = cache.get(modelId, texts.get(i));
-      if (cached == null) {
-        missing.add(i);
-      } else {
-        vectors[i] = normalise(cached);
-      }
-    }
-    for (int from = 0; from < missing.size(); from += BATCH) {
-      List<Integer> batch = missing.subList(from, Math.min(from + BATCH, missing.size()));
-      List<String> send = batch.stream().map(texts::get).toList();
-      var response = model.call(new EmbeddingRequest(send, null));
-      for (int j = 0; j < batch.size(); j++) {
-        float[] raw = response.getResults().get(j).getOutput();
-        cache.put(modelId, send.get(j), raw);
-        vectors[batch.get(j)] = normalise(raw);
-      }
-      cache.commit();
-    }
+  public static VectorSearch of(ElementUnits units, Embedder embedder) {
+    List<String> passages = units.all().stream().map(ElementReader::passage).toList();
+    float[][] vectors = normalisedAll(embedder.passages(passages));
     var lifecycles = units.all().stream().map(ElementReader::lifecycle).toArray(Lifecycle[]::new);
-    return new VectorSearch(units, vectors, lifecycles, model, modelId, prefix, cache);
+    return new VectorSearch(units, vectors, lifecycles, embedder);
   }
 
   /**
@@ -121,23 +79,9 @@ public final class VectorSearch {
     return out;
   }
 
-  /** A question as a vector of length one, cached like a passage. */
+  /** A question as a vector of length one. */
   public float[] query(String question) {
-    String text = prefix.query(question);
-    float[] cached = cache.get(modelId, text);
-    if (cached != null) {
-      return normalise(cached);
-    }
-    float[] raw =
-        model.call(new EmbeddingRequest(List.of(text), null)).getResults().getFirst().getOutput();
-    cache.put(modelId, text, raw);
-    cache.commit();
-    return normalise(raw);
-  }
-
-  /** The model and digest the vectors were made with, as the report prints it. */
-  public String modelId() {
-    return modelId;
+    return normalise(embedder.question(question));
   }
 
   public int dimensions() {
@@ -150,6 +94,14 @@ public final class VectorSearch {
       sum += (double) a[i] * b[i];
     }
     return sum;
+  }
+
+  private static float[][] normalisedAll(float[][] raw) {
+    var out = new float[raw.length][];
+    for (int row = 0; row < raw.length; row++) {
+      out[row] = normalise(raw[row]);
+    }
+    return out;
   }
 
   /** A copy scaled to length one; a zero vector is left as it is, as the prototype leaves it. */
