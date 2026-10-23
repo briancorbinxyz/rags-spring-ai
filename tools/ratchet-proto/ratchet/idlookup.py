@@ -21,9 +21,18 @@ import re
 from collections import defaultdict
 
 ID_TOKEN = re.compile(r"(?<![\w-])(?P<prefix>[A-Z]+-)*[A-Z]+-?\d+(?![\w-])")
-SPEC = re.compile(r"\b(?P<spec_word>spec|specs|slice)\s+(?P<in_prose>\d{3})\b|(?<![\w-])(?P<in_slug>\d{3})-[a-z]", re.IGNORECASE)
+SPEC = re.compile(r"\b(?P<spec_word>spec|specs|slice)\s+(?P<in_prose>\d{3,})\b|(?<![\w-])(?P<in_slug>\d{3,})-[a-z]", re.IGNORECASE)
 
 _LC_ORDER = {"current": 0, "history": 1}
+
+
+def spec_of(key: str) -> str:
+    """The number of the spec a unit key belongs to: specs/045-run-budget/... is "045".
+
+    Read to the slug's first dash, not to a fixed three characters, so that a thousandth spec
+    cannot read as the hundredth. The archive is three digits wide today.
+    """
+    return key.split("/")[1].split("-")[0]
 
 
 def parse(question: str, anchors: set) -> tuple[list, list]:
@@ -64,8 +73,8 @@ class IdIndex:
         for i in ids:
             keys = self.by_anchor[i]
             if specs:
-                keys = [k for k in keys if k.split("/")[1][:3] in specs]
-            elif len({k.split("/")[1] for k in keys}) != 1:
+                keys = [k for k in keys if spec_of(k) in specs]
+            elif len({spec_of(k) for k in keys}) != 1:
                 keys = []
             out += [k for k in keys if k not in out]
 
@@ -78,6 +87,8 @@ class IdIndex:
     def items(self, key: str) -> list:
         return self.first_item.get(key, [])
 
+    # The earlier prototype's linker, reproduced verbatim for P0-P3: three digits and a [:3] read
+    # included. Fixing it here would stop it being a reproduction, so the fix lives above instead.
     _PRIOR_ID = re.compile(r"\b(?P<kind>FR|NFR|SC|D|T|US|REQ-[A-Z]+)-\d+\b")
     _PRIOR_SPEC = re.compile(r"\b(?P<spec_word>spec|specs|slice)\s+(?P<in_prose>\d{3})\b|\b(?P<in_slug>\d{3})-[a-z]")
 

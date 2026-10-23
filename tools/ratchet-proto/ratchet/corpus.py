@@ -331,7 +331,7 @@ def _links(c: Corpus, trees: dict, keys: set):
                 src = node_of(source, e)
                 for x in vals:
                     if attr == "defer-to":
-                        if re.match(r"^\d{3}-", x) and f"specs/{x}/spec.html" in pages:
+                        if re.match(r"^\d{3,}-", x) and f"specs/{x}/spec.html" in pages:
                             dst = ["p", f"specs/{x}/spec.html"]
                         else:
                             continue
