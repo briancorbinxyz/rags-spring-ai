@@ -39,6 +39,23 @@ class IdentifierLookupTest {
     }
   }
 
+  /**
+   * The archive is three digits wide, and both the pattern and {@code specOf} used to say so. A
+   * fixed three-digit read makes 1000 and 1001 the same spec, which turns "pin only if exactly one
+   * spec has this id" into pinning both.
+   */
+  @Test
+  void aSpecNumberedPastNineNinetyNineIsStillOneSpec(@TempDir Path dir) throws Exception {
+    try (var keywords =
+        KeywordSearch.of(new ElementUnits(new ElementReader(Archives.pastNineNinetyNine(dir)).get()))) {
+      var ids = new IdentifierLookup(keywords.units());
+      assertEquals(
+          List.of("specs/1000-alpha/spec.html#FR-009"), ids.lookup("What does FR-009 in spec 1000 require?"));
+      assertEquals(List.of("specs/1001-beta/spec.html#FR-009"), ids.lookup("FR-009 of 1001-beta"));
+      assertEquals(List.of(), ids.lookup("What does FR-009 require?"), "two specs have it, so neither is named");
+    }
+  }
+
   @Test
   void aNamedUnitIsPinnedAboveTheSearch(@TempDir Path dir) throws Exception {
     try (var keywords = KeywordSearch.of(new ElementUnits(new ElementReader(Archives.tiny(dir)).get()))) {

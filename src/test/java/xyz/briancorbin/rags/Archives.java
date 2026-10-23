@@ -59,6 +59,34 @@ final class Archives {
     return dir;
   }
 
+  /**
+   * Two specs numbered past 999, each holding the same id. The archive is three digits wide today,
+   * so nothing here is read from spectastic; it exists to keep the lookup honest if that changes.
+   */
+  static Path pastNineNinetyNine(Path dir) throws IOException {
+    write(
+        dir,
+        "specs/1000-alpha/spec.html",
+        """
+        <!doctype html><html><head><title>1000 Alpha</title></head><body><main>
+        <section id="requirements"><h2>Requirements</h2>
+        <ul><li id="FR-009">The alpha service MUST retry a failed upload twice.</li></ul>
+        </section>
+        </main></body></html>
+        """);
+    write(
+        dir,
+        "specs/1001-beta/spec.html",
+        """
+        <!doctype html><html><head><title>1001 Beta</title></head><body><main>
+        <section id="requirements"><h2>Requirements</h2>
+        <ul><li id="FR-009">The beta service MUST reject an upload over one gigabyte.</li></ul>
+        </section>
+        </main></body></html>
+        """);
+    return dir;
+  }
+
   private static void write(Path dir, String file, String html) throws IOException {
     Path p = dir.resolve(file);
     Files.createDirectories(p.getParent());

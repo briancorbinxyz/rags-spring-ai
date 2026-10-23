@@ -23,7 +23,8 @@ import org.springframework.ai.document.Document;
  *       {@code REQ-TOOL-001}, {@code US5}) that is also an element id somewhere in the archive.
  *       Ids are written in capitals, so this is case-sensitive: "d-001" in prose is not an id;
  *   <li>a <b>spec</b> is "spec 040", "Spec 058's" or "slice 040" in any case, or a slug like
- *       {@code 040-run-budget};
+ *       {@code 040-run-budget}. Three digits throughout the archive today, but the number is read
+ *       as written, so a thousandth spec needs nothing changed here;
  *   <li>an id with a spec names that id in that spec, on every page of it. An id with no spec
  *       names something only if exactly one spec has it.
  * </ul>
@@ -38,7 +39,7 @@ public final class IdentifierLookup {
 
   private static final Pattern SPEC =
       Pattern.compile(
-          "\\b(?<specWord>spec|specs|slice)\\s+(?<inProse>\\d{3})\\b|(?<![\\w-])(?<inSlug>\\d{3})-[a-z]",
+          "\\b(?<specWord>spec|specs|slice)\\s+(?<inProse>\\d{3,})\\b|(?<![\\w-])(?<inSlug>\\d{3,})-[a-z]",
           Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
 
   private final ElementUnits units;
@@ -121,8 +122,14 @@ public final class IdentifierLookup {
     };
   }
 
-  /** The three-digit number of the spec an address belongs to: {@code specs/045-…/…} is "045". */
+  /**
+   * The number of the spec an address belongs to, however many digits it has: {@code specs/045-…}
+   * is "045" and {@code specs/1000-…} is "1000". Read to the slug's first dash rather than to a
+   * fixed width, so that a thousandth spec cannot read as the hundredth.
+   */
   private static String specOf(String address) {
-    return address.split("/")[1].substring(0, 3);
+    String slug = address.split("/")[1];
+    int dash = slug.indexOf('-');
+    return dash < 0 ? slug : slug.substring(0, dash);
   }
 }
