@@ -35,7 +35,15 @@ public final class GoldenScorer {
   public enum Hit {
     FULL,
     PARTIAL,
-    NONE
+    NONE;
+
+    /** The better of two outcomes on the same chunk. Said out, not left to declaration order. */
+    Hit or(Hit other) {
+      if (this == FULL || other == FULL) {
+        return FULL;
+      }
+      return this == PARTIAL || other == PARTIAL ? PARTIAL : NONE;
+    }
   }
 
   /**
@@ -87,51 +95,61 @@ public final class GoldenScorer {
     return score(q.expected(), q.accept(), retrieved);
   }
 
+  /** What a question will accept as an answer: the passages it expects, and the audit's rulings. */
+  private record Wanted(List<String> expected, List<GoldenSet.Accept> accept) {}
+
   /**
    * Scores a ranked list of chunks against the expected addresses and the accepted ones. A partial
    * hit on an accepted passage counts as partial, never as a hit.
    */
   public Score score(
       List<String> expected, List<GoldenSet.Accept> accept, List<Document> retrieved) {
+    var wanted = new Wanted(expected, accept);
     Integer hit = null;
     Integer partial = null;
     Integer all = null;
-    var covered = new java.util.HashSet<String>();
-    for (int i = 0; i < retrieved.size(); i++) {
-      var chunk = retrieved.get(i);
-      for (String address : expected) {
-        Hit found = hit(address, chunk);
-        if (found == Hit.FULL) {
-          covered.add(address);
-          if (hit == null) {
-            hit = i + 1;
-          }
-        }
-        if (found != Hit.NONE && partial == null) {
-          partial = i + 1;
-        }
+    var covered = new HashSet<String>();
+    for (int rank = 0; rank < retrieved.size(); rank++) {
+      Hit best = cover(wanted, retrieved.get(rank), covered);
+      if (best == Hit.FULL && hit == null) {
+        hit = rank + 1;
       }
-      for (GoldenSet.Accept accepted : accept) {
-        Hit found = hit(accepted.address(), chunk);
-        if (found == Hit.FULL) {
-          if (accepted.wholeQuestion()) {
-            covered.addAll(expected);
-          } else if (expected.contains(accepted.forTarget())) {
-            covered.add(accepted.forTarget());
-          }
-          if (hit == null) {
-            hit = i + 1;
-          }
-        }
-        if (found != Hit.NONE && partial == null) {
-          partial = i + 1;
-        }
+      if (best != Hit.NONE && partial == null) {
+        partial = rank + 1;
       }
       if (all == null && !expected.isEmpty() && covered.containsAll(expected)) {
-        all = i + 1;
+        all = rank + 1;
       }
     }
     return new Score(hit, partial, all);
+  }
+
+  /**
+   * Notes which expected passages this chunk covers, and returns the best it managed on any of
+   * them. An accepted passage can stand for one expected passage or for the whole question, which
+   * is what the blind audit decided for it.
+   */
+  private Hit cover(Wanted wanted, Document chunk, Set<String> covered) {
+    Hit best = Hit.NONE;
+    for (String address : wanted.expected()) {
+      Hit found = hit(address, chunk);
+      if (found == Hit.FULL) {
+        covered.add(address);
+      }
+      best = best.or(found);
+    }
+    for (GoldenSet.Accept accepted : wanted.accept()) {
+      Hit found = hit(accepted.address(), chunk);
+      if (found == Hit.FULL) {
+        if (accepted.wholeQuestion()) {
+          covered.addAll(wanted.expected());
+        } else if (wanted.expected().contains(accepted.forTarget())) {
+          covered.add(accepted.forTarget());
+        }
+      }
+      best = best.or(found);
+    }
+    return best;
   }
 
   /**

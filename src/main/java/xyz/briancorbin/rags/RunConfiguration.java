@@ -72,32 +72,45 @@ class RunConfiguration {
         case "none" -> {}
         case "demo" -> log.info("Embedding demo:\n{}", new EmbeddingDemo(embedder).run());
         case "ingest" -> log.info("Archive ready: {}", corpus.open());
-        case "ask" -> {
-          corpus.open();
-          if (!question.isBlank()) {
-            print(archive.ask(question, UUID.randomUUID().toString()));
-          } else {
-            converse(archive);
-          }
-        }
-        case "golden" -> {
-          var manifest = corpus.open();
-          var questions = GoldenSet.read(golden);
-          var goldenRun = new GoldenRun(archive, new GoldenScorer(corpus.checkout()), citations);
-          var rows = goldenRun.run(questions);
-          var setup =
-              new GoldenRun.Setup(
-                  manifest,
-                  chatModel,
-                  embeddingModel,
-                  digests(ollama),
-                  GoldenRun.hash(
-                      List.of(text(answererPersona), text(quoterPersona), text(soloPersona))));
-          log.info("Baseline:\n{}", goldenRun.write(rows, setup, Path.of("build")));
-        }
+        case "ask" -> ask(corpus, archive, question);
+        case "golden" ->
+            golden(
+                corpus,
+                new GoldenRun(archive, new GoldenScorer(corpus.checkout()), citations),
+                GoldenSet.read(golden),
+                chatModel,
+                embeddingModel,
+                digests(ollama),
+                GoldenRun.hash(
+                    List.of(text(answererPersona), text(quoterPersona), text(soloPersona))));
         default -> throw new IllegalArgumentException("Unknown archive.run: " + run);
       }
     };
+  }
+
+  /** One question from the command line, or a conversation at the terminal if none was given. */
+  private static void ask(SpecCorpus corpus, Archive archive, String question) throws IOException {
+    corpus.open();
+    if (question.isBlank()) {
+      converse(archive);
+      return;
+    }
+    print(archive.ask(question, UUID.randomUUID().toString()));
+  }
+
+  /** Every golden question, scored, with the run files written beside the summary. */
+  private static void golden(
+      SpecCorpus corpus,
+      GoldenRun goldenRun,
+      List<GoldenSet.Question> questions,
+      String chatModel,
+      String embeddingModel,
+      Map<String, String> digests,
+      String promptsHash) {
+    var manifest = corpus.open();
+    var rows = goldenRun.run(questions);
+    var setup = new GoldenRun.Setup(manifest, chatModel, embeddingModel, digests, promptsHash);
+    log.info("Baseline:\n{}", goldenRun.write(rows, setup, Path.of("build")));
   }
 
   /** Questions typed at the terminal, one conversation, until an empty line. */

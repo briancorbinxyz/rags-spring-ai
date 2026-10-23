@@ -46,15 +46,14 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
       }
       cited.add(quote.get());
     }
-    return new Verdict(
-        claim,
-        Status.SUPPORTED,
-        "cites "
-            + String.join(
-                ", ",
-                cited.stream()
-                    .map(quote -> quote.label() + " (" + quote.address() + ")")
-                    .toList()));
+    return new Verdict(claim, Status.SUPPORTED, "cites " + labels(cited));
+  }
+
+  /** The quotations a claim leaned on, by label and address, in the order it cited them. */
+  private static String labels(List<Quote> cited) {
+    return cited.stream()
+        .map(quote -> quote.label() + " (" + quote.address() + ")")
+        .collect(java.util.stream.Collectors.joining(", "));
   }
 
   /** True when the reply says the answer is not in the archive and backs no claim with a quote. */

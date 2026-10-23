@@ -168,25 +168,31 @@ public final class Supersession implements Successors {
           || successors.containsKey(address)) {
         continue;
       }
-      var mark =
-          SpectasticReader.first(
-              element,
-              status ->
-                  status.normalName().equals("spec-status")
-                      && "superseded".equals(status.attr("value")));
-      if (mark == null) {
-        continue;
-      }
-      var replacement = next(page.html(), mark);
-      if (replacement == null) {
-        continue;
-      }
-      String to =
-          resolve(source, replacement.attr("href")) + "#" + fragment(replacement.attr("href"));
-      if (units.containsKey(to) && !to.equals(address)) {
+      String to = markedSuccessor(page, element, source);
+      if (to != null && units.containsKey(to) && !to.equals(address)) {
         successors.put(address, to);
       }
     }
+  }
+
+  /**
+   * Where an element marked superseded in place points: the first link after its {@code
+   * spec-status}. Null if it carries no such mark, or the mark is followed by nothing.
+   */
+  private static String markedSuccessor(Page page, Element element, String source) {
+    var mark =
+        SpectasticReader.first(
+            element,
+            status ->
+                status.normalName().equals("spec-status")
+                    && "superseded".equals(status.attr("value")));
+    if (mark == null) {
+      return null;
+    }
+    var replacement = next(page.html(), mark);
+    return replacement == null
+        ? null
+        : resolve(source, replacement.attr("href")) + "#" + fragment(replacement.attr("href"));
   }
 
   // --- helpers -------------------------------------------------------------------------------

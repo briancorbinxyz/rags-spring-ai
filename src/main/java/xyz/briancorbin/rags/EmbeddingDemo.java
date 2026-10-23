@@ -37,15 +37,18 @@ public final class EmbeddingDemo {
     // Stored text gets the document prefix, a question gets the query prefix, as in the archive.
     List<float[]> vectors =
         SENTENCES.stream().map(sentence -> embedder.embed(new Document(sentence))).toList();
-    float[] question = embedder.embed(QUESTION);
+    return shape(vectors.getFirst()) + pairs(vectors) + againstTheQuestion(vectors);
+  }
 
-    var out = new StringBuilder();
-    float[] first = vectors.getFirst();
-    out.append(
-        "\"%s\" is %d numbers. The first five: %s%n%n"
-            .formatted(
-                SENTENCES.getFirst(), first.length, Arrays.toString(Arrays.copyOf(first, 5))));
-    out.append("Cosine similarity, 1.00 = same direction:\n\n");
+  /** What one embedding looks like: how many numbers, and the first few of them. */
+  private static String shape(float[] vector) {
+    return "\"%s\" is %d numbers. The first five: %s%n%n"
+        .formatted(SENTENCES.getFirst(), vector.length, Arrays.toString(Arrays.copyOf(vector, 5)));
+  }
+
+  /** Every sentence against every other, which is what "similar" means to a model. */
+  private static String pairs(List<float[]> vectors) {
+    var out = new StringBuilder("Cosine similarity, 1.00 = same direction:\n\n");
     for (int i = 0; i < SENTENCES.size(); i++) {
       for (int j = i + 1; j < SENTENCES.size(); j++) {
         out.append(
@@ -56,7 +59,14 @@ public final class EmbeddingDemo {
                     SENTENCES.get(j)));
       }
     }
-    out.append("%nThe question \"%s\" against each sentence:%n%n".formatted(QUESTION));
+    return out.toString();
+  }
+
+  /** The question against each sentence: the same arithmetic a search does. */
+  private String againstTheQuestion(List<float[]> vectors) {
+    float[] question = embedder.embed(QUESTION);
+    var out =
+        new StringBuilder("%nThe question \"%s\" against each sentence:%n%n".formatted(QUESTION));
     for (int i = 0; i < SENTENCES.size(); i++) {
       out.append(
           "%.2f  %s%n"

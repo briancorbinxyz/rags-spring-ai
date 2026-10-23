@@ -57,10 +57,7 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
       var at = locate(quote, retrieved);
       if (at.isEmpty()) {
         // An invented quotation outweighs everything else in the claim.
-        return new Verdict(
-            claim,
-            Status.CONTRADICTED,
-            "not word for word in anything retrieved: \"%s\"".formatted(preview(quote)));
+        return notFound(claim, quote);
       }
       if (SPACE.split(quote, -1).length < MIN_WORDS) {
         tooShort = quote;
@@ -72,6 +69,13 @@ public final class QuoteResolver implements FactChecker<List<Document>> {
           claim, Status.UNSUPPORTED, "quotation too short to trace: \"%s\"".formatted(tooShort));
     }
     return new Verdict(claim, Status.SUPPORTED, "quoted from " + found.getFirst());
+  }
+
+  private static Verdict notFound(Claim claim, String quote) {
+    return new Verdict(
+        claim,
+        Status.CONTRADICTED,
+        "not word for word in anything retrieved: \"%s\"".formatted(preview(quote)));
   }
 
   /**

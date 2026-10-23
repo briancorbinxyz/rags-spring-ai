@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.SequencedMap;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
@@ -85,16 +86,7 @@ public final class RetrievalRun {
       trec.addAll(
           TrecFiles.run(
               result.question().id(), result.ranked(), step.name(), ElementRetriever.DEPTH));
-      var line = new LinkedHashMap<String, Object>();
-      line.put("step", step.name());
-      line.put("id", result.question().id());
-      line.put("stratum", result.question().stratum());
-      line.put("expected", result.question().expected());
-      line.put("first_hit", result.score().firstHit());
-      line.put("first_all", result.score().firstAll());
-      line.put("first_stale", result.firstStale());
-      line.put("top10", result.ranked().subList(0, Math.min(10, result.ranked().size())));
-      json.add(JsonMapper.shared().writeValueAsString(line));
+      json.add(JsonMapper.shared().writeValueAsString(line(step, result)));
     }
     try {
       Files.createDirectories(dir);
@@ -103,5 +95,19 @@ public final class RetrievalRun {
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  /** One question's record: what was asked for, where it was found, and the first ten results. */
+  private static SequencedMap<String, Object> line(Step step, Result result) {
+    var line = new LinkedHashMap<String, Object>();
+    line.put("step", step.name());
+    line.put("id", result.question().id());
+    line.put("stratum", result.question().stratum());
+    line.put("expected", result.question().expected());
+    line.put("first_hit", result.score().firstHit());
+    line.put("first_all", result.score().firstAll());
+    line.put("first_stale", result.firstStale());
+    line.put("top10", result.ranked().subList(0, Math.min(10, result.ranked().size())));
+    return line;
   }
 }

@@ -1,6 +1,5 @@
 package xyz.briancorbin.rags.search;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,26 +36,37 @@ public final class Rrf {
     var first = new LinkedHashMap<String, long[]>(); // id -> {list, rank}: where it first appeared
     var unit = new LinkedHashMap<String, Document>();
     for (int list = 0; list < lists.size(); list++) {
-      List<Document> ranking = lists.get(list);
-      for (int i = 0; i < ranking.size(); i++) {
-        Document doc = ranking.get(i);
-        int rank = i + 1;
-        score.merge(doc.getId(), 1.0 / (K + rank), Double::sum);
-        if (first.putIfAbsent(doc.getId(), new long[] {list, rank}) == null) {
-          unit.put(doc.getId(), doc);
-        }
+      add(lists.get(list), list, score, first, unit);
+    }
+    return score.keySet().stream()
+        .sorted(byScoreThenFirstAppearance(score, first))
+        .map(id -> ElementUnits.scored(unit.get(id), score.get(id)))
+        .toList();
+  }
+
+  /** One ranking's contribution: 1/(K + rank) for each unit, and where each was first seen. */
+  private static void add(
+      List<Document> ranking,
+      int list,
+      Map<String, Double> score,
+      Map<String, long[]> first,
+      Map<String, Document> unit) {
+    for (int i = 0; i < ranking.size(); i++) {
+      Document doc = ranking.get(i);
+      int rank = i + 1;
+      score.merge(doc.getId(), 1.0 / (K + rank), Double::sum);
+      if (first.putIfAbsent(doc.getId(), new long[] {list, rank}) == null) {
+        unit.put(doc.getId(), doc);
       }
     }
-    var ids = new ArrayList<>(score.keySet());
-    ids.sort(
-        Comparator.comparingDouble((String id) -> -score.get(id))
-            .thenComparingLong(id -> first.get(id)[0])
-            .thenComparingLong(id -> first.get(id)[1]));
-    var out = new ArrayList<Document>(ids.size());
-    for (String id : ids) {
-      out.add(ElementUnits.scored(unit.get(id), score.get(id)));
-    }
-    return out;
+  }
+
+  /** Best score first; a tie goes to whichever list saw it first, then to its rank there. */
+  private static Comparator<String> byScoreThenFirstAppearance(
+      Map<String, Double> score, Map<String, long[]> first) {
+    return Comparator.comparingDouble((String id) -> -score.get(id))
+        .thenComparingLong(id -> first.get(id)[0])
+        .thenComparingLong(id -> first.get(id)[1]);
   }
 
   /** The fused score of each unit, for a test or a report. */

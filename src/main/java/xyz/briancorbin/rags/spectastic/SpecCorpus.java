@@ -85,7 +85,8 @@ public final class SpecCorpus {
     String commit = commitOf(checkout);
     if (!expectedCommit.isBlank() && !commit.startsWith(expectedCommit)) {
       log.warn(
-          "spectastic is at {}, not the pinned {}: these numbers are a new baseline, not a comparison",
+          "spectastic is at {}, not the pinned {}: these numbers are a new baseline, not a"
+              + " comparison",
           commit,
           expectedCommit);
     }
@@ -95,13 +96,21 @@ public final class SpecCorpus {
                 commit.substring(0, 7), embeddingModel.replaceAll("[^A-Za-z0-9.-]", "_"), FORMAT);
     Path storeFile = storeDir.resolve(name + ".json");
     Path manifestFile = storeDir.resolve(name + ".manifest.json");
-    if (Files.exists(storeFile) && Files.exists(manifestFile)) {
-      store.load(storeFile.toFile());
-      Manifest manifest = read(manifestFile);
-      log.info(
-          "Loaded {} chunks from {} files ({})", manifest.chunks(), manifest.files(), storeFile);
-      return manifest;
-    }
+    return Files.exists(storeFile) && Files.exists(manifestFile)
+        ? load(storeFile, manifestFile)
+        : build(commit, storeFile, manifestFile);
+  }
+
+  /** A store built earlier for this commit and this model: read it rather than embed again. */
+  private Manifest load(Path storeFile, Path manifestFile) {
+    store.load(storeFile.toFile());
+    Manifest manifest = read(manifestFile);
+    log.info("Loaded {} chunks from {} files ({})", manifest.chunks(), manifest.files(), storeFile);
+    return manifest;
+  }
+
+  /** Read the archive, embed it, and save both the store and what it was made from. */
+  private Manifest build(String commit, Path storeFile, Path manifestFile) {
     Manifest manifest = ingest(commit);
     try {
       Files.createDirectories(storeDir);

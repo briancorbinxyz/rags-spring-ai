@@ -12,6 +12,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
@@ -125,30 +126,34 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
   }
 
   /** The model the service has loaded, or empty if it is not answering: for a test's assumption. */
-  public static java.util.Optional<String> modelAt(String baseUrl) {
+  public static Optional<String> modelAt(String baseUrl) {
     try {
-      var request =
-          HttpRequest.newBuilder(URI.create(baseUrl.replaceAll("/+$", "") + "/health"))
-              .timeout(Duration.ofSeconds(5))
-              .GET()
-              .build();
-      HttpResponse<String> response =
-          HttpClient.newBuilder()
-              .connectTimeout(Duration.ofSeconds(3))
-              .build()
-              .send(request, HttpResponse.BodyHandlers.ofString());
+      HttpResponse<String> response = health(baseUrl);
       if (response.statusCode() != 200) {
-        return java.util.Optional.empty();
+        return Optional.empty();
       }
       var parsed =
           JsonMapper.shared()
               .readValue(response.body(), new TypeReference<Map<String, Object>>() {});
-      return java.util.Optional.ofNullable((String) parsed.get("model"));
-    } catch (IOException | InterruptedException | RuntimeException e) {
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
-      return java.util.Optional.empty();
+      return Optional.ofNullable((String) parsed.get("model"));
+    } catch (IOException | RuntimeException e) {
+      return Optional.empty();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Optional.empty();
     }
+  }
+
+  private static HttpResponse<String> health(String baseUrl)
+      throws IOException, InterruptedException {
+    var request =
+        HttpRequest.newBuilder(URI.create(baseUrl.replaceAll("/+$", "") + "/health"))
+            .timeout(Duration.ofSeconds(5))
+            .GET()
+            .build();
+    return HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(3))
+        .build()
+        .send(request, HttpResponse.BodyHandlers.ofString());
   }
 }

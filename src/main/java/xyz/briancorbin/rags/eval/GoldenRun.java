@@ -147,30 +147,31 @@ public final class GoldenRun {
 
   Row row(Question question, Archive.Ruling ruling) {
     List<Document> top = ruling.retrieved().subList(0, Math.min(K, ruling.retrieved().size()));
-    Score score = scorer.score(question, top);
-    Double verified =
-        ruling.mode() == Archive.Mode.QUOTED
-            ? new QuoteResolver.Resolution(ruling.quoter().verdicts(), ruling.quotes())
-                .verifiedShare()
-            : null;
-    boolean staleRetrieved = anyStaleAmong(question, top);
-    var cited = citedBy(ruling);
-    boolean staleCited = anyStaleQuotedIn(question, cited);
-    boolean staleFlagged =
-        ruling
-            .answerer()
-            .said()
-            .map(reply -> FLAGS_STALE.matcher(reply.answer()).find())
-            .orElse(false);
     return new Row(
         question,
         ruling,
-        score,
-        verified,
+        scorer.score(question, top),
+        verifiedShare(ruling),
         Tally.of(ruling.answerer().verdicts()),
-        staleRetrieved,
-        staleCited,
-        staleFlagged);
+        anyStaleAmong(question, top),
+        anyStaleQuotedIn(question, citedBy(ruling)),
+        flagsStale(ruling));
+  }
+
+  /** How much of what the quoter offered traced word for word; nothing to share in direct mode. */
+  private static Double verifiedShare(Archive.Ruling ruling) {
+    return ruling.mode() == Archive.Mode.QUOTED
+        ? new QuoteResolver.Resolution(ruling.quoter().verdicts(), ruling.quotes()).verifiedShare()
+        : null;
+  }
+
+  /** Whether the answer says, in words, that what it found is out of date. A heuristic, said so. */
+  private static boolean flagsStale(Archive.Ruling ruling) {
+    return ruling
+        .answerer()
+        .said()
+        .map(said -> FLAGS_STALE.matcher(said.answer()).find())
+        .orElse(false);
   }
 
   private static int value(Integer i) {
