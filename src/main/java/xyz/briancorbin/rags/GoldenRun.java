@@ -46,7 +46,7 @@ public final class GoldenRun {
 
   /** Words that mark an answer as knowing its source is out of date. A heuristic, said so. */
   private static final Pattern FLAGS_STALE =
-      Pattern.compile("(?i)\\b(withdrawn|superseded|no longer|retired|archived|was proposed)\\b");
+      Pattern.compile("(?i)\\b(?<staleWord>withdrawn|superseded|no longer|retired|archived|was proposed)\\b");
 
   /** What the run was measured on. */
   public record Setup(

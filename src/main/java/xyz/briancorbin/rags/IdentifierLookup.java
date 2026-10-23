@@ -32,11 +32,11 @@ import org.springframework.ai.document.Document;
 public final class IdentifierLookup {
 
   private static final Pattern ID =
-      Pattern.compile("(?<![\\w-])(?:[A-Z]+-)*[A-Z]+-?\\d+(?![\\w-])", Pattern.UNICODE_CHARACTER_CLASS);
+      Pattern.compile("(?<![\\w-])(?<prefix>[A-Z]+-)*[A-Z]+-?\\d+(?![\\w-])", Pattern.UNICODE_CHARACTER_CLASS);
 
   private static final Pattern SPEC =
       Pattern.compile(
-          "\\b(?:spec|specs|slice)\\s+(?<inProse>\\d{3})\\b|(?<![\\w-])(?<inSlug>\\d{3})-[a-z]",
+          "\\b(?<specWord>spec|specs|slice)\\s+(?<inProse>\\d{3})\\b|(?<![\\w-])(?<inSlug>\\d{3})-[a-z]",
           Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS);
 
   private final ElementUnits units;

@@ -75,7 +75,7 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
 
   /** Accepts "Q2", "q2" and "[Q2]"; nothing looser. */
   private static Optional<Quote> find(String source, List<Quote> given) {
-    String label = source.strip().replaceAll("^\\[(.*)]$", "$1").toUpperCase(Locale.ROOT);
+    String label = source.strip().replaceAll("^\\[(?<label>.*)]$", "${label}").toUpperCase(Locale.ROOT);
     return given.stream().filter(q -> q.label().equals(label)).findFirst();
   }
 }
