@@ -91,6 +91,12 @@ spotless {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Let -Dspectastic.path=… and friends reach the test JVM, so a worktree can point at the
+    // checkout it is measuring rather than assuming a sibling directory. Without this the ratchet
+    // tests skip silently, which is a bad way to pass.
+    for (name in listOf("spectastic.path", "vectors.cache", "ollama.url", "rerank.url")) {
+        System.getProperty(name)?.let { systemProperty(name, it) }
+    }
     // sqlite-jdbc loads its native library; say so, rather than be warned about it.
     jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
