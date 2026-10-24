@@ -1,11 +1,11 @@
 # Ratchet prototype: llamacpp:qwen3-embedding-8b-q8_0
 
-Run 2026-10-23 21:50 · spectastic c64d41c · 10,540 element units in 11,492 items (units over 250 words split into parts) · 10,540 prior-prototype units · 2,147 naive chunks
+Run 2026-10-24 19:47 · spectastic c64d41c · 10,540 element units in 11,492 items (units over 250 words split into parts) · 10,540 prior-prototype units · 2,147 naive chunks
 
 - Embedder: llama.cpp Qwen/Qwen3-Embedding-8B-GGUF:Q8_0 as `qwen3-embedding-8b-q8_0` (pooling last); file /home/briancorbin/.cache/huggingface/hub/models--Qwen--Qwen3-Embedding-8B-GGUF/snapshots/69d0e58a13e463cd99a9b83e3f5fee7c10265fab/Qwen3-Embedding-8B-Q8_0.gguf; sha256 d20ddc71e8a5c4344f2343481e242233a997dc5eaff442427a945836c97b4deb; 7567295488 params, n_embd 4096, n_ctx_train 40960; slot context 2048; server build b11832-643b0cdac; queries as 'Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery:{text}', documents as '{text}'; <|endoftext|> added by the GGUF's tokenizer (add_eos_token); inputs must fit 2048 tokens (checked, never truncated)
 - Reranker: llama.cpp ethicalabs/Qwen3-Reranker-8B-GGUF:Q8_0 as `qwen3-reranker-8b-q8_0` (pooling rank); file /home/briancorbin/.cache/huggingface/hub/models--ethicalabs--Qwen3-Reranker-8B-GGUF/snapshots/a521f5253a5c8c6e390af5458fdb736274127052/Qwen3-Reranker-8B.Q8_0.gguf; sha256 2f63dc6f2aa0b1f2b8f92004754049fe7c63954a9e6e856dc262c376d4e2cd26; 7567320064 params, n_embd 4096, n_ctx_train 40960; slot context 2048; server build b11832-643b0cdac; sanity pair 0.9571 > 1.17e-05; query + passage must fit 2048 tokens (refused, never truncated)
 - Context tokens: cl100k_base via tiktoken (SHA-256 checked); counted over the text given to a reader (heading path + unit text, or the chunk)
-- Golden set: src/main/resources/golden/questions.jsonl (answerable 47, unanswerable 6); run time 70 s
+- Golden set: src/main/resources/golden/questions.jsonl (answerable 47, unanswerable 6); run time 71 s
 
 ## Episode 4 main line and Episode 5 (cumulative)
 
@@ -13,10 +13,10 @@ Each row adds one step to the row above. Verdict against the previous row that r
 
 | key | configuration | Hit@4 | Partial@4 | MRR@50 | all@4 | all@10 | stale@4 | ctx tokens mean / max | verdict | won / lost at Hit@4 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S3 | 3 + lifecycle filter | 32/47 (68%) | – | 0.609 | 26 | 32 | 1 | 531 / 1227 | (start) |  |
-| S4 | 4 + dense, RRF k=60 | 37/47 (79%) | – | 0.704 | 34 | 37 | 1 | 581 / 1164 | **pass** (vs S3) | +6 G-006 G-016 G-018 G-020 G-079 G-081 / −1 G-036 |
-| S5 | 5 + cross-encoder rerank top 50 | 44/47 (94%) | – | 0.860 | 40 | 41 | 1 | 638 / 1371 | **pass** (vs S4) | +8 G-007 G-011 G-012 G-014 G-015 G-017 G-036 G-078 / −1 G-029 |
-| E5-1 | E5-1 + supersession redirect (superseded history dropped) | 44/47 (94%) | – | 0.870 | 40 | 41 | 0 | 635 / 1371 | **pass** (vs S5) | +0 / −0 |
+| S3 | 3 + lifecycle filter | 32/47 (68%) | – | 0.609 | 26 | 33 | 1 | 531 / 1227 | (start) |  |
+| S4 | 4 + dense, RRF k=60 | 37/47 (79%) | – | 0.704 | 35 | 38 | 1 | 581 / 1164 | **pass** (vs S3) | +6 G-006 G-016 G-018 G-020 G-079 G-081 / −1 G-036 |
+| S5 | 5 + cross-encoder rerank top 50 | 44/47 (94%) | – | 0.860 | 40 | 42 | 1 | 638 / 1371 | **pass** (vs S4) | +8 G-007 G-011 G-012 G-014 G-015 G-017 G-036 G-078 / −1 G-029 |
+| E5-1 | E5-1 + supersession redirect (superseded history dropped) | 44/47 (94%) | – | 0.870 | 40 | 42 | 0 | 635 / 1371 | **pass** (vs S5) | +0 / −0 |
 
 ## Episode 5 on the BM25 line (no embedder involved)
 
@@ -24,32 +24,32 @@ The same two Episode 5 steps on top of step 3, so their effect can be read witho
 
 | key | configuration | Hit@4 | Partial@4 | MRR@50 | all@4 | all@10 | stale@4 | ctx tokens mean / max | verdict | won / lost at Hit@4 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S3 | 3 + lifecycle filter | 32/47 (68%) | – | 0.609 | 26 | 32 | 1 | 531 / 1227 | (start) |  |
-| X1 | S3 + supersession redirect (superseded history dropped) | 32/47 (68%) | – | 0.630 | 26 | 32 | 0 | 536 / 1227 | **pass** (vs S3) | +0 / −0 |
+| S3 | 3 + lifecycle filter | 32/47 (68%) | – | 0.609 | 26 | 33 | 1 | 531 / 1227 | (start) |  |
+| X1 | S3 + supersession redirect (superseded history dropped) | 32/47 (68%) | – | 0.630 | 26 | 33 | 0 | 536 / 1227 | **pass** (vs S3) | +0 / −0 |
 
 ## Variants, epilogue and ablations
 
 | key | configuration | Hit@4 | Partial@4 | MRR@50 | all@4 | all@10 | stale@4 | ctx tokens mean / max |
 |---|---|---|---|---|---|---|---|---|
-| E5-1b | variant: redirect keeps applied history behind its successor (Episode 4's first rule) | 44/47 (94%) | – | 0.870 | 40 | 41 | 1 | 638 / 1371 |
-| X1b | variant: X1 with the keeping redirect | 32/47 (68%) | – | 0.630 | 26 | 32 | 0 | 535 / 1227 |
-| H1 | S3 + redirect + dense RRF (no reranker) | 37/47 (79%) | – | 0.715 | 34 | 37 | 0 | 574 / 1152 |
-| H1b | variant: H1 with the keeping redirect | 37/47 (79%) | – | 0.715 | 34 | 37 | 0 | 581 / 1164 |
+| E5-1b | variant: redirect keeps applied history behind its successor (Episode 4's first rule) | 44/47 (94%) | – | 0.870 | 40 | 42 | 1 | 638 / 1371 |
+| X1b | variant: X1 with the keeping redirect | 32/47 (68%) | – | 0.630 | 26 | 33 | 0 | 535 / 1227 |
+| H1 | S3 + redirect + dense RRF (no reranker) | 37/47 (79%) | – | 0.715 | 35 | 38 | 0 | 574 / 1152 |
+| H1b | variant: H1 with the keeping redirect | 37/47 (79%) | – | 0.715 | 35 | 38 | 0 | 581 / 1164 |
 | EP3 | Episode 3 run replayed (its real nomic top-4, rescored here) | 10/41 (24%) | 14 | 0.173 (@4) | 9 | 9 | 1 | 2809 / 3172 |
 
 ## Per stratum: Hit@4 · all@4 · all@10
 
 | key | single-fact (10) | paraphrase (10) | identifier (8) | relation (7) | stale (7) | intent (5) | stale@4 |
 |---|---|---|---|---|---|---|---|
-| S3 | 8 · 7 · 7 | 2 · 2 · 5 | 8 · 8 · 8 | 6 · 1 · 3 | 7 · 7 · 7 | 1 · 1 · 2 | 1 |
-| S4 | 9 · 8 · 8 | 5 · 5 · 8 | 8 · 8 · 8 | 5 · 3 · 3 | 7 · 7 · 7 | 3 · 3 · 3 | 1 |
-| S5 | 10 · 9 · 9 | 10 · 10 · 10 | 8 · 8 · 8 | 5 · 2 · 3 | 7 · 7 · 7 | 4 · 4 · 4 | 1 |
-| E5-1 | 10 · 9 · 9 | 10 · 10 · 10 | 8 · 8 · 8 | 5 · 2 · 3 | 7 · 7 · 7 | 4 · 4 · 4 | 0 |
-| E5-1b | 10 · 9 · 9 | 10 · 10 · 10 | 8 · 8 · 8 | 5 · 2 · 3 | 7 · 7 · 7 | 4 · 4 · 4 | 1 |
-| X1 | 8 · 7 · 7 | 2 · 2 · 5 | 8 · 8 · 8 | 6 · 1 · 3 | 7 · 7 · 7 | 1 · 1 · 2 | 0 |
-| X1b | 8 · 7 · 7 | 2 · 2 · 5 | 8 · 8 · 8 | 6 · 1 · 3 | 7 · 7 · 7 | 1 · 1 · 2 | 0 |
-| H1 | 9 · 8 · 8 | 5 · 5 · 8 | 8 · 8 · 8 | 5 · 3 · 3 | 7 · 7 · 7 | 3 · 3 · 3 | 0 |
-| H1b | 9 · 8 · 8 | 5 · 5 · 8 | 8 · 8 · 8 | 5 · 3 · 3 | 7 · 7 · 7 | 3 · 3 · 3 | 0 |
+| S3 | 8 · 7 · 8 | 2 · 2 · 5 | 8 · 8 · 8 | 6 · 1 · 3 | 7 · 7 · 7 | 1 · 1 · 2 | 1 |
+| S4 | 9 · 9 · 9 | 5 · 5 · 8 | 8 · 8 · 8 | 5 · 3 · 3 | 7 · 7 · 7 | 3 · 3 · 3 | 1 |
+| S5 | 10 · 9 · 10 | 10 · 10 · 10 | 8 · 8 · 8 | 5 · 2 · 3 | 7 · 7 · 7 | 4 · 4 · 4 | 1 |
+| E5-1 | 10 · 9 · 10 | 10 · 10 · 10 | 8 · 8 · 8 | 5 · 2 · 3 | 7 · 7 · 7 | 4 · 4 · 4 | 0 |
+| E5-1b | 10 · 9 · 10 | 10 · 10 · 10 | 8 · 8 · 8 | 5 · 2 · 3 | 7 · 7 · 7 | 4 · 4 · 4 | 1 |
+| X1 | 8 · 7 · 8 | 2 · 2 · 5 | 8 · 8 · 8 | 6 · 1 · 3 | 7 · 7 · 7 | 1 · 1 · 2 | 0 |
+| X1b | 8 · 7 · 8 | 2 · 2 · 5 | 8 · 8 · 8 | 6 · 1 · 3 | 7 · 7 · 7 | 1 · 1 · 2 | 0 |
+| H1 | 9 · 9 · 9 | 5 · 5 · 8 | 8 · 8 · 8 | 5 · 3 · 3 | 7 · 7 · 7 | 3 · 3 · 3 | 0 |
+| H1b | 9 · 9 · 9 | 5 · 5 · 8 | 8 · 8 · 8 | 5 · 3 · 3 | 7 · 7 · 7 | 3 · 3 · 3 | 0 |
 | EP3 | 5 · 5 · 5 | 2 · 2 · 2 | 1 · 1 · 1 | 1 · 0 · 0 | 1 · 1 · 1 | 0 · 0 · 0 | 1 |
 
 ## Checks against Episode 3 and the earlier prototype
