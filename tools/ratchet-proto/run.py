@@ -103,6 +103,42 @@ def load_golden(path: Path) -> list:
     return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
+ROUNDS = [
+    REPO / "results/episode-4/golden-audit-2026-10.jsonl",
+    REPO / "results/episode-5/golden-audit-round3.jsonl",
+]
+ACCEPTED = {"whole", "standin"}
+
+
+def fold_audit(golden: list, rounds: list) -> int:
+    """Adds what the blind audit accepted to the passages each question already accepts.
+
+    The golden set is frozen, so a round that lands after the freeze cannot be written back into
+    it: Episode 4's acceptances are in questions.jsonl, every round since is only in its own file.
+    A passage a question already accepts is left alone, so folding Episode 4's round again changes
+    nothing. The same rule as `BlindAudit.fold` on the Java side."""
+    by_id = {q["id"]: q for q in golden}
+    added = 0
+    for path in rounds:
+        if not Path(path).exists():
+            continue
+        for line in Path(path).read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            decision = json.loads(line)
+            q = by_id.get(decision["id"])
+            if q is None or decision["decision"] not in ACCEPTED:
+                continue
+            accept = q.get("accept") or []
+            q["accept"] = accept
+            if any(a["address"] == decision["candidate"] for a in accept):
+                continue
+            accept.append({"address": decision["candidate"],
+                           "for": decision.get("for") or "question"})
+            added += 1
+    return added
+
+
 def element_texts(root: Path, addresses: set) -> dict:
     """GoldenScorer.elementText: normalised jsoup text of the first element with that id."""
     out, trees = {}, {}
@@ -132,6 +168,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--spectastic", default=str(REPO.parent / "spectastic"), help="spectastic checkout (default ../spectastic)")
     ap.add_argument("--golden", default=str(REPO / "src/main/resources/golden/questions.jsonl"))
+    ap.add_argument("--audit", nargs="*", default=[str(p) for p in ROUNDS],
+                    help="blind-audit rounds whose acceptances count; empty for the frozen set alone")
     ap.add_argument("--embedder", default="wordllama", help="wordllama | ollama:<model> | llamacpp:<alias> | none")
     ap.add_argument("--reranker", default="none",
                     help="e.g. cross-encoder/ms-marco-MiniLM-L-6-v2 or llamacpp:<alias>")
@@ -152,6 +190,9 @@ def main():
     if not (root / "specs").is_dir():
         raise SystemExit(f"no spectastic checkout at {root} (git clone --branch v0.1.0-pre.28 ...)")
     golden = load_golden(Path(args.golden))
+    folded = fold_audit(golden, [Path(a) for a in args.audit])
+    if folded:
+        print(f"blind audit: {folded} accepted passage(s) folded in", file=sys.stderr)
     commits = {q["commit"] for q in golden}
     enc = T.load(args.cl100k_file)
     print(f"tokenizer: {T.how()}", file=sys.stderr)

@@ -279,7 +279,8 @@ information retrieval's own tools instead of trusting ours:
 - `src/main/resources/golden/qrels.txt`: one judgment per line, `question 0 passage relevance`.
   1 is an expected passage or one the blind audit accepted; 0 is a stale record or an audit
   decision of "partly" or "doesn't answer it". Regenerate it after any change to the golden set:
-  `python3 -m ratchet.trec ../../src/main/resources/golden/questions.jsonl ../../results/episode-4/golden-audit-2026-10.jsonl ../../src/main/resources/golden/qrels.txt` (from `tools/ratchet-proto`).
+  `python3 -m ratchet.trec ../../src/main/resources/golden/questions.jsonl ../../results/episode-4/golden-audit-2026-10.jsonl ../../results/episode-5/golden-audit-round3.jsonl ../../src/main/resources/golden/qrels.txt` (from `tools/ratchet-proto`).
+  Every argument between the questions and the output is a round of the audit, in order.
 - `run.py` writes `<out>.<config>.run` for every element-unit configuration: `question Q0 passage rank score run-name`,
   the top 10, each passage once (a split unit's later parts are dropped, or the scorer would keep the later rank).
   Naive-chunk configurations (A, B, EP3) are left out: their passages are chunks, which the qrels don't judge.

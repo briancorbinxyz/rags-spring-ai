@@ -66,13 +66,26 @@ def load_jsonl(path: Path) -> list:
     return [json.loads(l) for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
-def write_qrels(questions_path: Path, audit_path: Path, out: Path) -> int:
-    lines = qrels_lines(load_jsonl(questions_path), load_jsonl(audit_path) if Path(audit_path).exists() else [])
+def write_qrels(questions_path: Path, audit_paths, out: Path) -> int:
+    """Qrels from the golden set and every round of the audit.
+
+    A round is a file of its own, so a later one is added by naming it rather than by appending to
+    a round that has already shipped. Rounds are read in the order given, and where two judge the
+    same passage the first one named wins, as ``qrels_lines`` does throughout. A single path is
+    still accepted, as the one-round call sites pass."""
+    if isinstance(audit_paths, (str, Path)):
+        audit_paths = [audit_paths]
+    audit = []
+    for path in audit_paths:
+        if Path(path).exists():
+            audit.extend(load_jsonl(path))
+    lines = qrels_lines(load_jsonl(questions_path), audit)
     Path(out).write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     return len(lines)
 
 
-if __name__ == "__main__":  # python3 -m ratchet.trec questions.jsonl audit.jsonl qrels.txt
+if __name__ == "__main__":  # python3 -m ratchet.trec questions.jsonl audit.jsonl [...] qrels.txt
     import sys
 
-    print(write_qrels(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])), "judgments")
+    print(write_qrels(Path(sys.argv[1]), [Path(a) for a in sys.argv[2:-1]], Path(sys.argv[-1])),
+          "judgments")
