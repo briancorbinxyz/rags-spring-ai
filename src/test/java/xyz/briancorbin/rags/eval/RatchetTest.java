@@ -55,7 +55,7 @@ class RatchetTest {
     assumeTrue(
         SpecCorpus.commitOf(checkout).equals(COMMIT), "the golden set is frozen at " + COMMIT);
 
-    questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));
+    questions = BlindAudit.audited(GoldenSet.read(new ClassPathResource("golden/questions.jsonl")));
     keywords =
         KeywordSearch.of(
             new ElementUnits(new SpectasticReader(checkout).get(), Lifecycle::of),

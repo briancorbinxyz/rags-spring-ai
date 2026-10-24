@@ -130,6 +130,10 @@ def page(items: list, round_number: int) -> str:
     padding: 1rem 1.1rem; margin: 1rem 0; box-shadow: var(--shadow); }}
   .label {{ font-size: .72rem; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); margin-bottom: .35rem; }}
   .q {{ font-size: 1.1rem; font-weight: 600; }}
+  .ask {{ flex: 1 0 100%; max-height: 34vh; overflow: auto; margin-top: .55rem;
+    padding-top: .55rem; border-top: 1px solid var(--line); }}
+  .ask .q {{ font-size: 1rem; }}
+  .ask .core {{ color: var(--muted); font-size: .93rem; margin-top: .3rem; }}
   .addr {{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem;
     color: var(--accent); word-break: break-all; }}
   .passage {{ white-space: pre-wrap; max-height: 24rem; overflow-y: auto; }}
@@ -156,6 +160,8 @@ def page(items: list, round_number: int) -> str:
     <b id="count"></b><div class="track"><div id="fill"></div></div>
     <small id="where"></small>
     <small class="hint">u undo · s skip</small>
+    <button id="sofar" class="primary" style="margin-left:auto">Download so far</button>
+    <div class="ask" id="ask"></div>
   </div>
   <div id="app"></div>
 </div>
@@ -164,6 +170,29 @@ const ITEMS = {data};
 const ROUND = {round_number};
 const DECIDED = [];
 let at = 0;
+
+/** Judgements are hand work: they survive a reload, and can be taken out part-way. */
+const KEY = "blind-audit-" + ROUND + "-" + ITEMS.length;
+function remember() {{
+  try {{ localStorage.setItem(KEY, JSON.stringify({{at: at, decided: DECIDED}})); }} catch (e) {{}}
+}}
+(function recall() {{
+  try {{
+    const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (saved && Array.isArray(saved.decided) && saved.decided.length) {{
+      DECIDED.push(...saved.decided);
+      at = Math.min(saved.at || 0, ITEMS.length);
+    }}
+  }} catch (e) {{}}
+}})();
+
+function asJsonl() {{ return DECIDED.map(d => JSON.stringify(d)).join("\\n") + "\\n"; }}
+function download() {{
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([asJsonl()], {{type: "application/json"}}));
+  a.download = `golden-audit-round${{ROUND}}.jsonl`;
+  a.click();
+}}
 
 const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;"}}[c]));
 
@@ -184,32 +213,30 @@ function render() {{
   document.getElementById("fill").style.width = (100 * at / ITEMS.length) + "%";
   if (at >= ITEMS.length) {{
     document.getElementById("where").textContent = "";
+    document.getElementById("ask").innerHTML = "";
     app.innerHTML = `<div class="done"><h2>All ${{ITEMS.length}} judged.</h2>
       <p class="hint">Save this as <code>golden-audit-round${{ROUND}}.jsonl</code> in <code>results/</code>.</p>
       <p><button class="primary" id="dl">Download .jsonl</button>
          <button class="primary" id="cp">Copy</button></p>
       <pre class="out" id="out"></pre></div>`;
-    const text = DECIDED.map(d => JSON.stringify(d)).join("\\n") + "\\n";
+    const text = asJsonl();
     document.getElementById("out").textContent = text;
     document.getElementById("cp").onclick = () => navigator.clipboard.writeText(text);
-    document.getElementById("dl").onclick = () => {{
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([text], {{type: "application/json"}}));
-      a.download = `golden-audit-round${{ROUND}}.jsonl`;
-      a.click();
-    }};
+    document.getElementById("dl").onclick = download;
     return;
   }}
   const it = ITEMS[at];
   document.getElementById("where").textContent = `${{it.stratum}}`;
+  document.getElementById("ask").innerHTML =
+    `<div class="q">${{esc(it.question)}}</div>` +
+    (it.core ? `<div class="core">${{esc(it.core)}}</div>` : "");
   app.innerHTML = `
     <div class="card">
-      <div class="label">Question</div><div class="q">${{esc(it.question)}}</div>
-    </div>
-    <div class="card">
-      <div class="label">The answer it should give</div><div>${{esc(it.core)}}</div>
-      <div class="label" style="margin-top:.8rem">Expected passage${{it.expected.length > 1 ? "s" : ""}}</div>
-      ${{it.expected.map(e => `<div class="addr">${{esc(e)}}</div>`).join("")}}
+      <div class="label">Expected passage${{it.expected.length > 1 ? "s" : ""}}</div>
+      ${{(it.expected_full || []).map(e =>
+          `<div class="addr">${{esc(e.address)}}</div>` +
+          (e.text ? `<div class="passage">${{highlight(e.text, it.core)}}</div>` : "")
+        ).join("")}}
     </div>
     <div class="card">
       <div class="label">Candidate — does this passage answer the question?</div>
@@ -229,6 +256,7 @@ function record(decision, forWhich) {{
   if (note) row.note = note;
   DECIDED.push(row);
   at++;
+  remember();
   render();
 }}
 
@@ -238,7 +266,10 @@ function standin() {{
   if (it.expected.length === 1) return record("standin", it.expected[0]);
   document.getElementById("choice").innerHTML =
     `<div class="label">Stands in for which expected passage?</div><div class="standin">` +
-    it.expected.map((e, i) => `<button data-e="${{esc(e)}}"><kbd>${{i + 1}}</kbd> ${{esc(e)}}</button>`).join("") +
+    (it.expected_full || []).map((e, i) =>
+      `<button data-e="${{esc(e.address)}}"><kbd>${{i + 1}}</kbd> ${{esc(e.address)}}` +
+      (e.text ? `<small style="display:block;margin-top:.35rem;color:var(--muted);font-weight:400">${{esc(e.text.slice(0, 500))}}${{e.text.length > 500 ? "…" : ""}}</small>` : "") +
+      `</button>`).join("") +
     `</div>`;
   document.querySelectorAll(".standin button").forEach(b =>
     b.onclick = () => record("standin", b.dataset.e));
@@ -250,9 +281,10 @@ document.addEventListener("keydown", e => {{
   else if (e.key === "2") standin();
   else if (e.key === "3") record("partly");   // counts for nothing, on purpose
   else if (e.key === "4") record("no");
-  else if (e.key === "s") {{ at++; render(); }}
-  else if (e.key === "u" && DECIDED.length) {{ DECIDED.pop(); at--; render(); }}
+  else if (e.key === "s") {{ at++; remember(); render(); }}
+  else if (e.key === "u" && DECIDED.length) {{ DECIDED.pop(); at--; remember(); render(); }}
 }});
+document.getElementById("sofar").onclick = download;
 render();
 </script>
 """
@@ -266,6 +298,8 @@ def main():
     ap.add_argument("--qrels", default="src/main/resources/golden/qrels.txt")
     ap.add_argument("--corpus", default="tools/ratchet-proto/cache/corpus-*units-v1-ep4-p250.json")
     ap.add_argument("--round", type=int, required=True, help="the audit round, written into every decision")
+    ap.add_argument("--done", nargs="*", default=[],
+                    help="decision files already written: those candidates are left out of the pack")
     ap.add_argument("--all", action="store_true",
                     help="keep questions a run already has full marks on (raises Judged@4, cannot change Hit@4)")
     ap.add_argument("--out", default="build/audit/audit.html")
@@ -286,6 +320,18 @@ def main():
     print(f"read {len(rows)} run-question rows from {len(args.runs)} file(s)")
 
     found = candidates(rows, golden, judged, args.all)
+
+    already = set()
+    for path in args.done:
+        for line in Path(path).read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                decision = json.loads(line)
+                already.add((decision["id"], decision["candidate"]))
+    if already:
+        kept = {q: [a for a in v if (q, a) not in already] for q, v in found.items()}
+        found = {q: v for q, v in kept.items() if v}
+        print(f"  already judged, left out of this pack: {len(already)}")
+
     items = []
     for qid, addresses in found.items():
         q = golden[qid]
@@ -294,6 +340,15 @@ def main():
             items.append({
                 "id": qid, "stratum": q["stratum"], "question": q["question"],
                 "core": q.get("core") or "", "expected": q.get("expected") or [],
+                # A stand-in decision is "this one does the job of that one", which cannot be made
+                # against an address. The expected passage travels with its text.
+                "expected_full": [
+                    {"address": e,
+                     "text": (passages.get(e) or {}).get("text", "(passage text not in the corpus cache)"),
+                     "path": (passages.get(e) or {}).get("path", ""),
+                     "lifecycle": (passages.get(e) or {}).get("lifecycle", "")}
+                    for e in (q.get("expected") or [])
+                ],
                 "candidate": address, "path": p.get("path", ""), "lifecycle": p.get("lifecycle", ""),
                 "parts": p.get("parts", 1), "text": p.get("text", "(passage text not in the corpus cache)"),
             })

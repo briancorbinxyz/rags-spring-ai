@@ -4,13 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.ClassPathResource;
+import xyz.briancorbin.rags.eval.BlindAudit.Decision;
 import xyz.briancorbin.rags.eval.GoldenSet.Accept;
 import xyz.briancorbin.rags.eval.GoldenSet.Question;
-import xyz.briancorbin.rags.eval.TrecFiles.Decision;
 
 class TrecFilesTest {
 
@@ -54,10 +53,10 @@ class TrecFilesTest {
   /// wins, so the audit does not get to overrule the question.
   private static List<Decision> anAuditThatAlsoNamesAPassageTheQuestionCallsStale() {
     return List.of(
-        new Decision("G-001", "z#9", "no"),
-        new Decision("G-001", "e#3", "standin"),
-        new Decision("G-001", "f#4", "partly"),
-        new Decision("G-002", "a#old", "whole"));
+        new Decision("G-001", "z#9", "no", null),
+        new Decision("G-001", "e#3", "standin", "a#1"),
+        new Decision("G-001", "f#4", "partly", null),
+        new Decision("G-002", "a#old", "whole", null));
   }
 
   @Test
@@ -83,7 +82,7 @@ class TrecFilesTest {
   @Test
   void theShippedQrelsMatchTheGoldenSetAndTheAudit() throws IOException {
     var questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));
-    var audit = TrecFiles.readAudit(Path.of("results/episode-4/golden-audit-2026-10.jsonl"));
+    var audit = BlindAudit.read(BlindAudit.ROUNDS);
     var shipped =
         new String(
             new ClassPathResource("golden/qrels.txt").getInputStream().readAllBytes(),

@@ -1,6 +1,5 @@
 package xyz.briancorbin.rags.eval;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.SequencedMap;
-import tools.jackson.databind.json.JsonMapper;
+import xyz.briancorbin.rags.eval.BlindAudit.Decision;
 import xyz.briancorbin.rags.eval.GoldenSet.Question;
 
 /// The golden set as a TREC test collection, so our numbers can be checked with information
@@ -33,15 +32,6 @@ import xyz.briancorbin.rags.eval.GoldenSet.Question;
 ///
 /// The same rules, and byte-for-byte the same qrels, as `tools/ratchet-proto/ratchet/trec.py`.
 public final class TrecFiles {
-
-  /// One blind-audit decision: `whole`, `standin`, `partly` or `no`.
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public record Decision(String id, String candidate, String decision) {
-
-    boolean accepted() {
-      return "whole".equals(decision) || "standin".equals(decision);
-    }
-  }
 
   private TrecFiles() {}
 
@@ -107,21 +97,6 @@ public final class TrecFiles {
       }
     }
     return lines;
-  }
-
-  /// Reads the audit decisions, one JSON object per line.
-  public static List<Decision> readAudit(Path file) {
-    try {
-      var out = new ArrayList<Decision>();
-      for (String line : Files.readAllLines(file, StandardCharsets.UTF_8)) {
-        if (!line.isBlank()) {
-          out.add(JsonMapper.shared().readValue(line, Decision.class));
-        }
-      }
-      return out;
-    } catch (IOException e) {
-      throw new UncheckedIOException("Cannot read the audit " + file, e);
-    }
   }
 
   /// Writes lines with a trailing newline, as the scorers expect.

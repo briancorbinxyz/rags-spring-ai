@@ -85,7 +85,7 @@ class Episode5RatchetTest {
   static void theArchiveAndTheEmbeddingsAreReady() {
     Path checkout = frozenCheckout();
     String modelId = OllamaModel.id(MODEL, measuredModel());
-    questions = GoldenSet.read(new ClassPathResource("golden/questions.jsonl"));
+    questions = BlindAudit.audited(GoldenSet.read(new ClassPathResource("golden/questions.jsonl")));
     keywords =
         KeywordSearch.of(
             new ElementUnits(new SpectasticReader(checkout).get(), Lifecycle::of),
@@ -140,7 +140,7 @@ class Episode5RatchetTest {
 
     assertThatStepSixIsWhatTheArticlePrints(six);
     assertEquals(
-        List.of("Hit@4 36→32", "all-evidence@4 33→28", "single-fact 9→7", "paraphrase 6→3"),
+        List.of("Hit@4 36→32", "all-evidence@4 33→29", "single-fact 9→7", "paraphrase 6→3"),
         Ratchet.failures(five, six),
         "step 6 is worse than step 5 outright");
   }
@@ -243,7 +243,10 @@ class Episode5RatchetTest {
 
   private static void assertThatStepSixIsWhatTheArticlePrints(Tally six) {
     assertEquals(32, six.hits());
-    assertEquals(28, six.allEvidence());
+    // 29 rather than 28 since the round 3 audit: it accepted `031-init-tools/spec.html#scenarios`
+    // as answering G-076 whole, and the reranker puts it second. Step 5 leaves it fifth, so only
+    // this row moves, and the verdict does not.
+    assertEquals(29, six.allEvidence());
     assertEquals(0, six.stale());
     assertEquals(
         Map.of(
