@@ -356,6 +356,9 @@ def main():
 
 
 def report(args, cp, corp, chunks, emb, rr_msg, results, labels, kinds, skipped, calib, warn, secs) -> str:
+    # A configuration that scored nothing has nothing to say: EP3's replay holds main-set
+    # questions, so it is empty when another file is being scored.
+    results = {k: v for k, v in results.items() if v}
     L = []
     w = L.append
     nparts = len(cp.units)
@@ -438,12 +441,14 @@ def report(args, cp, corp, chunks, emb, rr_msg, results, labels, kinds, skipped,
         w("Skipped: " + "; ".join(f"**{k}** ({v[0]}): {v[1]}" for k, v in skipped.items()) + "\n")
 
     w("## Per stratum: Hit@4 · all@4 · all@10\n")
-    w("| key | " + " | ".join(f"{s} ({n})" for s, n in ((s, sum(1 for r in next(iter(results.values()), []) if r.stratum == s)) for s in S.STRATA)) + " | stale@4 |")
-    w("|---|" + "---|" * (len(S.STRATA) + 1))
+    strata = S.strata_of([r for rows in results.values() for r in rows])
+    w("| key | " + " | ".join(f"{s} ({n})" for s, n in ((s, sum(1 for r in next(iter(results.values()), []) if r.stratum == s)) for s in strata)) + " | stale@4 |")
+    w("|---|" + "---|" * (len(strata) + 1))
     for key in results:
         _, by = S.aggregate(results[key])
-        w(f"| {key} | " + " | ".join(f"{by[s].h4} · {by[s].all4} · {by[s].all10}" for s in S.STRATA) +
-          f" | {sum(by[s].stale4 for s in S.STRATA)} |")
+        cell = lambda s: by.get(s) or S.Agg()  # noqa: E731
+        w(f"| {key} | " + " | ".join(f"{cell(s).h4} · {cell(s).all4} · {cell(s).all10}" for s in strata) +
+          f" | {sum(cell(s).stale4 for s in strata)} |")
     w("")
 
     w("## Checks against Episode 3 and the earlier prototype\n")

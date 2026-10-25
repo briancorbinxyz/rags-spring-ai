@@ -162,9 +162,19 @@ class Agg:
         return self.rr4 / self.n if self.n else 0.0
 
 
+def strata_of(results: list) -> list:
+    """The kinds of question in this file: the ones we know, in STRATA's order, then any others.
+
+    The held-out and time files carry strata the main set does not -- history, as-of,
+    what-changed, as-known -- so the scorer takes them from the questions rather than from a list
+    it was written with. A file of main-set questions gives exactly STRATA, as before."""
+    present = {r.stratum for r in results if r.stratum != "unanswerable"}
+    return [s for s in STRATA if s in present] + sorted(present - set(STRATA))
+
+
 def aggregate(results: list) -> tuple[Agg, dict]:
     tot = Agg()
-    by = {s: Agg() for s in STRATA}
+    by = {s: Agg() for s in strata_of(results)}
     for r in results:
         if r.stratum == "unanswerable":
             continue
@@ -201,8 +211,8 @@ def ratchet(prev: list, cur: list) -> tuple[bool, list]:
         why.append(f"Hit@4 {pt.h4}→{ct.h4}")
     if ct.all4 < pt.all4:
         why.append(f"all@4 {pt.all4}→{ct.all4}")
-    for s in STRATA:
-        if pb[s].h4 - cb[s].h4 > 1:
+    for s in pb:
+        if s in cb and pb[s].h4 - cb[s].h4 > 1:
             why.append(f"{s} {pb[s].h4}→{cb[s].h4}")
     if ct.stale4 > pt.stale4:
         why.append(f"stale@4 {pt.stale4}→{ct.stale4}")
