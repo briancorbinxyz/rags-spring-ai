@@ -68,6 +68,13 @@ def configs() -> list[Config]:
                redirect="behind", expand=True, needs=("dense", "rerank"), **ep4),
         Config("EpiB", "epilogue: RRF-merge neighbours (k=60, w=0.5) instead of anchored expansion", ids=True,
                lifecycle=True, dense=True, rerank=True, redirect="replace", rrf_neighbours=True, needs=("dense", "rerank"), **ep4),
+        # Episode 6: the artifact family as an edge. Siblings join the rerank window rather than
+        # being merged into the ranking (EpiB) or appended after it (E5-2); the reranker selects.
+        Config("E6-1", "E5-1 + sibling artifacts of the best-ranked specs, reranked", ids=True, lifecycle=True,
+               dense=True, rerank=True, redirect="replace", siblings=True, needs=("dense", "rerank"), **ep4),
+        Config("E6-2", "E5-2 + sibling artifacts (typed expansion and the family edge together)", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True, siblings=True,
+               needs=("dense", "rerank"), **ep4),
         # Episode 5 steps on the BM25 line (exact here: no embedder involved)
         Config("X1", "S3 + supersession redirect (superseded history dropped)", ids=True, lifecycle=True, redirect="replace", **ep4),
         Config("X2", "S3 + redirect + anchored typed expansion", ids=True, lifecycle=True, redirect="replace", expand=True, **ep4),

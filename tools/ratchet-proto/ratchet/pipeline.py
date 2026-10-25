@@ -30,6 +30,8 @@ DEPTH_FUSED = 100  # each list's depth before fusion
 RRF_K = 60
 RERANK_TOP = 50
 EXPAND_MAX = 5
+SIBLING_SEEDS = 5      # how many ranked items name a spec directory
+SIBLING_MAX = 200      # how many sibling units may be handed to the reranker
 TYPED_WEIGHTS = {"typed:validates": 2.0, "typed:cites": 2.0, "typed:delta": 2.0, "typed:target": 1.5, "typed:defer-to": 1.5}
 
 
@@ -46,6 +48,7 @@ class Config:
     expand: bool = False
     redirect: str | None = None  # None | "replace" (the rule) | "behind" (keeps applied history)
     rrf_neighbours: bool = False
+    siblings: bool = False  # Episode 6: sibling artifacts of the best-ranked spec directories
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -107,8 +110,18 @@ class Pipeline:
         self.idx = idindex
         self.g = graph
         self.reranker = reranker
+        self._dirs = None
 
     # --- helpers ----------------------------------------------------------------------------
+    def _by_dir(self):
+        """Unit numbers by spec directory, built once: the artifact family's own index."""
+        if self._dirs is None:
+            self._dirs = collections.defaultdict(list)
+            for n, it in enumerate(self.u.items):
+                if it is not None and getattr(it, "source", None):
+                    self._dirs[it.source.rsplit("/", 1)[0]].append(n)
+        return self._dirs
+
     def _key(self, n):
         it = self.u.items[n]
         return f"{it.source}#{it.anchor}"
@@ -152,11 +165,15 @@ class Pipeline:
         pinned_set = set(pinned)
         rest = [(n, s) for n, s in fused if n not in pinned_set]
 
+        extra = self.siblings(rest, pinned_set, cfg) if cfg.siblings else []
+
         if cfg.rerank:
-            head = rest[:RERANK_TOP]
+            head = rest[:RERANK_TOP] + [(n, 0.0) for n in extra]
             scores = self.reranker.scores(q, [items[n].passage() for n, _ in head])
             order = sorted(range(len(head)), key=lambda i: -scores[i])
             rest = [(head[i][0], scores[i]) for i in order] + rest[RERANK_TOP:]
+        elif extra:
+            rest = rest + [(n, 0.0) for n in extra]
 
         top1 = rest[0][1] if rest else None
         final = (pinned + [n for n, _ in rest])[:50]
@@ -168,6 +185,43 @@ class Pipeline:
         if cfg.redirect:
             final = self.redirect(final, q, cfg.redirect)
         return final[:50], top1, len(pinned)
+
+    # --- Episode 6 --------------------------------------------------------------------------
+    def siblings(self, rest, pinned_set, cfg):
+        """Units from the sibling artifacts of the best-ranked spec directories.
+
+        A spec's spec.html, design.html, tasks.html and verify.html belong together whether or
+        not anything links them: the artifact family says so, the way a 13D/A is an amendment to
+        a 13D without saying it in prose. Only verify->spec is a declared MUST; the rest is
+        convention, legible in the link direction (tasks->spec 1413, design->spec 596, against
+        spec->design 2), so this is an inferred relation and is named one.
+
+        The candidates are handed to the reranker unfiltered, which is the point. Choosing among
+        them by BM25 first reproduces the miss the edge exists to fix: the wanted unit is the one
+        the lexical matcher does not see. The cap is on how many may be scored, never on which.
+        """
+        if cfg.items != "units":
+            return []
+        by_dir = self._by_dir()
+        seen_pages, dirs = set(), []
+        for n, _ in rest[:SIBLING_SEEDS]:
+            source = self.u.items[n].source
+            seen_pages.add(source)
+            d = source.rsplit("/", 1)[0]
+            if d not in dirs:
+                dirs.append(d)
+        out = []
+        for d in dirs:
+            for n in by_dir.get(d, ()):
+                it = self.u.items[n]
+                if it.source in seen_pages or n in pinned_set:
+                    continue
+                if cfg.lifecycle and not self._live_items(self._key(n), True):
+                    continue
+                out.append(n)
+                if len(out) >= SIBLING_MAX:
+                    return out
+        return out
 
     # --- Episode 5 --------------------------------------------------------------------------
     def expand(self, final, anchor_key, q):
