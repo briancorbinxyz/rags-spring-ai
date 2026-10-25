@@ -102,6 +102,19 @@ class Graph:
                 out.append(d)
         return out
 
+    def typed_pages(self, key: str) -> list:
+        """Typed edges that land on a page rather than a unit.
+
+        All 166 `defer-to` edges are of this shape: a slice defers a concern to another spec, not
+        to one element of it. `typed_neighbours` keeps only unit destinations, so until these are
+        resolved to a unit the relation is parsed, stored and then dropped on the floor.
+        """
+        out = []
+        for (kind, d), w, t in self.adj[("u", key)]:
+            if kind == "p" and t.startswith("typed:") and d not in out:
+                out.append(d)
+        return out
+
 
 class Pipeline:
     def __init__(self, units: Index, chunks: Index | None, idindex, graph: Graph, reranker=None):
@@ -227,8 +240,21 @@ class Pipeline:
     def expand(self, final, anchor_key, q):
         """E5-2: typed-link neighbours of the anchor (validates, cites, target incl. spec-delta,
         defer-to resolved to a unit), one hop, at most 5 units, ranked by BM25 among themselves,
-        inserted right after the anchor's own item(s)."""
+        inserted right after the anchor's own item(s).
+
+        `defer-to` lands on a page, never a unit, so it was silently dropped until the page
+        resolution below was added; the docstring had promised it since Episode 5.
+        """
         cand = [k for k in self.g.typed_neighbours(anchor_key) if self._live_items(k, True)]
+        # A typed edge onto a page becomes the page's best unit for this question, as the
+        # supersession redirect already resolves a superseded page.
+        cache = {}
+        for page in self.g.typed_pages(anchor_key):
+            b = self._best_in_page(q, page, cache)
+            if b is not None:
+                k = self._key(b)
+                if k not in cand and self._live_items(k, True):
+                    cand.append(k)
         if not cand:
             return final
         scope = [n for k in cand for n in self._live_items(k, True)]
