@@ -346,3 +346,45 @@ useful (three of twenty), so the set is chosen by the reader rather than by a `k
 `TJ` is `ids + lifecycle + dense + rerank + scope_rrf + doc_scope + scope_pin` and carries **no
 `route_scope`** — the one arm that failed its generalisation test is absent from the answer. G-075
 still abstains with nothing pinned, because it names no spec and so has no scope to read.
+
+
+## Validated: a selection is not an enumeration
+
+`scope_pin` answered all nine and cost three main-set questions (33/47 → 30/47), worse than the
+router it replaced. The diagnosis was the opposite of what I expected.
+
+**The answer was inside the named scope all three times.** Pinning was not wrong in principle; the
+*amount* was. On G-031, G-032 and G-044 the reader selected **15, 20 and 19** of twenty candidates,
+against **3 of twenty** on the cutoff questions. Pinning a selection that includes almost everything
+pins the whole scope — exactly what `idlookup` refuses to do, for exactly the reason it refuses.
+
+So the failure is the reader's **selectivity**, not the seam. A selection covering most of what it
+read is an enumeration, not a judgement: it carries no discriminating information, so there is
+nothing to pin. `scope_picks` returns nothing unless the reader named a strict minority of its
+window — a rule with a prior justification rather than a fitted threshold, but one written after
+seeing both failures, so it had to be measured both ways.
+
+| | cutoff questions | main set |
+|---|---|---|
+| `scope_pin` alone | 9/9 | 30/47 — **fails** |
+| **`scope_pin` + minority rule** | **9/9** | **33/47, all@4 31, stale@4 0, ratchet `(True, [])`** |
+
+Not a net wash: **lost none, won none**, identical on every stratum. And it fires on three of the
+nine — G-063, G-073, G-074 pin three units each, G-072 pins one from the identifier lookup, the rest
+pin nothing. A mechanism that touches three questions and leaves forty-four alone.
+
+## The configuration, and the arc
+
+**`TJ`** = `ids + lifecycle + dense + rerank + scope_rrf + doc_scope + scope_pin`, over a bitemporal
+corpus, with a cross-encoder on the open ranking and a listwise reader on the window the question
+named. **No `route_scope`, no `doc_scope_default`** — both arms flagged as possibly fitted were
+measured and are absent from the answer.
+
+1. The snapshot answers **0/9**, and a better model does not help: `stale@4` gets *worse* as models grow.
+2. A bitemporal corpus is **1.36×** the snapshot, not 555×; a slice costs **0.09 s**.
+3. Over a slice, Episode 4's own pipeline reaches **6/9** with no new mechanism.
+4. A named spec is a named haystack, and a subset is a collection with its own statistics — **8/9**.
+5. G-073 is negation: it defeats lexical, dense and three cross-encoders; a pointwise judge
+   saturates at 10/10, a listwise one chooses.
+6. Fusing a confident reader throws its judgement away, three times over. Pinning its *selection*
+   keeps it — **9/9**; pinning its *enumeration* breaks everything else.
