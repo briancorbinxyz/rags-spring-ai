@@ -190,6 +190,40 @@ def commit_of(root: Path) -> str:
     return "unknown"
 
 
+def page_units(source: str, body: H.Element, title: str, page_status: str | None, *,
+               legacy: bool = False, part_words: int = PART_WORDS, path: bool = True,
+               parts: bool = True):
+    """What one page contributes: an element with an id, its standing, and its text in parts.
+
+    Lifted out of `build` so that something other than a filesystem walk can ask the same question
+    of the same page — a past revision of it, read from version control, which is how the time
+    questions get a corpus. Keeping one copy of the rule is the point: a unit is "an element with an
+    id of its own, holding its own text and nothing belonging to an element nested inside it", and
+    that sentence should be true in exactly one place.
+
+    Yields (anchor, lifecycle, heading path, own heading, text parts). It does not number the units
+    or de-duplicate repeated ids, because both are properties of the corpus being assembled rather
+    than of the page.
+    """
+    for e in body.iter():
+        if e is body or not e.id:
+            continue
+        text = H.soup_text(e, skip=lambda k: bool(k.id))
+        if len(text.split()) < MIN_WORDS:
+            continue
+        lc = lifecycle(source, e)
+        if page_status == "superseded" and lc == "current":
+            lc = "superseded"
+        hd = e.find(lambda k: k.tag in ("h2", "h3", "h4"))
+        heading = _strip_join(hd) if hd is not None else ""
+        if legacy:
+            hpath, chunks = "", [text]
+        else:
+            hpath = heading_path(title, e) if path else ""
+            chunks = split_parts(text, part_words) if parts else [text]
+        yield e.id, lc, hpath, heading, chunks
+
+
 def build(root: Path, legacy: bool = False, part_words: int = PART_WORDS, path: bool = True, parts: bool = True) -> Corpus:
     """``legacy``: the earlier prototype's units. ``path=False`` / ``parts=False``: step 1 without
     the heading path or without splitting long units, to isolate each."""
@@ -211,28 +245,16 @@ def build(root: Path, legacy: bool = False, part_words: int = PART_WORDS, path: 
         c.titles[source] = title
         st = H.find_tag(tree, "spec-status")
         page_status = st.get("value") if st is not None else None
-        for e in body.iter():
-            if e is body or not e.id:
-                continue
-            text = H.soup_text(e, skip=lambda k: bool(k.id))
-            if len(text.split()) < MIN_WORDS:
-                continue
-            lc = lifecycle(source, e)
-            if page_status == "superseded" and lc == "current":
-                lc = "superseded"
-            hd = e.find(lambda k: k.tag in ("h2", "h3", "h4"))
-            heading = _strip_join(hd) if hd is not None else ""
-            if legacy:
-                hpath, chunks = "", [text]
-            else:
-                hpath = heading_path(title, e) if path else ""
-                chunks = split_parts(text, part_words) if parts else [text]
-            key = unit_key(source, e.id)
+        for anchor, lc, hpath, heading, chunks in page_units(
+            source, body, title, page_status, legacy=legacy, part_words=part_words, path=path,
+            parts=parts
+        ):
+            key = unit_key(source, anchor)
             if key in keys:  # a repeated id on one page: the first one is the element (getElementById)
                 continue
             keys[key] = len(units)
             for i, ch in enumerate(chunks):
-                units.append(Item(len(units), source, e.id, spec_of(source), lc, title, hpath, heading, ch,
+                units.append(Item(len(units), source, anchor, spec_of(source), lc, title, hpath, heading, ch,
                                   part=i + 1, parts=len(chunks)))
     c.units = units
     _links(c, trees, set(keys))
