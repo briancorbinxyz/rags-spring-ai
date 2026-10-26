@@ -224,6 +224,29 @@ it was harmless — G-063 2nd → 1st, G-074 1st → 1st — so it is non-discri
 topic, so an absolute score cannot express "this one and not that one". The negation distinction is
 comparative by nature, and a scale that rates each candidate alone cannot carry it.
 
+## Listwise judging finds it
+
+Ask for a comparison rather than a score — one call, every candidate, the model must choose an
+order (the RankGPT shape). Over the named document's own top twenty:
+
+| question | fused rank | after listwise |
+|---|---|---|
+| **G-073** | 9 | **1** |
+| G-063 | 2 | **1** |
+| G-074 | 1 | **1** |
+
+Each step of this chain came from the previous failure rather than a guess: negation defeats lexical
+and dense retrieval, then three MS-MARCO cross-encoders (as the literature predicts), then a
+pointwise judge that saturates — so ask it to compare, and it chooses correctly.
+
+**A near-miss worth recording.** Ollama defaults the context window to a few thousand tokens
+whatever the model declares — qwen3:8b declares 40,960 and its modelfile sets none — and a longer
+prompt is **silently truncated**. A listwise call over fifty candidates is about 7,500 tokens, so
+the tail of the list would never have been read while the reply still looked like a ranking. The
+twenty-candidate probe survived only because it fitted. `num_ctx` is now explicit and the call
+checks `prompt_eval_count` and raises: a ranking over candidates the model never saw is worse than
+no ranking, because it is indistinguishable from one.
+
 ## The arms cannot move the main line, measured
 
 | | S3 | X1 | X2 | H1 | E5-1 | E5-2 |
