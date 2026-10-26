@@ -61,6 +61,7 @@ class Config:
     doc_scope_default: bool = False  # ...and treat a spec named with no document kind as its spec.html
     route_scope: bool = False  # Episode 6: rerank only when the question named no haystack
     scope_rerank: int = 0  # Episode 6: rerank this many of the named scope's own ranking first
+    scope_pin: int = 0  # Episode 6: pin what a reader picks out of the named scope, unfused
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -129,12 +130,25 @@ class Graph:
 
 
 class Pipeline:
-    def __init__(self, units: Index, chunks: Index | None, idindex, graph: Graph, reranker=None):
+    def __init__(self, units: Index, chunks: Index | None, idindex, graph: Graph, reranker=None,
+                 scope_reranker=None):
+        """`scope_reranker` reads the narrow, question-named case; `reranker` reads the open one.
+
+        They are different jobs and the measurements said so twice. A listwise reader discriminates
+        where a cross-encoder cannot — it is the only thing that found G-073's negation — and it is
+        priced per candidate per query, about four and a half minutes over fifty candidates against
+        ninety seconds over twenty. A cross-encoder is cheap over fifty and is what finds the
+        questions that name no haystack at all, which the reader alone scores 5 of 9 on.
+
+        So the narrow reader gets the window the question itself narrowed, and the cross-encoder
+        keeps the open ranking. One reranker for both was the wrong shape, not the wrong model.
+        """
         self.u = units
         self.c = chunks
         self.idx = idindex
         self.g = graph
         self.reranker = reranker
+        self.scope_reranker = scope_reranker
         self._dirs = None
 
     # --- helpers ----------------------------------------------------------------------------
@@ -191,6 +205,10 @@ class Pipeline:
             pinned_keys = [k for k in self.idx.lookup(q, cfg.linker) if self._live_items(k, cfg.lifecycle)]
             for k in pinned_keys:
                 pinned += [n for n in self._live_items(k, cfg.lifecycle) if n not in pinned]
+        if cfg.scope_pin:
+            for n in self.scope_picks(q, qv, cfg):
+                if n not in pinned:
+                    pinned.append(n)
         pinned_set = set(pinned)
         rest = [(n, s) for n, s in fused if n not in pinned_set]
 
@@ -305,9 +323,39 @@ class Pipeline:
                  for i in sorted(range(len(inside)), key=lambda i: -sims[i])]
         lexical = self._scope_bm25(inside).search(q, depth=len(inside))
         fused = rrf([[(inside[n], s) for n, s in lexical], dense])
-        if cfg.scope_rerank and self.reranker is not None:
+        if cfg.scope_rerank and (self.scope_reranker or self.reranker) is not None:
             fused = self._reread(q, fused, cfg.scope_rerank)
         return fused[:depth]
+
+    def scope_picks(self, q, qv, cfg) -> list:
+        """What a reader picks out of the window the question named, pinned rather than fused.
+
+        Fusing a reader's judgement throws it away, and that has now been measured twice. As an RRF
+        vote beside the ranking it put everything at 7th or 8th and committed to nothing (`T9`); as
+        a third list inside the scope ranking it moved G-073 from 28th to 16th and no further,
+        because global BM25 and dense outvoted it two to one (`TH`). A reader that can tell "leave
+        it untouched" from "add it" is the only thing here that can answer the question, so its
+        answer has to survive the pipeline.
+
+        The identifier lookup already has the shape for this: an exact match is **pinned** above the
+        ranking and never reranked. A named scope is weaker evidence than a named id, which is why
+        the lookup refuses to pin a whole spec — but the reader's *selection* inside that spec is
+        not a whole spec. A listwise call returns the few identifiers it considers useful (three of
+        twenty, in the probe), so the set is chosen by the reader rather than by a `k` I picked, and
+        that is what gets pinned.
+        """
+        if cfg.items != "units" or qv is None:
+            return []
+        reader = self.scope_reranker or self.reranker
+        if reader is None:
+            return []
+        ranked = self.scope_ranking(q, qv, replace(cfg, scope_rerank=0), cfg.scope_pin)
+        if not ranked:
+            return []
+        scores = reader.scores(q, [self.u.items[n].passage() for n, _ in ranked])
+        picked = [(ranked[i][0], scores[i]) for i in range(len(ranked)) if scores[i] > 0]
+        picked.sort(key=lambda row: -row[1])
+        return [n for n, _ in picked]
 
     def _reread(self, q, ranked, window):
         """Let the reranker read the named scope's ranking before it is fused with the rest.
@@ -318,8 +366,9 @@ class Pipeline:
         reader gets the scope's own top few rather than fifty candidates drawn from the whole
         archive. Reranking here and fusing afterwards keeps the rest of the ranking honest.
         """
+        reader = self.scope_reranker or self.reranker
         head = ranked[:window]
-        scores = self.reranker.scores(q, [self.u.items[n].passage() for n, _ in head])
+        scores = reader.scores(q, [self.u.items[n].passage() for n, _ in head])
         order = sorted(range(len(head)), key=lambda i: -scores[i])
         return [(head[i][0], scores[i]) for i in order] + ranked[window:]
 

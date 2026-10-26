@@ -71,6 +71,12 @@ def configs() -> list[Config]:
         Config("TG", "variant: the reader given the named scope's own top 20, then fused", ids=True,
                lifecycle=True, dense=True, scope_rrf=True, doc_scope=True, scope_rerank=20,
                needs=("dense", "rerank"), **units),
+        Config("TH", "8 + a listwise reader on the named scope, the cross-encoder on the rest",
+               ids=True, lifecycle=True, dense=True, rerank=True, scope_rrf=True, doc_scope=True,
+               route_scope=True, scope_rerank=20, needs=("dense", "rerank"), **units),
+        Config("TJ", "8 + what a reader picks out of the named scope, pinned", ids=True,
+               lifecycle=True, dense=True, rerank=True, scope_rrf=True, doc_scope=True,
+               scope_pin=20, needs=("dense", "rerank"), **units),
     ]
 
 
@@ -90,7 +96,11 @@ def main() -> int:
     ap.add_argument("--spectastic", default=str(REPO.parent / "spectastic"))
     ap.add_argument("--golden", default=str(REPO / "src/main/resources/golden/questions-time.jsonl"))
     ap.add_argument("--embedder", default="wordllama")
-    ap.add_argument("--reranker", default="none")
+    ap.add_argument("--reranker", default="none", help="the open ranking's reader")
+    ap.add_argument("--scope-reranker", default="none",
+                    help="a second reader for the window the question itself narrowed; a listwise "
+                         "reader belongs here and not on the open ranking, where it is four times "
+                         "the cost and no better")
     ap.add_argument("--ollama-url", default="http://localhost:11434")
     ap.add_argument("--llamacpp-url", default="http://127.0.0.1:8090")
     ap.add_argument("--llamacpp-rerank-url", default="http://127.0.0.1:8091")
@@ -127,8 +137,10 @@ def main() -> int:
         emb.attach_cache(cache)
     rr, msg = R.make(args.reranker, args.llamacpp_rerank_url, cache)
     print(msg, file=sys.stderr)
+    scope_rr, scope_msg = R.make(args.scope_reranker, args.llamacpp_rerank_url, cache)
+    print(f"scope reader: {scope_msg}", file=sys.stderr)
 
-    timeline = TL.Timeline(corpus, reranker=rr, embedder=emb)
+    timeline = TL.Timeline(corpus, reranker=rr, embedder=emb, scope_reranker=scope_rr)
     qvec = {q["id"]: emb.embed_queries([q["question"]])[0] for q in cutoffs} if emb else {}
 
     only = set(filter(None, args.only.split(",")))

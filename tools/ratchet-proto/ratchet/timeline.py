@@ -44,9 +44,10 @@ class Timeline:
     collection, and a slice *is* a collection.
     """
 
-    def __init__(self, corpus, reranker=None, embedder=None):
+    def __init__(self, corpus, reranker=None, embedder=None, scope_reranker=None):
         self.corpus = corpus
         self.reranker = reranker
+        self.scope_reranker = scope_reranker
         self.embedder = embedder
         self._slices: dict[int, tuple] = {}
 
@@ -55,7 +56,7 @@ class Timeline:
             items = items_at(self.corpus, position)
             index = P.Index(items, B.BM25(items), self._vectors(items))
             self._slices[position] = (items, P.Pipeline(index, None, I.IdIndex(items), None,
-                                                        self.reranker))
+                                                        self.reranker, self.scope_reranker))
         return self._slices[position]
 
     def _vectors(self, items):

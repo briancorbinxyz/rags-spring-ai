@@ -97,6 +97,9 @@ def configs() -> list[Config]:
         Config("G3", "G2 + reranking only when the question named no haystack", ids=True,
                lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
                scope_rrf=True, doc_scope=True, route_scope=True, needs=("dense", "rerank"), **ep4),
+        Config("G4", "G2 + what a reader picks out of the named scope, pinned", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, scope_pin=20, needs=("dense", "rerank"), **ep4),
         # ablations
         Config("A", "naive 800-token chunks, dense only", items="chunks", bm25=False, dense=True, needs=("dense",)),
         Config("B", "naive 800-token chunks, BM25 only", items="chunks"),
@@ -197,6 +200,8 @@ def main():
     ap.add_argument("--embedder", default="wordllama", help="wordllama | ollama:<model> | llamacpp:<alias> | none")
     ap.add_argument("--reranker", default="none",
                     help="e.g. cross-encoder/ms-marco-MiniLM-L-6-v2 or llamacpp:<alias>")
+    ap.add_argument("--scope-reranker", default="none",
+                    help="a second reader for a window the question itself narrowed (Episode 6)")
     ap.add_argument("--ollama-url", default="http://localhost:11434")
     ap.add_argument("--llamacpp-url", default="http://127.0.0.1:8090", help="llama-server for --embedder llamacpp:")
     ap.add_argument("--llamacpp-rerank-url", default="http://127.0.0.1:8091",
@@ -243,6 +248,8 @@ def main():
         emb.attach_cache(cache)
     rr, rr_msg = R.make(args.reranker, args.llamacpp_rerank_url, cache)
     print(rr_msg, file=sys.stderr)
+    scope_rr, scope_msg = R.make(args.scope_reranker, args.llamacpp_rerank_url, cache)
+    print(f"scope reader: {scope_msg}", file=sys.stderr)
 
     # --- indexes ----------------------------------------------------------------------------
     idx = {k: I.IdIndex(v.units) for k, v in corp.items()}
@@ -295,7 +302,7 @@ def main():
         uix = P.Index(units, bm25_for(cfg.corpus, cfg.dash_tokens, units), uvec if cfg.corpus == "ep4" else None)
         cix = P.Index(chunks, bm25_for("chunks", False, chunks), cvec) if chunks is not None else None
         g = graph if cfg.corpus == "ep4" else None
-        pipe = P.Pipeline(uix, cix, idx[cfg.corpus], g, rr)
+        pipe = P.Pipeline(uix, cix, idx[cfg.corpus], g, rr, scope_rr)
         hit_fn = S.unit_hit if cfg.items == "units" else scorer.hit
         out = []
         for qi, q in enumerate(golden):
