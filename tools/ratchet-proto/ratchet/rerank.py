@@ -127,10 +127,83 @@ class OllamaJudgeReranker:
         return [self.cache[(query, p)] for p in passages]
 
 
+class OllamaListwiseReranker:
+    """One call, every candidate, and the model must choose an order.
+
+    The pointwise judge above saturated: asked to rate each passage from 0 to 10 it gave 10 to six
+    different ones, the answering unit and the passages saying the opposite alike, so nothing was
+    separated and the order fell out of the tie-break. An absolute scale cannot express "this one
+    and not that one" when every candidate is about the question's topic, and negation is exactly
+    that kind of distinction — comparative by nature.
+
+    So this asks for a comparison instead. It is the standard listwise shape from the RankGPT line
+    of work, and on G-073 it moves the answering unit from 9th to 1st where three cross-encoders and
+    the pointwise judge all failed.
+
+    Candidates the model does not name keep their incoming order, because a model that returns three
+    identifiers out of twenty has *selected* rather than ordered, and discarding the rest would
+    throw away a ranking that was already better than nothing.
+    """
+
+    #: Passages are truncated for the prompt only. A listwise call has to hold every candidate at
+    #: once, so this trades tail detail for being able to compare them at all.
+    CHARS = 600
+
+    def __init__(self, model: str, url: str = "http://localhost:11434", window: int = 50):
+        self.name = f"ollama-listwise:{model}"
+        self.model = model
+        self.url = url.rstrip("/")
+        self.window = window
+        self.cache = {}
+
+    def _order(self, query: str, passages: list) -> list:
+        import json
+        import urllib.request
+
+        numbered = "\n\n".join(f"[{i + 1}] {p[:self.CHARS]}" for i, p in enumerate(passages))
+        prompt = (
+            f"Question: {query}\n\nCandidate passages:\n\n{numbered}\n\n"
+            "Order the candidates from most to least useful for answering the question. "
+            "Negation decides this: a passage saying something must NOT be done answers a question "
+            "about not doing it, and does NOT answer a question about doing it. "
+            "Reply with the identifiers only, best first, as a comma-separated list like "
+            "[3],[1],[7]. No other text. /no_think")
+        body = json.dumps({"model": self.model, "prompt": prompt, "stream": False, "think": False,
+                           "options": {"temperature": 0, "num_predict": 1500}}).encode()
+        request = urllib.request.Request(f"{self.url}/api/generate", body,
+                                         {"Content-Type": "application/json"})
+        reply = json.loads(urllib.request.urlopen(request, timeout=900).read())["response"]
+        tail = reply.split("</think>")[-1]
+        out = []
+        for token in tail.replace("[", " ").replace("]", " ").replace(",", " ").split():
+            if token.isdigit():
+                i = int(token) - 1
+                if 0 <= i < len(passages) and i not in out:
+                    out.append(i)
+        return out
+
+    def scores(self, query: str, passages: list) -> list:
+        """Scores standing in for an order: chosen candidates descend, the rest keep their place.
+
+        The pipeline sorts by score with a stable sort, so giving every unchosen candidate the same
+        score leaves them in the order they arrived in.
+        """
+        head = passages[:self.window]
+        key = (query, tuple(head))
+        if key not in self.cache:
+            self.cache[key] = self._order(query, head)
+        chosen = self.cache[key]
+        ranks = {i: len(head) - r for r, i in enumerate(chosen)}
+        return [float(ranks.get(i, 0)) for i in range(len(passages))]
+
+
 def make(name: str | None, llamacpp_url: str = "http://127.0.0.1:8091", cache_dir=None):
     """(reranker or None, message)."""
     if not name or name == "none":
         return None, "no reranker requested"
+    if name.startswith("ollama-listwise:"):
+        rr = OllamaListwiseReranker(name[len("ollama-listwise:"):])
+        return rr, f"reranker {rr.name}: one listwise call over the first {rr.window} candidates"
     if name.startswith("ollama:"):
         rr = OllamaJudgeReranker(name[len("ollama:"):])
         return rr, f"reranker {rr.name}: an instruction-following judge, pointwise, one call per passage"

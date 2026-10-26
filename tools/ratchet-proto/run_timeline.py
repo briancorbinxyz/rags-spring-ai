@@ -65,6 +65,9 @@ def configs() -> list[Config]:
         Config("TE", "variant: TD reading a bare spec as its spec.html", ids=True, lifecycle=True,
                dense=True, rerank=True, scope_rrf=True, doc_scope=True, doc_scope_default=True,
                route_scope=True, needs=("dense", "rerank"), **units),
+        Config("TF", "7 + the named document, reranked everywhere", ids=True, lifecycle=True,
+               dense=True, rerank=True, scope_rrf=True, doc_scope=True,
+               needs=("dense", "rerank"), **units),
     ]
 
 
