@@ -142,3 +142,57 @@ python3 tools/ratchet-proto/revisions.py --spectastic ../spectastic
 
 It exits non-zero on an unreachable commit and names the likely cause, because the likely cause is a
 `--depth 1` clone and both runner scripts make one.
+
+
+## Retrieval over the slice — 26 Oct
+
+Once the corpus can express "then", Episode 4's pipeline runs on a slice unchanged, and scoring is
+revision-aware for free: the slice holds only what was in force, so a retrieved address *is* the
+right revision.
+
+| configuration | answered |
+|---|---|
+| snapshot corpus, every model and every step | **0/9** |
+| T1 BM25 over the slice | 4/9 |
+| T2 + identifier lookup (G-072) | 5/9 |
+| T5 + dense and the cross-encoder | 6/9 |
+| **TD + the named document, routed** | **7/9** |
+| TE + reading a bare spec as its `spec.html` | 8/9 |
+
+**G-075 is the abstention row and it is not a free pass.** It asks whether the archive described
+something on 11 September 2026; it did not, because spec 111 was first recorded on the 13th. Asked
+against the snapshot, the pipeline returns a top four made *entirely* of spec 111, with the passage
+the golden set marks stale at rank 3 — on the laptop and on the 5090, Qwen3-Reranker included. It
+would answer "yes", with citations. Against the slice, spec 111 is not in the collection, so no
+stale passage can appear. A question is counted answered here only when no stale passage reaches the
+top four, which the snapshot fails and every slice configuration passes.
+
+**G-072 is the identifier lookup's win**, and the cleanest demonstration: its unit is
+`004/plan.html#D-005`, a path the current archive does not have, and in the slice it is simply there.
+
+**The standing filter earns its step without moving the number.** `095/tasks.html#T-1203` is
+`superseded` today; at p551 no retirement had been recorded, so the slice carries it as `current`.
+A snapshot has one lifecycle per address; a state has one per interval.
+
+**The router.** Questions naming a spec are answered by the scoped ranking and *ruined* by the
+cross-encoder (G-063 5th → absent, G-074 1st → 14th). Questions naming nothing — "the npm publishing
+spec", "the spec verb" — are found only by the cross-encoder. Disjoint by mechanism, so `route_scope`
+reranks only when the question named no haystack.
+
+`doc_scope_default` is off by default and reported separately: it is the one choice made with the
+answer in view. **7/9 is the honest number; 8/9 is the optimistic one.**
+
+### G-073 is unreached, and it is a negation failure
+
+It asks whether an open task told implementers *not to add* a new resource kind. The answering unit
+says to leave the kind list untouched; every ranker prefers the tasks that *add* it.
+
+| ranker | rank of the answering unit |
+|---|---|
+| dense, within the 57-unit document | 18 |
+| `ms-marco-MiniLM-L-6-v2` | 60 of 215 |
+| `ms-marco-MiniLM-L-12-v2` | 58 of 215 |
+| `mxbai-rerank-base-v1` | 26 of 215 |
+
+Two bi-encoder configurations and three cross-encoders agree. Nothing in this stack addresses
+negation, and the decoy is additionally the very change that would later retire the answer.
