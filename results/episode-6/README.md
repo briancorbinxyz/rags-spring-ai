@@ -291,3 +291,24 @@ So the filter's 196 removed units today (96 superseded, 90 withdrawn, 10 rejecte
 populations**, and the series has been describing them as one. The long-carried *lifecycle
 admission* arm therefore has a precise scope at last: it is needed only for born-withdrawn records,
 it is the only thing that can reach G-051, G-052 and G-058, and it is not a time mechanism at all.
+
+
+## What the 8/9 does and does not cover
+
+`run_timeline` scores the **nine questions carrying a single `cutoff`** — the five `as-of` and four
+`as-known` rows. That is the claim: eight of those nine, against zero on the snapshot. It is not
+eight of twenty-four.
+
+The other fifteen stand as follows:
+
+| stratum | n | state |
+|---|---|---|
+| `as-of` + `as-known` | 9 | **8 answered** (TD), G-073 outstanding |
+| `history-decoy` | 3 | 3 answered — they want current text, which the snapshot already serves |
+| `history` | 7 | **0 answered.** Four are reachable in principle (G-054, G-055, G-056 at an earlier position; G-057 needs the redirect taught about time), three are born-withdrawn and beyond reach. No mechanism picks the position, because the question states no cutoff. |
+| `what-changed` | 5 | **unmeasured, and not merely unanswered.** These carry a `window` with a `from` and a `to`, so answering one means retrieving from *two* slices and saying what differs. Nothing is built for that shape, and `run_timeline` skips them. |
+
+So the honest shape of the episode is: a bitemporal corpus answers the questions that name **one**
+point in time, almost completely. Questions that name **two** points need a mechanism that does not
+exist yet, and questions that name **none** — the history stratum — need the cutoff to be inferred,
+which is the trigger problem in a new guise.
