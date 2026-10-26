@@ -257,3 +257,37 @@ no ranking, because it is indistinguishable from one.
 Identical on Hit@4, all-evidence@4, MRR to three decimals and stale@4, every row. Every new path is
 behind a flag defaulting false and the one edit to existing flow is an extract-variable whose `else`
 branch is the old line verbatim — but that is an argument, so it was run as well.
+
+
+## Withdrawn is not superseded, and only one of them is a time problem
+
+Asking of the seven **history** questions *is the expected unit admissible at any position at all?*
+splits them in two. (Positions come from the ground truth, so this is a ceiling — what a trigger
+could win if one existed, not a mechanism.)
+
+| | now | admissible at | |
+|---|---|---|---|
+| G-054 | `rejected` | p510–525 as `current` | the lifecycle changed |
+| G-055 (×4) | `superseded` | p495–556 as `current` | the lifecycle changed |
+| G-056 | `superseded` | p380–560 as `current` | the lifecycle changed |
+| G-057 | `current` | p380–LIVE | admissible now; the *redirect* drops it |
+| G-051, G-052 | `withdrawn` | **never** | born withdrawn |
+| G-058 (×2) | `withdrawn` | **never** | born withdrawn |
+
+A withdrawn proposal was never anything else — its units carry `withdrawn` from first state to last
+— so no position would have admitted them. **Bitemporality cannot reach them**, not because the
+corpus lacks anything but because nothing about them ever changed. Superseded and rejected are the
+opposite: the lifecycle moved, so a slice from before the move admits the unit.
+
+Over the whole archive, of 12,022 addresses that have ever existed:
+
+| | addresses | |
+|---|---|---|
+| never excluded | 11,843 | the filter never touches them |
+| **excluded at some point, not all** | **97** | **a slice reaches these** |
+| excluded in every state | **82** | no position admits them (81 withdrawn, 1 rejected) |
+
+So the filter's 196 removed units today (96 superseded, 90 withdrawn, 10 rejected) are **two
+populations**, and the series has been describing them as one. The long-carried *lifecycle
+admission* arm therefore has a precise scope at last: it is needed only for born-withdrawn records,
+it is the only thing that can reach G-051, G-052 and G-058, and it is not a time mechanism at all.
