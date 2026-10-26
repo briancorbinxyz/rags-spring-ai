@@ -56,6 +56,9 @@ class Config:
     scope: bool = False  # Episode 6: the named spec's own units, when it named no id
     scope_rrf: bool = False  # Episode 6: rank inside the named spec and fuse, rather than admit
     rerank_rrf: bool = False  # Episode 6: the reranker as a vote fused with the ranking, not a replacement
+    doc_scope: bool = False  # Episode 6: narrow scope_rrf to the document kind the question named
+    doc_scope_default: bool = False  # ...and treat a spec named with no document kind as its spec.html
+    route_scope: bool = False  # Episode 6: rerank only when the question named no haystack
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -193,7 +196,15 @@ class Pipeline:
         if cfg.scope:
             extra = extra + self.scope_units(q, pinned_set, extra, cfg)
 
-        if cfg.rerank:
+        rerank = cfg.rerank
+        if rerank and cfg.route_scope and self._named_scope(q):
+            # The question named its own haystack, so the scoped ranking is better evidence
+            # than a cross-encoder's reading of the whole archive. Measured: reranking costs
+            # G-063 (5th -> absent) and G-074 (1st -> 14th), both of which the scoped ranking
+            # had right, and buys nothing on either. Where the question names nothing, the
+            # cross-encoder is the only thing that finds the answer at all.
+            rerank = False
+        if rerank:
             head = rest[:RERANK_TOP] + [(n, 0.0) for n in extra]
             scores = self.reranker.scores(q, [items[n].passage() for n, _ in head])
             order = sorted(range(len(head)), key=lambda i: -scores[i])
@@ -276,11 +287,59 @@ class Pipeline:
             return []
         inside = [n for n, it in enumerate(self.u.items)
                   if I.spec_of(f"{it.source}#{it.anchor}") == specs[0] and self._admits(it, cfg)]
+        if cfg.doc_scope:
+            kind = self._named_kind(q, cfg)
+            if kind:
+                inside = [n for n in inside if self.u.items[n].source.endswith("/" + kind)]
         if not inside:
             return []
         sims = self.u.vectors[inside] @ qv
         order = sorted(range(len(inside)), key=lambda i: -sims[i])[:depth]
         return [(inside[i], float(sims[i])) for i in order]
+
+    def _named_scope(self, q: str) -> bool:
+        """Whether the question said where to look: exactly one spec, and no id that would pin.
+
+        This is the router's one decision, and it is the weakest thing in the episode: the rule was
+        chosen while looking at these nine questions, so it needs the held-out and time sets to say
+        whether it generalises. The *rationale* is prior to the data -- a question that names its
+        haystack has given better evidence than a reranker's reading of the whole archive -- but a
+        rationale is not a measurement.
+        """
+        ids, specs = I.parse(q, self.idx.anchors)
+        return len(specs) == 1 and not ids
+
+    #: The documents a spectastic spec is made of, and how a question refers to each. The archive
+    #: has a fixed, small set of these, so naming them is adapter knowledge rather than a guess.
+    DOC_KINDS = (
+        (("task list", "tasks", "task"), "tasks.html"),
+        (("design",), "design.html"),
+        (("verification", "verify"), "verify.html"),
+        (("triage log", "triage"), "triage-log.html"),
+        (("plan",), "plan.html"),
+        (("specification", "spec"), "spec.html"),
+    )
+
+    def _named_kind(self, q: str, cfg) -> str | None:
+        """Which of a spec's documents the question asked about, if it said.
+
+        "spec 095's task list" and "spec 105's design" name the document as well as the spec, which
+        narrows the haystack from a couple of hundred units to a few dozen — and a few dozen is
+        small enough to rank in. The words are matched after the spec is named, so "spec 078" does
+        not read as a request for spec.html.
+
+        `doc_scope_default` additionally treats a spec named with no document kind as a reference to
+        its `spec.html`. It is **off by default and reported separately**, because I chose it
+        knowing it would help G-063, and nine questions cannot tell a sound prior from a fitted one.
+        """
+        lowered = q.lower()
+        for words, filename in self.DOC_KINDS:
+            for word in words:
+                if word == "spec" or word == "specification":
+                    continue  # "spec 078" is the scope, not the document
+                if word in lowered:
+                    return filename
+        return "spec.html" if cfg.doc_scope_default else None
 
     def _admits(self, it, cfg):
         return not cfg.lifecycle or it.lifecycle not in EXCLUDED
