@@ -19,10 +19,11 @@ Every list is cut to 50 items.
 from __future__ import annotations
 
 import collections
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
+from ratchet import bm25 as B
 from ratchet import idlookup as I
 
 from .corpus import EXCLUDED
@@ -275,10 +276,15 @@ class Pipeline:
         high without being pinned, and a spec that holds nothing relevant contributes a list of
         irrelevant units that RRF buries. Rejectable, which a filter would not be.
 
-        Dense only, and that is the point rather than a shortcut: a cosine has no collection
-        statistics, so restricting it to a subset is exact. Restricting BM25 the same way would
-        reproduce the very error this episode is about — scoring a small collection with a large
-        one's document frequencies.
+        **Hybrid, with the scope's own BM25 statistics.** I first built this dense-only, reasoning
+        that a cosine has no collection statistics so restricting it is exact, while restricting
+        BM25 would reproduce the very error this episode is about. That was wrong, and wrong in an
+        instructive way: it is only true of BM25 scored with *global* statistics over a filtered row
+        set. An index built over the scope has the scope's statistics, which is correct for exactly
+        the reason S4 is correct for a cutoff — a subset is a collection, and a collection has its
+        own document frequencies. Measured, the lexical half is the stronger one here: spec-local
+        BM25 puts G-063's unit 1st of 91 and G-074's 1st of 201, where dense alone managed 7th and
+        2nd.
         """
         if cfg.items != "units" or qv is None or self.u.vectors is None:
             return []
@@ -294,8 +300,22 @@ class Pipeline:
         if not inside:
             return []
         sims = self.u.vectors[inside] @ qv
-        order = sorted(range(len(inside)), key=lambda i: -sims[i])[:depth]
-        return [(inside[i], float(sims[i])) for i in order]
+        dense = [(inside[i], float(sims[i]))
+                 for i in sorted(range(len(inside)), key=lambda i: -sims[i])]
+        lexical = self._scope_bm25(inside).search(q, depth=len(inside))
+        fused = rrf([[(inside[n], s) for n, s in lexical], dense])
+        return fused[:depth]
+
+    def _scope_bm25(self, inside):
+        """An FTS5 index over the scope alone, so its statistics are the scope's. Kept per scope."""
+        key = (id(self.u.items), tuple(inside[:1]), len(inside))
+        cached = getattr(self, "_scope_indexes", None)
+        if cached is None:
+            cached = self._scope_indexes = {}
+        if key not in cached:
+            local = [replace(self.u.items[n], n=i) for i, n in enumerate(inside)]
+            cached[key] = B.BM25(local)
+        return cached[key]
 
     def _named_scope(self, q: str) -> bool:
         """Whether the question said where to look: exactly one spec, and no id that would pin.
