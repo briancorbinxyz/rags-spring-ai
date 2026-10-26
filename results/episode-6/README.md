@@ -58,6 +58,39 @@ against an unshallowed corpus that `revisions.py` verified. Results in
    clean ones are G-059 and G-061 (decoys, wanting current text) and G-067, G-068 (`what-changed`).
    Of the 21 questions that genuinely ask about the past, the best models available answer **two**.
 
+## Repriced against the revision axis — `1096536`
+
+`Revisions` is built (`ratchet/revisions.py`, with `GitHistory` as this corpus's adapter), and
+`revisions.py --score` re-prices a run already on disk. Nothing is re-run and no retrieval changes,
+so the correction is arithmetic over existing rankings:
+
+```bash
+tools/ratchet-proto/revisions.py --score results/episode-6/time-laptop.jsonl \
+    tools/ratchet-proto/results/5090-*-time.jsonl
+```
+
+| run · `E5-1` | Hit@4 | revision-aware | as-of | as-known |
+|---|---|---|---|---|
+| laptop, nomic | 7/24 | **3/24** | 4 → **0** | 0 |
+| 5090, nomic | 10/24 | **5/24** | 4 → **0** | 1 → **0** |
+| 5090, Qwen3-Emb-8B | 10/24 | **4/24** | 5 → **0** | 1 → **0** |
+| 5090, + Qwen3-Reranker-8B | 11/24 | **5/24** | 5 → **0** | 1 → **0** |
+
+**Every `as-of` and every `as-known` question scores zero** — all nine cutoff questions, every
+configuration, every model. Qwen3's perfect 5 of 5 is 0 of 5.
+
+Of the best row's five survivors, three are history-decoys (G-059, G-060, G-061) wanting *current*
+text, so not questions about the past. The other two are `what-changed`, and the coverage check
+finishes them: one snapshot supplies 1 of G-067's 4 declared versions and 1 of G-068's 2, so a
+reader gets one state and cannot see the change. G-069 is 0 of 4.
+
+**Of the 21 questions that genuinely ask about the past, this line answers none completely.**
+
+Cross-checked by a method sharing nothing with it: counting hits that carry no stale passage in the
+same top four gives G-059, G-061, G-067, G-068 — the same two `what-changed` questions. The one
+difference is G-060, a decoy whose expected address is also listed stale, which the ranking test
+drops because it cannot tell a stale revision from a stale passage.
+
 ## Reachability, before any retrieval
 
 Of 29 expected addresses across the 24 questions: **18 reachable, 11 removed by the lifecycle
