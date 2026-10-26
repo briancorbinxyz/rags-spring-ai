@@ -74,10 +74,66 @@ class LlamaCppReranker:
         return [self.cache[(query, p)] for p in passages]
 
 
+class OllamaJudgeReranker:
+    """An instruction-following model asked, per passage, whether it answers the question.
+
+    Not a cross-encoder. The MS-MARCO cross-encoders are trained on short web queries and are weak
+    at negation, which is the one thing G-073 turns on: it asks about a task telling implementers
+    *not to add* a resource kind, and every lexical and dense ranker prefers the tasks that add one.
+    MiniLM-L6 put the answering unit 60th of 215, MiniLM-L12 58th, mxbai-rerank-base 26th. A model
+    that can be *told* to watch for negation is the only remaining mechanism, so it is worth one
+    measurement — and it may still fail, which is the point of measuring rather than assuming.
+
+    Pointwise and slow: one call per passage. It exists to test a hypothesis about negation, not to
+    sit in the main line, and the instruction is fixed so that nothing here is tuned per question.
+    """
+
+    INSTRUCTION = (
+        "Does this passage, on its own, answer the question? Reply with one integer from 0 to 10 "
+        "and nothing else, where 10 means it directly answers the question and 0 means it is "
+        "irrelevant. Pay attention to negation: a passage saying something must NOT be done does "
+        "not answer a question about doing it, and a passage saying something must be done does "
+        "not answer a question about not doing it."
+    )
+
+    def __init__(self, model: str, url: str = "http://localhost:11434", think: bool = False):
+        self.name = f"ollama:{model}"
+        self.model = model
+        self.url = url.rstrip("/")
+        self.think = think
+        self.cache = {}
+
+    def _ask(self, query: str, passage: str) -> float:
+        import json
+        import urllib.request
+
+        prompt = f"Question: {query}\n\nPassage:\n{passage}\n\n{self.INSTRUCTION}"
+        if not self.think:
+            prompt += " /no_think"
+        body = json.dumps({"model": self.model, "prompt": prompt, "stream": False,
+                           "think": self.think,
+                           "options": {"temperature": 0, "num_predict": 1200}}).encode()
+        request = urllib.request.Request(f"{self.url}/api/generate", body,
+                                         {"Content-Type": "application/json"})
+        reply = json.loads(urllib.request.urlopen(request, timeout=300).read())["response"]
+        tail = reply.split("</think>")[-1]
+        digits = [t for t in "".join(c if c.isdigit() else " " for c in tail).split() if t]
+        return float(digits[-1]) if digits else 0.0
+
+    def scores(self, query: str, passages: list) -> list:
+        for passage in passages:
+            if (query, passage) not in self.cache:
+                self.cache[(query, passage)] = self._ask(query, passage)
+        return [self.cache[(query, p)] for p in passages]
+
+
 def make(name: str | None, llamacpp_url: str = "http://127.0.0.1:8091", cache_dir=None):
     """(reranker or None, message)."""
     if not name or name == "none":
         return None, "no reranker requested"
+    if name.startswith("ollama:"):
+        rr = OllamaJudgeReranker(name[len("ollama:"):])
+        return rr, f"reranker {rr.name}: an instruction-following judge, pointwise, one call per passage"
     if name.startswith("llamacpp:"):
         rr = LlamaCppReranker(name[len("llamacpp:"):], llamacpp_url, cache_dir)
         return rr, (f"{rr.provenance}; sanity pair {rr.sanity[0]:.4g} > {rr.sanity[1]:.4g}; "
