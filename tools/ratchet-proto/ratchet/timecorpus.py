@@ -177,3 +177,39 @@ def _emit(address: str, unit: tuple, from_pos: int, to_pos: int) -> list[State]:
     return [State(address, source, anchor, C.spec_of(source), lc, title, hpath, heading, chunk,
                   i + 1, len(chunks), from_pos, to_pos)
             for i, chunk in enumerate(chunks)]
+
+
+# --- cache ------------------------------------------------------------------------------------
+
+VERSION = "v1"
+
+
+def cache_file(cache_dir: Path, commit: str) -> Path:
+    return Path(cache_dir) / f"timecorpus-{commit[:7]}-{VERSION}.json"
+
+
+def save(corpus: TimeCorpus, path: Path) -> None:
+    import json
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    Path(path).write_text(json.dumps({
+        "root": corpus.root, "positions": corpus.positions,
+        "states": [[s.address, s.source, s.anchor, s.spec, s.lifecycle, s.title, s.path,
+                    s.heading, s.text, s.part, s.parts, s.from_pos, s.to_pos]
+                   for s in corpus.states]}), encoding="utf-8")
+
+
+def load(path: Path) -> TimeCorpus:
+    import json
+    raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    return TimeCorpus(root=raw["root"], positions=raw["positions"],
+                      states=[State(*row) for row in raw["states"]])
+
+
+def load_or_build(root: Path, cache_dir: Path, commit: str, progress=None) -> TimeCorpus:
+    """Built once per archive revision and kept: the walk costs about 45 seconds."""
+    path = cache_file(cache_dir, commit)
+    if path.exists():
+        return load(path)
+    corpus = build(root, progress)
+    save(corpus, path)
+    return corpus
