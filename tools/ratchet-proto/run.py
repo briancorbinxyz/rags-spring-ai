@@ -147,13 +147,19 @@ def fold_audit(golden: list, rounds: list) -> int:
 
 
 def element_texts(root: Path, addresses: set) -> dict:
-    """GoldenScorer.elementText: normalised jsoup text of the first element with that id."""
+    """GoldenScorer.elementText: normalised jsoup text of the first element with that id.
+
+    An address the checkout does not hold gets the empty text, exactly as an address whose element
+    is missing does. The time questions make that case ordinary rather than exceptional: they name
+    addresses as they were at a cutoff, and a page that has since been renamed — 004's plan.html,
+    now design.html — is simply not in this snapshot."""
     out, trees = {}, {}
     for a in sorted(addresses):
         f, _, ident = a.partition("#")
         if f not in trees:
-            trees[f] = H.parse((root / f).read_text(encoding="utf-8"))
-        el = trees[f].find(lambda e: e.id == ident)
+            page = root / f
+            trees[f] = H.parse(page.read_text(encoding="utf-8")) if page.is_file() else None
+        el = trees[f].find(lambda e: e.id == ident) if trees[f] is not None else None
         out[a] = S.normalise(H.jsoup_text(el)) if el is not None else ""
     return out
 
