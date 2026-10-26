@@ -354,6 +354,15 @@ class Pipeline:
             return []
         scores = reader.scores(q, [self.u.items[n].passage() for n, _ in ranked])
         picked = [(ranked[i][0], scores[i]) for i in range(len(ranked)) if scores[i] > 0]
+        if len(picked) * 2 >= len(ranked):
+            # A selection that includes most of what it read is an *enumeration*, not a judgement,
+            # and carries no discriminating information — so pinning it pins the whole scope, which
+            # is the thing the identifier lookup rightly refuses to do. Measured: on the nine cutoff
+            # questions the reader picks 3 of 20 and pinning it answers them; on G-031, G-032 and
+            # G-044 it picks 15, 20 and 19 of 20 and pinning it buries answers that were 4th, 1st
+            # and 1st. The answer was inside the named scope every time, so the failure is the
+            # reader's selectivity and not the seam.
+            return []
         picked.sort(key=lambda row: -row[1])
         return [n for n, _ in picked]
 
