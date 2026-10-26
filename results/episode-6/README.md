@@ -156,8 +156,9 @@ right revision.
 | T1 BM25 over the slice | 4/9 |
 | T2 + identifier lookup (G-072) | 5/9 |
 | T5 + dense and the cross-encoder | 6/9 |
-| **TD + the named document, routed** | **7/9** |
-| TE + reading a bare spec as its `spec.html` | 8/9 |
+| T7 + the named spec ranked and fused | 6/9 |
+| **TD + the named document, routed, scope-local statistics** | **8/9** |
+| TE the same, reading a bare spec as its `spec.html` | 8/9 |
 
 **G-075 is the abstention row and it is not a free pass.** It asks whether the archive described
 something on 11 September 2026; it did not, because spec 111 was first recorded on the 13th. Asked
@@ -179,8 +180,17 @@ cross-encoder (G-063 5th → absent, G-074 1st → 14th). Questions naming nothi
 spec", "the spec verb" — are found only by the cross-encoder. Disjoint by mechanism, so `route_scope`
 reranks only when the question named no haystack.
 
-`doc_scope_default` is off by default and reported separately: it is the one choice made with the
-answer in view. **7/9 is the honest number; 8/9 is the optimistic one.**
+**A correction worth keeping.** The scope ranking was dense-only at first, on the reasoning that a
+cosine has no collection statistics so restricting it is exact, while restricting BM25 would
+reproduce this episode's own error. That holds only for BM25 scored with *global* statistics over a
+filtered row set. An index built over the scope has the scope's own statistics — correct for exactly
+the reason an index per cutoff is correct. The same sentence twice, once about time and once about
+scope. The lexical half is the stronger one: spec-local BM25 puts G-063's unit 1st of 91 and
+G-074's 1st of 201, against dense's 7th and 2nd.
+
+That retired `doc_scope_default`, which existed only to buy G-063 and was the one choice made with
+the answer in view. With the scope's own statistics G-063 comes 4th without it, so `TE` equals `TD`.
+**8/9 is the honest number.**
 
 ### G-073 is unreached, and it is a negation failure
 
@@ -190,6 +200,8 @@ says to leave the kind list untouched; every ranker prefers the tasks that *add*
 | ranker | rank of the answering unit |
 |---|---|
 | dense, within the 57-unit document | 18 |
+| BM25 with the document's own statistics | 7 of 57 |
+| the two fused | 9 of 57 |
 | `ms-marco-MiniLM-L-6-v2` | 60 of 215 |
 | `ms-marco-MiniLM-L-12-v2` | 58 of 215 |
 | `mxbai-rerank-base-v1` | 26 of 215 |
