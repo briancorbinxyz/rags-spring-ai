@@ -35,6 +35,29 @@ loses at the step that was added to fix the present. Full reading in the series 
    address is right and the revision served is wrong, and an address-level measure cannot tell the
    difference. `as-of` and `as-known` are unmeasurable here until there is a revision axis.
 
+## Confirmed on the 5090 — run 26 Oct, `e59d5c9` on `episode-4-prototype`
+
+All 24 through the same six configurations on `nomic`, `qwen3-emb-8b` and `qwen3-emb-8b-qwen3-rr`,
+against an unshallowed corpus that `revisions.py` verified. Results in
+`tools/ratchet-proto/results/5090-*-time.{md,jsonl}` on that branch. `E5-1`:
+
+| tier | Hit@4 | stale@4 | history | h-decoy | as-of | what-changed | as-known |
+|---|---|---|---|---|---|---|---|
+| laptop, nomic | 7/24 | 6 | **0/7** | 3/3 | 4/5 | 0/5 | 0/4 |
+| 5090, nomic | 10/24 | 7 | **0/7** | 3/3 | 4/5 | 2/5 | 1/4 |
+| 5090, Qwen3-Emb-8B | 10/24 | 8 | **0/7** | 3/3 | **5/5** | 1/5 | 1/4 |
+| 5090, + Qwen3-Reranker-8B | 11/24 | 10 | **0/7** | 3/3 | **5/5** | 2/5 | 1/4 |
+
+1. **History is 1/7 on `S3` and 0/7 on `X1` for every model.** The mechanism is wrong, not the
+   model, and that is what the run existed to establish.
+2. **A better model makes this set worse.** `stale@4` on `E5-1` goes 6 → 7 → 8 → 10 while `S3` stays
+   at 4. A better retriever finds the right address more often, and the right address holds the
+   wrong text.
+3. **The best configuration scores 5/5 on `as-of`, all five the artefact.** Counting only hits with
+   no stale passage in the same top four, the best row's 11 hits are 4 clean and 7 artefact; the
+   clean ones are G-059 and G-061 (decoys, wanting current text) and G-067, G-068 (`what-changed`).
+   Of the 21 questions that genuinely ask about the past, the best models available answer **two**.
+
 ## Reachability, before any retrieval
 
 Of 29 expected addresses across the 24 questions: **18 reachable, 11 removed by the lifecycle
