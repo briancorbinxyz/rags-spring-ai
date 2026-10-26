@@ -312,3 +312,37 @@ So the honest shape of the episode is: a bitemporal corpus answers the questions
 point in time, almost completely. Questions that name **two** points need a mechanism that does not
 exist yet, and questions that name **none** — the history stratum — need the cutoff to be inferred,
 which is the trigger problem in a new guise.
+
+
+## 9/9: pin what the reader picks
+
+The listwise reader could answer G-073 from the first probe. Getting its answer *through* the
+pipeline was the difficulty, and three shapes failed the same way.
+
+| shape | hits | why |
+|---|---|---|
+| `T9` the reader as an RRF vote beside the ranking | 5/9 | two confident, opposed orderings fused commit to nothing — everything lands 7th or 8th |
+| `TG` the reader on the named scope, no open reranker | 5/9 | fixes the scoped questions, loses G-062 and G-066, which name no spec and have no other mechanism |
+| `TH` the reader on the scope, cross-encoder on the rest | 7/9 | the reader works and the fusion undoes it: G-073 moves 28th → **16th** and stops, outvoted two to one |
+| **`TJ` what the reader picks, pinned** | **9/9** | the reader's answer survives the pipeline |
+
+`TH` also settled a design question. **The two paths want different readers**: a listwise reader
+discriminates where a cross-encoder cannot and costs ~4.5 min over fifty candidates against ~90 s
+over twenty, while a cross-encoder is cheap over fifty and is the only thing that finds questions
+naming no haystack at all. One reranker for both was the wrong *shape*, not the wrong model, so
+`Pipeline` takes two.
+
+The fix used a seam that already existed: an identifier hit is **pinned** above the ranking and
+never reranked. `idlookup` refuses to pin a whole spec, rightly — but the reader's *selection*
+inside that spec is not a whole spec, and a listwise call returns the few identifiers it finds
+useful (three of twenty), so the set is chosen by the reader rather than by a `k` I picked.
+
+| question | TD | TJ |
+|---|---|---|
+| G-063 | rank 4 | **rank 1** |
+| G-073 | (28) | **rank 1** |
+| the other seven | unchanged | unchanged |
+
+`TJ` is `ids + lifecycle + dense + rerank + scope_rrf + doc_scope + scope_pin` and carries **no
+`route_scope`** — the one arm that failed its generalisation test is absent from the answer. G-075
+still abstains with nothing pinned, because it names no spec and so has no scope to read.
