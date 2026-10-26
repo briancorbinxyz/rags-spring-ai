@@ -23,12 +23,16 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from ratchet import idlookup as I
+
 from .corpus import EXCLUDED
 
 DEPTH_SINGLE = 50
 DEPTH_FUSED = 100  # each list's depth before fusion
 RRF_K = 60
 RERANK_TOP = 50
+#: A spec runs to about a hundred units, so this admits essentially any one spec whole.
+SCOPE_MAX = 200
 EXPAND_MAX = 5
 SIBLING_SEEDS = 5      # how many ranked items name a spec directory
 SIBLING_MAX = 200      # how many sibling units may be handed to the reranker
@@ -49,6 +53,9 @@ class Config:
     redirect: str | None = None  # None | "replace" (the rule) | "behind" (keeps applied history)
     rrf_neighbours: bool = False
     siblings: bool = False  # Episode 6: sibling artifacts of the best-ranked spec directories
+    scope: bool = False  # Episode 6: the named spec's own units, when it named no id
+    scope_rrf: bool = False  # Episode 6: rank inside the named spec and fuse, rather than admit
+    rerank_rrf: bool = False  # Episode 6: the reranker as a vote fused with the ranking, not a replacement
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -168,6 +175,10 @@ class Pipeline:
             lists.append(ix.bm25.search(q, allow=allow, depth=depth))
         if cfg.dense:
             lists.append(ix.dense(qv, cfg.lifecycle, depth))
+        if cfg.scope_rrf:
+            inside = self.scope_ranking(q, qv, cfg, depth)
+            if inside:
+                lists.append(inside)
         fused = rrf(lists) if len(lists) > 1 else lists[0]
 
         pinned_keys, pinned = [], []
@@ -179,12 +190,22 @@ class Pipeline:
         rest = [(n, s) for n, s in fused if n not in pinned_set]
 
         extra = self.siblings(rest, pinned_set, cfg) if cfg.siblings else []
+        if cfg.scope:
+            extra = extra + self.scope_units(q, pinned_set, extra, cfg)
 
         if cfg.rerank:
             head = rest[:RERANK_TOP] + [(n, 0.0) for n in extra]
             scores = self.reranker.scores(q, [items[n].passage() for n, _ in head])
             order = sorted(range(len(head)), key=lambda i: -scores[i])
-            rest = [(head[i][0], scores[i]) for i in order] + rest[RERANK_TOP:]
+            reranked = [(head[i][0], scores[i]) for i in order]
+            if cfg.rerank_rrf:
+                # The reranker as a second opinion rather than the last word. Replacing the ranking
+                # outright costs as much as it buys: measured on the cutoff questions it wins G-062
+                # and G-066 and loses G-063 and G-074, which had been 5th and 2nd. Fusing the two
+                # orders keeps a unit that one of them likes and the other merely tolerates.
+                rest = rrf([reranked, rest[:RERANK_TOP]]) + rest[RERANK_TOP:]
+            else:
+                rest = reranked + rest[RERANK_TOP:]
         elif extra:
             rest = rest + [(n, 0.0) for n in extra]
 
@@ -200,6 +221,71 @@ class Pipeline:
         return final[:50], top1, len(pinned)
 
     # --- Episode 6 --------------------------------------------------------------------------
+    def scope_units(self, q, pinned_set, already, cfg):
+        """The units of a spec the question named, when it named no id that pinned anything.
+
+        The identifier lookup's rule is that "a spec with no id pins nothing", and it is right to
+        refuse: pinning a whole spec above the ranking would bury a better answer elsewhere. But
+        refusing to *pin* is not a reason to refuse to *look*. "As spec 095's task list stood on 15
+        August" names its haystack exactly, and the unit that answers it shares almost no words with
+        it, so the ranking never reaches the spec at all.
+
+        So the spec's units join the rerank window and the cross-encoder decides — the same shape as
+        `siblings`, and for the same reason. This is a hypothesis the reranker can reject, not a
+        filter: if the named spec holds nothing relevant, nothing is promoted and the arm costs only
+        the reading.
+
+        Deliberately **not** ranked by BM25 before the reranker sees them. That was the trap the
+        sibling arm fell into: pre-filtering the candidates with the same lexical signal that failed
+        to find them is a guarantee of finding nothing new.
+        """
+        if cfg.items != "units":
+            return []
+        ids, specs = I.parse(q, self.idx.anchors)
+        if len(specs) != 1 or ids:
+            return []
+        seen = set(pinned_set) | set(already)
+        # `I.spec_of` and not `Item.spec`: the item carries the whole slug
+        # ("078-federated-resource-uri") and the question names the number, so the comparison has
+        # to use the identifier lookup's own reading of which spec a unit is in.
+        out = [n for n, it in enumerate(self.u.items)
+               if I.spec_of(f"{it.source}#{it.anchor}") == specs[0]
+               and n not in seen and self._admits(it, cfg)]
+        return out[:SCOPE_MAX]
+
+    def scope_ranking(self, q, qv, cfg, depth):
+        """Rank only inside the spec the question named, and let RRF decide how much it is worth.
+
+        `scope_units` admits the whole spec to the rerank window and depends on the cross-encoder to
+        find the answer in it. Measured, the cross-encoder does not: it put G-063's unit 41st of 141
+        and pushed G-074's from 3rd to 32nd. So this is the other way of using the same signal — the
+        named spec gets *its own ranking*, and that ranking joins the fusion as a third list beside
+        BM25 and dense. A unit that is first inside its spec and five-hundredth overall comes out
+        high without being pinned, and a spec that holds nothing relevant contributes a list of
+        irrelevant units that RRF buries. Rejectable, which a filter would not be.
+
+        Dense only, and that is the point rather than a shortcut: a cosine has no collection
+        statistics, so restricting it to a subset is exact. Restricting BM25 the same way would
+        reproduce the very error this episode is about — scoring a small collection with a large
+        one's document frequencies.
+        """
+        if cfg.items != "units" or qv is None or self.u.vectors is None:
+            return []
+        ids, specs = I.parse(q, self.idx.anchors)
+        if len(specs) != 1 or ids:
+            return []
+        inside = [n for n, it in enumerate(self.u.items)
+                  if I.spec_of(f"{it.source}#{it.anchor}") == specs[0] and self._admits(it, cfg)]
+        if not inside:
+            return []
+        sims = self.u.vectors[inside] @ qv
+        order = sorted(range(len(inside)), key=lambda i: -sims[i])[:depth]
+        return [(inside[i], float(sims[i])) for i in order]
+
+    def _admits(self, it, cfg):
+        return not cfg.lifecycle or it.lifecycle not in EXCLUDED
+
+
     def siblings(self, rest, pinned_set, cfg):
         """Units from the sibling artifacts of the best-ranked spec directories.
 
