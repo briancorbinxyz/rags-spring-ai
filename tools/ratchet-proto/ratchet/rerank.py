@@ -18,6 +18,9 @@ from . import llamacpp as L
 
 
 class Reranker:
+    #: Scores every passage on its own scale; it does not choose a subset. See `selects` below.
+    selects = False
+
     def __init__(self, name: str, max_length: int = 512):
         from sentence_transformers import CrossEncoder
 
@@ -35,6 +38,7 @@ class Reranker:
 
 
 class LlamaCppReranker:
+    selects = False
     batch = 64
     SANITY = ("What is the capital of France?",
               ["Paris is the capital and largest city of France.", "Bananas are a good source of potassium."])
@@ -87,6 +91,8 @@ class OllamaJudgeReranker:
     Pointwise and slow: one call per passage. It exists to test a hypothesis about negation, not to
     sit in the main line, and the instruction is fixed so that nothing here is tuned per question.
     """
+
+    selects = False  # a 0-10 score per passage, and it saturates: see the class docstring
 
     INSTRUCTION = (
         "Does this passage, on its own, answer the question? Reply with one integer from 0 to 10 "
@@ -144,6 +150,12 @@ class OllamaListwiseReranker:
     identifiers out of twenty has *selected* rather than ordered, and discarding the rest would
     throw away a ranking that was already better than nothing.
     """
+
+    #: This reader *chooses*: it names the candidates it finds useful and is silent about the rest,
+    #: which is what makes its output something to pin rather than something to sort by. A reader
+    #: that scores every candidate on its own scale has not chosen anything, and reading a choice
+    #: out of the sign of a logit would be meaningless.
+    selects = True
 
     #: Passages are truncated for the prompt only. A listwise call has to hold every candidate at
     #: once, so this trades tail detail for being able to compare them at all.

@@ -347,7 +347,11 @@ class Pipeline:
         if cfg.items != "units" or qv is None:
             return []
         reader = self.scope_reranker or self.reranker
-        if reader is None:
+        if reader is None or not getattr(reader, "selects", False):
+            # Pinning is for a reader that *chooses*. A cross-encoder scores every candidate on its
+            # own scale — MiniLM's logits run negative — so reading a choice out of the sign of a
+            # score would pin an arbitrary subset and call it a judgement. Such a reader can still
+            # reorder (`scope_rerank`); it cannot pin.
             return []
         ranked = self.scope_ranking(q, qv, replace(cfg, scope_rerank=0), cfg.scope_pin)
         if not ranked:
