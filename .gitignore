@@ -35,3 +35,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### TREC run files
+# Regenerable from each run's .jsonl by ratchet/trec.py, and one per configuration per run, so they
+# are evidence that rebuilds rather than evidence worth versioning. The .jsonl and .md are tracked.
+results/**/*.run
