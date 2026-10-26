@@ -149,6 +149,9 @@ class OllamaListwiseReranker:
     #: once, so this trades tail detail for being able to compare them at all.
     CHARS = 600
 
+    #: Enough for 50 candidates at CHARS each, with room for the instruction and the reply.
+    CONTEXT = 16384
+
     def __init__(self, model: str, url: str = "http://localhost:11434", window: int = 50):
         self.name = f"ollama-listwise:{model}"
         self.model = model
@@ -168,11 +171,21 @@ class OllamaListwiseReranker:
             "about not doing it, and does NOT answer a question about doing it. "
             "Reply with the identifiers only, best first, as a comma-separated list like "
             "[3],[1],[7]. No other text. /no_think")
+        # num_ctx is not optional here. Ollama defaults it to a few thousand tokens regardless of
+        # what the model supports — qwen3:8b declares 40,960 and its modelfile sets none — and a
+        # prompt over that limit is **silently truncated**, so the tail of the candidate list would
+        # simply not be read and the ranking would look like a judgement.
         body = json.dumps({"model": self.model, "prompt": prompt, "stream": False, "think": False,
-                           "options": {"temperature": 0, "num_predict": 1500}}).encode()
+                           "options": {"temperature": 0, "num_predict": 1500,
+                                       "num_ctx": self.CONTEXT}}).encode()
         request = urllib.request.Request(f"{self.url}/api/generate", body,
                                          {"Content-Type": "application/json"})
-        reply = json.loads(urllib.request.urlopen(request, timeout=900).read())["response"]
+        answer = json.loads(urllib.request.urlopen(request, timeout=1800).read())
+        if answer.get("prompt_eval_count", 0) >= self.CONTEXT:
+            raise RuntimeError(
+                f"the listwise prompt filled the context ({answer['prompt_eval_count']} tokens of "
+                f"{self.CONTEXT}): candidates were dropped, so this is not a ranking")
+        reply = answer["response"]
         tail = reply.split("</think>")[-1]
         out = []
         for token in tail.replace("[", " ").replace("]", " ").replace(",", " ").split():
