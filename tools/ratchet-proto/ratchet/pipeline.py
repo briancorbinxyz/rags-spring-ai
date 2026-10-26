@@ -60,6 +60,7 @@ class Config:
     doc_scope: bool = False  # Episode 6: narrow scope_rrf to the document kind the question named
     doc_scope_default: bool = False  # ...and treat a spec named with no document kind as its spec.html
     route_scope: bool = False  # Episode 6: rerank only when the question named no haystack
+    scope_rerank: int = 0  # Episode 6: rerank this many of the named scope's own ranking first
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -304,7 +305,23 @@ class Pipeline:
                  for i in sorted(range(len(inside)), key=lambda i: -sims[i])]
         lexical = self._scope_bm25(inside).search(q, depth=len(inside))
         fused = rrf([[(inside[n], s) for n, s in lexical], dense])
+        if cfg.scope_rerank and self.reranker is not None:
+            fused = self._reread(q, fused, cfg.scope_rerank)
         return fused[:depth]
+
+    def _reread(self, q, ranked, window):
+        """Let the reranker read the named scope's ranking before it is fused with the rest.
+
+        A listwise reader has to hold every candidate at once, and its judgement degrades as the
+        list grows — the long-context "lost in the middle" effect. The named scope is the one place
+        where a short, high-quality list is available: the question said to look there, so the
+        reader gets the scope's own top few rather than fifty candidates drawn from the whole
+        archive. Reranking here and fusing afterwards keeps the rest of the ranking honest.
+        """
+        head = ranked[:window]
+        scores = self.reranker.scores(q, [self.u.items[n].passage() for n, _ in head])
+        order = sorted(range(len(head)), key=lambda i: -scores[i])
+        return [(head[i][0], scores[i]) for i in order] + ranked[window:]
 
     def _scope_bm25(self, inside):
         """An FTS5 index over the scope alone, so its statistics are the scope's. Kept per scope."""

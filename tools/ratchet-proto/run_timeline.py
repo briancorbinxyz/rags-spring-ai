@@ -68,6 +68,9 @@ def configs() -> list[Config]:
         Config("TF", "7 + the named document, reranked everywhere", ids=True, lifecycle=True,
                dense=True, rerank=True, scope_rrf=True, doc_scope=True,
                needs=("dense", "rerank"), **units),
+        Config("TG", "variant: the reader given the named scope's own top 20, then fused", ids=True,
+               lifecycle=True, dense=True, scope_rrf=True, doc_scope=True, scope_rerank=20,
+               needs=("dense", "rerank"), **units),
     ]
 
 
