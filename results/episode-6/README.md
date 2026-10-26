@@ -208,3 +208,29 @@ says to leave the kind list untouched; every ranker prefers the tasks that *add*
 
 Two bi-encoder configurations and three cross-encoders agree. Nothing in this stack addresses
 negation, and the decoy is additionally the very change that would later retire the answer.
+
+
+## The negation probe: pointwise judging saturates
+
+`--reranker ollama:<model>` asks an instruction-following model, per passage, whether it answers the
+question, with a fixed instruction naming negation explicitly. It refuted its own hypothesis.
+
+G-073 moved 9th → 6th in its document, and **not because the judge disagreed**: it scored **10 out
+of 10 for six different passages**, T-1203 and the "add screen to RESOURCE_KINDS" tasks alike.
+Nothing was separated and the order came from the tie-break. On the two questions already working
+it was harmless — G-063 2nd → 1st, G-074 1st → 1st — so it is non-discriminating rather than wrong.
+
+**Pointwise relevance judging saturates.** Every task in that document *is* about the question's
+topic, so an absolute score cannot express "this one and not that one". The negation distinction is
+comparative by nature, and a scale that rates each candidate alone cannot carry it.
+
+## The arms cannot move the main line, measured
+
+| | S3 | X1 | X2 | H1 | E5-1 | E5-2 |
+|---|---|---|---|---|---|---|
+| before the arms | 32/47 | 32/47 | 33/47 | 36/47 | 32/47 | 33/47 |
+| after | 32/47 | 32/47 | 33/47 | 36/47 | 32/47 | 33/47 |
+
+Identical on Hit@4, all-evidence@4, MRR to three decimals and stale@4, every row. Every new path is
+behind a flag defaulting false and the one edit to existing flow is an extract-variable whose `else`
+branch is the old line verbatim — but that is an argument, so it was run as well.
