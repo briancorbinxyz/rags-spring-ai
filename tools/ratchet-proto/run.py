@@ -86,6 +86,17 @@ def configs() -> list[Config]:
                redirect="replace", expand=True, needs=("dense",), **ep4),
         Config("H1b", "variant: H1 with the keeping redirect", ids=True, lifecycle=True, dense=True,
                redirect="behind", needs=("dense",), **ep4),
+        # Episode 6: the scope arms, on the snapshot corpus, as a generalisation test. They were
+        # built for the nine cutoff questions and must be shown not to be fitted to them.
+        Config("G1", "E5-2 + the named spec ranked and fused", ids=True, lifecycle=True, dense=True,
+               rerank=True, redirect="replace", expand=True, scope_rrf=True,
+               needs=("dense", "rerank"), **ep4),
+        Config("G2", "G1 + narrowed to the named document", ids=True, lifecycle=True, dense=True,
+               rerank=True, redirect="replace", expand=True, scope_rrf=True, doc_scope=True,
+               needs=("dense", "rerank"), **ep4),
+        Config("G3", "G2 + reranking only when the question named no haystack", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, route_scope=True, needs=("dense", "rerank"), **ep4),
         # ablations
         Config("A", "naive 800-token chunks, dense only", items="chunks", bm25=False, dense=True, needs=("dense",)),
         Config("B", "naive 800-token chunks, BM25 only", items="chunks"),
