@@ -442,3 +442,53 @@ the bitemporal corpus alone takes the cutoff questions from 0 of 9 to 7 of 9 wit
 mechanism at all** — identifier lookup, standing filter, dense fusion and cross-encoder, unchanged,
 pointed at the right collection. Everything after that buys one or two questions and costs a
 main-set question somewhere.
+
+
+## The section seam: a why-question's collection is `#context`
+
+G-080 was the 5090 main line's only miss and had **no structural signal at all** — no id, no named
+spec, no typed edge. Where it actually lands is the clue: the pipeline finds the right *page* and
+the wrong *section*. Rank 8 was `025-id-uniqueness/spec.html#scenarios`; the answer is that page's
+`#context`.
+
+That generalises because the archive says so: **all five main-set `intent` questions expect a
+`#context` unit**, and spectastic's schema puts the problem a spec exists to solve there. Over the
+129 in-force `#context` units the expected one ranks **first** for G-077, G-079, G-080 and G-081,
+sixth for G-078. A subset is a collection, for the fourth time this episode.
+
+Fused, never pinned: the `why` trigger fires on 19 questions across the three sets and only 4 want a
+`#context`.
+
+| main set, laptop | Hit@4 | all@4 | stale@4 | ratchet |
+|---|---|---|---|---|
+| `E5-2` | 33/47 | 31 | 0 | — |
+| `G9` the earlier keepers | 33/47 | 31 | 0 | clean |
+| **`GA` + `context_scope`** | **35/47** | **33** | 0 | **`(True, [])`** |
+
+Won G-078 and G-081 from absent to rank 3, lost nothing. G-080 reaches 21 — reachable where it was
+nowhere, with the fusion diluting a list that had it first, so the 5090's stronger reranker is the
+test that matters.
+
+### Every other section kind is as sharp, which is the trap
+
+| collection | size | expected unit's rank |
+|---|---|---|
+| `#changelog` | 596 | G-051 **2**, G-052 **3**, G-058 9 |
+| `#risks` | 415 | G-058 **1**, H-010 **2** |
+| `#intent` | 156 | G-006 **1**, G-018 **1**, H-009 **2**, H-011 **1** |
+| `#requirements` | 121 | G-031 **1**, G-032 **1**, H-004 **1** |
+
+Five more questions are one trigger away — and **both trigger-free designs fail, in opposite
+directions**:
+
+- **One combined collection** of all 4,926 section units is blunter: G-051 2 → 13, G-052 3 → 14,
+  G-080 1 → 41, G-078 6 → 97. Mixing `#changelog` with `#risks` and `#context` reintroduces the
+  competition that narrowing removed.
+- **One fused list per kind** is worse: there are **31 kinds** with 40+ units, so 31 lists each
+  offer a confident rank-1 and the answer lands in a tie-tier near 9th. G-051 2 → 38, G-078 6 → 164.
+
+So the per-kind collection is sharp *and* needs to know which kind. For `#context` that mapping is
+the archive's own schema and holds 5 of 5. For `#risks`, `#changelog` and `#intent` it would mean
+inventing a trigger from two or three examples each — the line between what the schema says and what
+these questions say. **The arm ships for `#context` and stops there**, and the other four are
+recorded as one trigger away rather than quietly fitted.
