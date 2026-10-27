@@ -1,13 +1,15 @@
 # The slice ratchet: llamacpp:qwen3-embedding-8b-q8_0 / llamacpp:qwen3-reranker-8b-q8_0
 
-Run 2026-10-26 23:28 · spectastic c64d41c · 15,616 unit-states · 14 questions with a cutoff
+Run 2026-10-27 00:10 · spectastic c64d41c · 15,616 unit-states · 14 questions with a cutoff
 
 Each question is answered against the archive as it stood at its own cutoff, so a retrieved address is the right revision by construction. G-075 is the abstention row: answered when no passage the golden set marks stale reaches the top four.
 
-| key | configuration | answered |
-|---|---|---|
-| T5 | 5 + cross-encoder rerank | **8/14** |
-| TD | 6 + the named document, reranked only when nothing was named | **10/14** |
+`what-changed` is scored apart and never counted in `answered`: *located* is the address in the top four, *told* is located **and** the address's chain of states rebuilt from the archive equal to the declared `versions`.
+
+| key | configuration | answered | what-changed: located · told |
+|---|---|---|---|
+| T5 | 5 + cross-encoder rerank | **7/9** | 1 · 1 of 5 |
+| TD | 6 + the named document, reranked only when nothing was named | **8/9** | 2 · 2 of 5 |
 
 ## Per question
 

@@ -12,9 +12,13 @@ configurations over a slice of `TimeCorpus` chosen per question, so a retrieved 
     tools/ratchet-proto/run_timeline.py --embedder llamacpp:qwen3-embedding-8b-q8_0 \\
         --reranker llamacpp:qwen3-reranker-8b --out results/5090-slice
 
-Only the questions carrying a `cutoff` are scored, because only those have a slice to be scored
-against. G-075 has an empty `expected` and no state at its cutoff: it is the abstention row, and it
-counts as answered when no passage the golden set marks stale reaches the top four.
+Only the questions carrying a `cutoff` or a `window` are scored, because only those have a slice to
+be scored against. G-075 has an empty `expected` and no state at its cutoff: it is the abstention
+row, and it counts as answered when no passage the golden set marks stale reaches the top four.
+
+The `window` questions (`what-changed`) are reported apart from the cutoff headline. Each asks for a
+diff, so it is answered only when retrieval locates the address and the chain of states rebuilt
+from the archive equals its declared `versions`.
 """
 
 from __future__ import annotations
@@ -117,6 +121,27 @@ def changes_in(corpus, history, question: dict, address: str) -> tuple:
     return held, len(declared)
 
 
+def chain(corpus, history, question: dict, address: str) -> list:
+    """The successive states of an address across a `what-changed` question's window, rebuilt.
+
+    One entry per state in force somewhere in the window: the position it began at, in order, with
+    a leading None when the address did not exist at the window's start. A diff is not a passage,
+    so this is the half of the answer no ranking supplies — the archive does, once retrieval has
+    found the address.
+    """
+    window = question["window"]
+    lo, hi = history.at(window["from"]).position, history.at(window["to"]).position
+    states = [s for s in corpus.history_of(address) if s.from_pos <= hi and s.to_pos > lo]
+    starts = sorted({s.from_pos for s in states})
+    return ([None] if not any(s.covers(lo) for s in states) else []) + starts
+
+
+def declared_chain(history, question: dict) -> list:
+    """The golden set's `versions` in the same shape as `chain`, so the two compare with ==."""
+    return [None if v.get("absent") else history.of(v["commit"]).position
+            for v in question.get("versions") or []]
+
+
 def abstains(question: dict, ranked: list) -> bool:
     """For a question with nothing to find: did the ranking avoid offering a wrong answer?
 
@@ -193,7 +218,7 @@ def main() -> int:
         if "rerank" in cfg.needs and rr is None:
             print(f"{cfg.key} skipped: {msg}", file=sys.stderr)
             continue
-        started, hits, out = time.time(), 0, []
+        started, hits, located, told, out = time.time(), 0, 0, 0, []
         for q in cutoffs:
             at = moment(history, q).position
             restrict = None
@@ -207,6 +232,17 @@ def main() -> int:
                                  lambda it: T.count(it.passage()), top1, pinned)
             answered = (bool(scored.first and scored.first <= DEPTH) if q["expected"]
                         else abstains(q, ranked))
+            # A what-changed question is answered when retrieval locates the address *and* the
+            # chain rebuilt from the archive is the declared one; it is scored apart from the
+            # cutoff headline, because Hit@4 on its own measures a passage and the question asks
+            # for a diff.
+            changed = bool(q.get("window") and q["expected"])
+            rebuilt = chain(corpus, history, q, q["expected"][0]) if changed else None
+            chain_ok = rebuilt == declared_chain(history, q) if changed else None
+            if changed:
+                located += answered
+                answered = answered and chain_ok
+                told += answered
             out.append({"config": cfg.key, "label": cfg.label,
                         "embedder": args.embedder, "reranker": args.reranker,
                         "id": scored.qid, "stratum": scored.stratum,
@@ -220,11 +256,15 @@ def main() -> int:
                         "pinned": scored.pinned, "top10": scored.top,
                         "context_tokens_top4": scored.context_tokens,
                         "top1_score": scored.top1_score,
+                        "chain": rebuilt, "chain_ok": chain_ok,
                         "abstention": not q["expected"], "answered": answered})
-            hits += answered
+            hits += answered and not changed
         rows += out
-        summary.append((cfg.key, cfg.label, hits, len(cutoffs), time.time() - started))
-        print(f"{cfg.key:4} {hits}/{len(cutoffs)}  {cfg.label}", file=sys.stderr)
+        n_changed = sum(1 for q in cutoffs if q.get("window") and q["expected"])
+        summary.append((cfg.key, cfg.label, hits, len(cutoffs) - n_changed, time.time() - started,
+                        located, told, n_changed))
+        print(f"{cfg.key:4} {hits}/{len(cutoffs) - n_changed}  what-changed located {located}, "
+              f"told {told}/{n_changed}  {cfg.label}", file=sys.stderr)
 
     stem = Path(args.out)
     stem.parent.mkdir(parents=True, exist_ok=True)
@@ -236,9 +276,14 @@ def main() -> int:
              "Each question is answered against the archive as it stood at its own cutoff, so a "
              "retrieved address is the right revision by construction. G-075 is the abstention "
              "row: answered when no passage the golden set marks stale reaches the top four.", "",
-             "| key | configuration | answered |", "|---|---|---|"]
-    for key, label, hits, total, _ in summary:
-        lines.append(f"| {key} | {label} | **{hits}/{total}** |")
+             "`what-changed` is scored apart and never counted in `answered`: *located* is the "
+             "address in the top four, *told* is located **and** the address's chain of states "
+             "rebuilt from the archive equal to the declared `versions`.", "",
+             "| key | configuration | answered | what-changed: located · told |",
+             "|---|---|---|---|"]
+    for key, label, hits, total, _, located, told, n_changed in summary:
+        lines.append(f"| {key} | {label} | **{hits}/{total}** | "
+                     + (f"{located} · {told} of {n_changed} |" if n_changed else "– |"))
     lines += ["", "## Per question", "",
               "| question | " + " | ".join(k for k, *_ in summary) + " |",
               "|---" * (len(summary) + 1) + "|"]
@@ -251,6 +296,8 @@ def main() -> int:
                          ("abstained" if r.get("abstention") and r["answered"] else
                           "**offered a stale answer**" if r.get("abstention") else
                           f"rank {r['first_hit']}" if r["answered"] else
+                          f"rank {r['first_hit']}, **wrong chain**" if r.get("chain_ok") is False
+                          and r.get("first_hit") and r["first_hit"] <= DEPTH else
                           f"({r['first_hit']})" if r.get("first_hit") else "miss"))
         lines.append(f"| {q['id']} {q['stratum']} | " + " | ".join(cells) + " |")
     stem.with_suffix(".md").write_text("\n".join(lines) + "\n", encoding="utf-8")
