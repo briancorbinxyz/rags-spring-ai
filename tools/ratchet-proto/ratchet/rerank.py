@@ -192,7 +192,12 @@ class OllamaListwiseReranker:
                                        "num_ctx": self.CONTEXT}}).encode()
         request = urllib.request.Request(f"{self.url}/api/generate", body,
                                          {"Content-Type": "application/json"})
-        answer = json.loads(urllib.request.urlopen(request, timeout=1800).read())
+        # A listwise call is one HTTP request holding every candidate, so a hung one stalls the
+        # whole run with nothing to show for it: a thirty-minute timeout meant a single bad call
+        # looked exactly like slow progress for half an hour. Five minutes is well past the
+        # measured cost — about 30s for fifty candidates uncontended, four and a half minutes at
+        # worst under contention — and a stall now says so.
+        answer = json.loads(urllib.request.urlopen(request, timeout=300).read())
         if answer.get("prompt_eval_count", 0) >= self.CONTEXT:
             raise RuntimeError(
                 f"the listwise prompt filled the context ({answer['prompt_eval_count']} tokens of "

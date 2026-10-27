@@ -68,6 +68,7 @@ class Config:
     history_pin: int = 0  # Episode 6: let a reader choose among the units the filter hides
     reader_pin: int = 0  # Episode 6: let a chooser pick from the top of the ranking and pin it
     context_scope: bool = False  # Episode 6: a why-question's collection is the archive's #context
+    section_scope: int = 0  # Episode 6: the best few of every section kind, ordered by a chooser
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -212,6 +213,10 @@ class Pipeline:
             why = self.context_ranking(q, qv, cfg, depth)
             if why:
                 lists.append(why)
+        if cfg.section_scope:
+            sections = self.section_ranking(q, qv, cfg)
+            if sections:
+                lists.append(sections)
         fused = rrf(lists) if len(lists) > 1 else lists[0]
 
         pinned_keys, pinned = [], []
@@ -378,6 +383,61 @@ class Pipeline:
         lowered = q.lower()
         return any(re.search(r"\b" + marker.replace(" ", r"\s+") + r"\b", lowered)
                    for marker in self.HISTORY_MARKERS)
+
+    #: Section kinds worth a collection of their own: the archive has 31 with forty or more units.
+    SECTION_MIN = 40
+
+    def section_ranking(self, q, qv, cfg):
+        """The best few of every section kind, put in order by a reader that chooses.
+
+        The per-kind collections are each very sharp — `#changelog` ranks G-051's answer 2nd of 596,
+        `#risks` ranks G-058's 1st of 415, `#context` ranks G-080's 1st of 129 — and the problem was
+        never finding the unit inside its kind. It was knowing *which kind*. Two trigger-free ways of
+        avoiding that question both failed: one combined collection of 4,926 sections is blunter
+        than any of them, and one fused list per kind is worse still, because 31 lists each offer a
+        confident rank-1 and RRF cannot tell them apart, so the answer lands in a tie-tier near 9th.
+
+        A reader can tell them apart, which is the one thing RRF could not do. Offered the best two
+        of each kind it ranked G-080's `#context` **first of 62**, where RRF had it 9th and the
+        combined collection 41st. It is not a cure — G-058's `#risks` came 6th — but it needs no
+        trigger, and a trigger per section kind was the thing worth avoiding.
+
+        Its **order** joins the fusion, and its picks are not pinned. For G-080 it chose 27 of 62,
+        which the selectivity rule in `_picks` accepts by a hair and which would be a catastrophic
+        pin: `scope_pin` lost the 5090 main set by pinning 15 to 20. A chooser's ordering is useful
+        here and its choosing is not.
+        """
+        reader = self.scope_reranker or self.reranker
+        if cfg.items != "units" or qv is None or self.u.vectors is None:
+            return []
+        if reader is None or not getattr(reader, "selects", False):
+            return []
+        pool = []
+        for members in self._section_kinds(cfg):
+            lexical = self._scope_bm25(members).search(q, depth=len(members))
+            ranked = [(members[n], sc) for n, sc in lexical]
+            sims = self.u.vectors[members] @ qv
+            dense = [(members[i], float(sims[i]))
+                     for i in sorted(range(len(members)), key=lambda i: -sims[i])]
+            pool += [n for n, _ in rrf([ranked, dense])[:cfg.section_scope]]
+        # The reader reads a window, and a pool longer than it would be silently truncated.
+        pool = pool[:getattr(reader, "window", len(pool))]
+        if not pool:
+            return []
+        scores = reader.scores(q, [self.u.items[n].passage() for n in pool])
+        order = sorted(range(len(pool)), key=lambda i: -scores[i])
+        return [(pool[i], float(len(pool) - r)) for r, i in enumerate(order)]
+
+    def _section_kinds(self, cfg):
+        """Unit numbers grouped by section anchor, for anchors the archive uses often. Built once."""
+        if getattr(self, "_sections", None) is None:
+            by = collections.defaultdict(list)
+            for n, it in enumerate(self.u.items):
+                if it.anchor and not any(ch.isdigit() for ch in it.anchor):
+                    by[it.anchor].append(n)
+            self._sections = [v for v in by.values() if len(v) >= self.SECTION_MIN]
+        return [[n for n in members if self._admits(self.u.items[n], cfg)]
+                for members in self._sections]
 
     #: A question shaped like "why does this exist". Poor precision on purpose: it fires on 19
     #: questions across the three sets and only 4 of them want a `#context`, which is why what
