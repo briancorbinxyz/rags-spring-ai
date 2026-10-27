@@ -19,6 +19,7 @@ Every list is cut to 50 items.
 from __future__ import annotations
 
 import collections
+import re
 from dataclasses import dataclass, replace
 
 import numpy as np
@@ -62,6 +63,9 @@ class Config:
     route_scope: bool = False  # Episode 6: rerank only when the question named no haystack
     scope_rerank: int = 0  # Episode 6: rerank this many of the named scope's own ranking first
     scope_pin: int = 0  # Episode 6: pin what a reader picks out of the named scope, unfused
+    admit_history: bool = False  # Episode 6: let a history question see what the filter hides
+    history_keeps_superseded: bool = False  # Episode 6: ...and let the redirect leave it in place
+    history_pin: int = 0  # Episode 6: let a reader choose among the units the filter hides
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -198,6 +202,10 @@ class Pipeline:
             inside = self.scope_ranking(q, qv, cfg, depth)
             if inside:
                 lists.append(inside)
+        if cfg.admit_history:
+            left_behind = self.excluded_ranking(q, qv, cfg, depth)
+            if left_behind:
+                lists.append(left_behind)
         fused = rrf(lists) if len(lists) > 1 else lists[0]
 
         pinned_keys, pinned = [], []
@@ -207,6 +215,10 @@ class Pipeline:
                 pinned += [n for n in self._live_items(k, cfg.lifecycle) if n not in pinned]
         if cfg.scope_pin:
             for n in self.scope_picks(q, qv, cfg):
+                if n not in pinned:
+                    pinned.append(n)
+        if cfg.history_pin and self._history_asked(q):
+            for n in self.history_picks(q, qv, cfg):
                 if n not in pinned:
                     pinned.append(n)
         pinned_set = set(pinned)
@@ -247,7 +259,13 @@ class Pipeline:
             final = self.expand(final, pinned_keys[0], q)
         if cfg.rrf_neighbours:
             final = self.rrf_neighbours(final, q)
-        if cfg.redirect:
+        if cfg.redirect and not (cfg.history_keeps_superseded and self._history_asked(q)):
+            # The redirect is right about the present and wrong about the past. It replaces a
+            # superseded record with what replaced it, which is what a reader asking "what does this
+            # require?" wants and the opposite of what "what did it originally say?" wants. G-057's
+            # D-005 is `current`, so the standing filter never touches it; the redirect is what
+            # removes it, and no amount of admitting excluded units reaches it. Same trigger, same
+            # rejectability: the record stays in place and the ranking may still bury it.
             final = self.redirect(final, q, cfg.redirect)
         return final[:50], top1, len(pinned)
 
@@ -327,6 +345,78 @@ class Pipeline:
             fused = self._reread(q, fused, cfg.scope_rerank)
         return fused[:depth]
 
+    #: Words that say a question is asking about a record that has been left behind. The archive's
+    #: own vocabulary first — `withdrawn`, `superseded`, `rejected` are the lifecycle's literal
+    #: names — then the English a reader actually writes. Measured on the three question sets: this
+    #: list fires on 9 of the 10 questions that need the excluded units, and also on 2 of the 3
+    #: history-decoys and 5 main-set questions, which is precisely why what follows is a candidate
+    #: list and not a filter flip.
+    HISTORY_MARKERS = (
+        "withdrawn", "withdraw", "superseded", "supersede", "rejected", "reject", "retired",
+        "abandoned", "dropped", "shelved", "set aside", "originally", "original", "first",
+        "earlier", "used to", "before", "previously", "replaced", "no longer", "former",
+    )
+
+    def _history_asked(self, q: str) -> bool:
+        lowered = q.lower()
+        return any(re.search(r"\b" + marker.replace(" ", r"\s+") + r"\b", lowered)
+                   for marker in self.HISTORY_MARKERS)
+
+    def excluded_ranking(self, q, qv, cfg, depth):
+        """The units the standing filter hides, ranked among themselves and offered to the fusion.
+
+        The filter exists because a search that cannot tell history from current text answers from
+        the past with confidence, and it has earned its place — Episode 4 measured it. But three
+        strata of questions ask *about* what it hides, and for them the filter is not a safeguard,
+        it is the reason the answer cannot be found at any depth. Six questions across the held-out
+        and time sets expect a unit that is `withdrawn`, `superseded` or `rejected`, and a withdrawn
+        proposal was *never* anything else, so no slice of history reaches it either.
+
+        **A candidate list, not a switch.** `admit_history` does not unfilter the search; it builds
+        a *separate* ranking over the excluded units and fuses it in, so the reranker and the
+        fusion can refuse it. That matters because the trigger is lexical and two of the three
+        history-decoys carry a marker while needing current text — G-060 says "no longer", G-061
+        says "originally" — and the golden set calls G-061 an expected misroute on purpose. A filter
+        flip would answer the decoys wrongly with the same confidence it answers the history
+        questions rightly.
+
+        **With their own statistics**, as everything else in this episode: 196 excluded units are a
+        collection, and a collection has its own document frequencies. Scoring them with the whole
+        archive's would repeat the mistake the as-of measurement exposed.
+        """
+        if cfg.items != "units" or not self._history_asked(q):
+            return []
+        hidden = [n for n, it in enumerate(self.u.items) if it.lifecycle in EXCLUDED]
+        if not hidden:
+            return []
+        lexical = self._scope_bm25(hidden).search(q, depth=len(hidden))
+        ranked = [(hidden[n], s) for n, s in lexical]
+        if qv is not None and self.u.vectors is not None:
+            sims = self.u.vectors[hidden] @ qv
+            dense = [(hidden[i], float(sims[i]))
+                     for i in sorted(range(len(hidden)), key=lambda i: -sims[i])]
+            ranked = rrf([ranked, dense])
+        return ranked[:depth]
+
+    def history_picks(self, q, qv, cfg) -> list:
+        """What a reader chooses among the units the standing filter hides.
+
+        `admit_history` makes them reachable and the ranking then buries them: measured on the time
+        set, G-054 lands 2nd but G-052 11th, G-057 11th, G-056 21st and G-055 39th. Reachable and
+        unread is the sibling arm's lesson a third time, and the answer is the one that worked for
+        the named scope — let a reader that *chooses* pick from the small population, and pin what
+        it picks, under the same rule that a selection covering most of what it read is an
+        enumeration and worth nothing.
+
+        The population here is 196 units out of 11,492, and a history question is asking about
+        exactly those. That is a far narrower bet than pinning inside a named spec, which is what
+        failed the main set at 46/47 — and the trigger fires on only five main-set questions.
+        """
+        if cfg.items != "units" or qv is None:
+            return []
+        ranked = self.excluded_ranking(q, qv, cfg, cfg.history_pin)
+        return self._picks(q, ranked)
+
     def scope_picks(self, q, qv, cfg) -> list:
         """What a reader picks out of the window the question named, pinned rather than fused.
 
@@ -355,6 +445,13 @@ class Pipeline:
             return []
         ranked = self.scope_ranking(q, qv, replace(cfg, scope_rerank=0), cfg.scope_pin)
         if not ranked:
+            return []
+        return self._picks(q, ranked)
+
+    def _picks(self, q, ranked) -> list:
+        """A reader's choice out of a candidate list, or nothing if it did not really choose."""
+        reader = self.scope_reranker or self.reranker
+        if not ranked or reader is None or not getattr(reader, "selects", False):
             return []
         scores = reader.scores(q, [self.u.items[n].passage() for n, _ in ranked])
         picked = [(ranked[i][0], scores[i]) for i in range(len(ranked)) if scores[i] > 0]
