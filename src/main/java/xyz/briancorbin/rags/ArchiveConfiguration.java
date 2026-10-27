@@ -6,8 +6,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +25,29 @@ import xyz.briancorbin.rags.spectastic.SpecCorpus;
 /// with their advisors.
 @Configuration
 class ArchiveConfiguration {
+
+  /// Spring AI leaves an option out of the request when it is null, and Ollama then fills in its
+  /// own: a random seed, `top_p` 0.9, `top_k` 40, and a five-minute `keep_alive` after which the
+  /// next call reloads the model and decides its load-time options again. So each is set here.
+  /// Only `OllamaChatOptions` can carry a seed; the portable `ChatOptions` has none. `num_ctx` is
+  /// set once, by `spring.ai.ollama.chat.num-ctx`, and reaches every request already.
+  static final int SEED = 42;
+
+  static final double TOP_P = 0.9;
+  static final int TOP_K = 40;
+
+  /// Long enough that a golden run never reloads the model between calls.
+  static final String KEEP_ALIVE = "30m";
+
+  /// The options every commentator runs with: its temperature, and the rest pinned.
+  static OllamaChatOptions.Builder pinned(double temperature) {
+    return OllamaChatOptions.builder()
+        .temperature(temperature)
+        .seed(SEED)
+        .topP(TOP_P)
+        .topK(TOP_K)
+        .keepAlive(KEEP_ALIVE);
+  }
 
   /// Spring AI's Ollama embedding model with nomic's task prefixes added. Primary, so anything that
   /// asks for an `EmbeddingModel` gets the prefixed one.
@@ -65,7 +88,7 @@ class ArchiveConfiguration {
     return builder
         .defaultSystem(persona)
         // Copying wants a cool head; Quoter's personality lives in the aside.
-        .defaultOptions(ChatOptions.builder().temperature(0.3))
+        .defaultOptions(pinned(0.3))
         .defaultAdvisors(
             MessageChatMemoryAdvisor.builder(chatMemory).build(),
             QuestionAnswerAdvisor.builder(store).build())
@@ -80,7 +103,7 @@ class ArchiveConfiguration {
       @Value("classpath:persona/answerer.md") Resource persona) {
     return builder
         .defaultSystem(persona)
-        .defaultOptions(ChatOptions.builder().temperature(0.4))
+        .defaultOptions(pinned(0.4))
         .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
         .build();
   }
@@ -94,7 +117,7 @@ class ArchiveConfiguration {
       @Value("classpath:persona/answerer-direct.md") Resource persona) {
     return builder
         .defaultSystem(persona)
-        .defaultOptions(ChatOptions.builder().temperature(0.3))
+        .defaultOptions(pinned(0.3))
         .defaultAdvisors(
             MessageChatMemoryAdvisor.builder(chatMemory).build(),
             QuestionAnswerAdvisor.builder(store).build())
