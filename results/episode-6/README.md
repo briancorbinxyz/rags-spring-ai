@@ -388,3 +388,57 @@ measured and are absent from the answer.
    saturates at 10/10, a listwise one chooses.
 6. Fusing a confident reader throws its judgement away, three times over. Pinning its *selection*
    keeps it — **9/9**; pinning its *enumeration* breaks everything else.
+
+
+## The 5090 verdict: the ratchet takes the 9/9 away
+
+Three runs on the main-line tier, verified from the committed JSONL.
+
+**The headline reproduces.** With `qwen3:8b` reading the named scope, `TJ` is **9/9**, pinning at
+rank 1 on G-063, G-072, G-073 and G-074. Nothing was laptop-specific.
+
+**Qwen3-Reranker-8B nearly replaces the reader, and the trade is exact.** The `selects` guard holds,
+so it can only reorder — and reordering alone lifts G-073 from **rank 29 to 2**, the negation case
+that defeated three MS-MARCO cross-encoders. But the same rerank sends G-074 from **1 to 5**. 8/9.
+An instruction-following *reranker* can see negation; it still cannot do what a *chooser* does, which
+is leave the rest of the ranking alone.
+
+**And `scope_pin` fails the main-set ratchet here.**
+
+| | Hit@4 | all@4 | stale@4 | MRR |
+|---|---|---|---|---|
+| `E5-2` | 46/47 | 42 | 0 | 0.890 |
+| `G2` scope arms, no pin | 46/47 | 42 | 0 | 0.890 |
+| `G4` + pin | **45/47** | 42 | 0 | 0.873 |
+
+`(False, ['Hit@4 46→45'])` — lost G-036, won nothing. It pins on 15 of 53 questions and hurts two:
+G-033 `[1,17] → [4,19]` and G-036 `[17,4] → [16,5]`.
+
+**Both are relation questions, which name a spec as the premise rather than the haystack.** G-033
+names 023 and answers span 023 *and* 024; G-036 names 076 and answers span 076 *and* 071. Pinning
+three units of the named spec fills the top four with premise material. At 33/47 that was absorbed;
+at 46/47 there is no slack — **a pin on a strong baseline can only displace.**
+
+A query-time rescue rule would fix this if one existed. "A unit of the named scope is already in the
+top four" is **true for every pinned question, G-073 included**, so that signal is dead.
+
+## Where the line actually stops
+
+| | laptop | 5090 | main-set ratchet |
+|---|---|---|---|
+| snapshot, any model | 0/9 | 0/9 | — |
+| `T3` slice + standing as of then | 5/9 | 5/9 | — |
+| `T5` slice + Episode 5's own line | 6/9 | **7/9** | clean |
+| `TF` + the scope arms | 6/9 | *to run* | **passes both tiers** |
+| `TD` + the router | 8/9 | 8/9 | **fails**, laptop 33→31 |
+| `TJ` + the pin | **9/9** | **9/9** | **fails**, 5090 46→45 |
+
+A step that fails the ratchet is a result, not a step — that rule applies to this work too. So
+`route_scope` and `scope_pin` are **epilogues**, published with their numbers as Episode 5 published
+a failing step 6, and the main line stops where the ratchet says.
+
+Which leaves a better claim than the one being chased: **on the tier the main line is defined on,
+the bitemporal corpus alone takes the cutoff questions from 0 of 9 to 7 of 9 with no new retrieval
+mechanism at all** — identifier lookup, standing filter, dense fusion and cross-encoder, unchanged,
+pointed at the right collection. Everything after that buys one or two questions and costs a
+main-set question somewhere.
