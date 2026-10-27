@@ -492,3 +492,52 @@ the archive's own schema and holds 5 of 5. For `#risks`, `#changelog` and `#inte
 inventing a trigger from two or three examples each — the line between what the schema says and what
 these questions say. **The arm ships for `#context` and stops there**, and the other four are
 recorded as one trigger away rather than quietly fitted.
+
+
+## The 5090 closes it — 27 Oct
+
+### The main set: 47/47
+
+| | Hit@4 | all@4 | stale@4 | MRR | ratchet |
+|---|---|---|---|---|---|
+| `E5-2` | 46/47 | 42 | 0 | 0.890 | — |
+| `G9` | 46/47 | 42 | 0 | 0.890 | clean |
+| **`GA` + `context_scope`** | **47/47** | **43** | 0 | **0.911** | **`(True, [])`** |
+
+Won G-080 at rank 1, lost nothing, `intent` 4/5 → 5/5. The top hit is
+`025-id-uniqueness/spec.html#context` — the unit the `#context` collection ranked first on the
+laptop. The arm that closed the set is two small index builds and **no model call at all**.
+
+### `TF` answers G-073, which retires the whole apparatus built for it
+
+`T5` 8/14 · `T7` 6/14 · **`TF` 9/14** — **8/9** on the cutoff rows, gaining G-073 at **rank 2**.
+
+G-073 defeated lexical retrieval, dense retrieval and three MS-MARCO cross-encoders on the laptop.
+It took a listwise chooser *and* a pin to answer there, and the pin then failed this tier's main-set
+ratchet. On the main line it falls to the **ratchet-clean** configuration by reordering alone.
+
+So `route_scope`, `scope_pin`, `history_pin`, `reader_pin`, `rerank_rrf` and `section_scope` are all
+surplus: each was measured and rejected, and the questions they were invented for are answered
+without them. What survives is the bitemporal corpus, the scope arms, `admit_history`,
+`history_keeps_superseded`, `context_scope` — and a reranker that can read.
+
+### `what-changed`, and a third question on the boundary
+
+`--changed-only`: `T5` 1/5, **`TD` 2/5**. G-068 and G-071 were rank 5 on the laptop and reach **rank
+3** here; G-067 is 33rd, G-069 and G-070 outside 50. The corpus holds **every** declared state for
+all five.
+
+**G-074 is rank 5 on this tier.** With G-068 and G-071 at rank 5 on the laptop, that is three
+remaining misses sitting exactly one place outside the cut — the sharpest argument for re-examining
+it, and exactly why moving it would be fitting rather than measuring.
+
+### Final standing
+
+| set | result | missing |
+|---|---|---|
+| **main, 47 answerable** | **47/47** | — |
+| time, 9 cutoff rows | **8/9** | G-074, rank 5 |
+| time, 5 `what-changed` | 2/5 | evidence complete, ranking short |
+| time, 7 history | 1/7 | five reachable at 11–39; every fix costs a decoy |
+| time, 3 decoys | 3/3 | — |
+| held-out, 13 | 6/13 | not run here — deferred decision |
