@@ -27,7 +27,7 @@ On the time set run through `run.py`, `GA` passes the ratchet against `E5-2`. Hi
 | G-055 | history | 39 | | Reachable, then buried by the fusion. Every pin that unburies history costs the decoy G-061 (`history_pin`, rejected). |
 | G-056 | history | 1 | yes | |
 | G-057 | history | 1 | yes | The D-005 spine question, answered by `history_keeps_superseded`. |
-| G-058 | history | – | | Born withdrawn, and outside the top 50 even with `admit_history`. It needs a change of policy, not a ranking: see below. |
+| G-058 | history | – | | Born withdrawn. `admit_history` *does* offer its units (see below), and they still rank outside 50, so this is a ranking problem. The `#risks` collection ranks it **1st**, one fitted trigger away. |
 | G-059 | decoy | 1 | yes | |
 | G-060 | decoy | 1 | yes | |
 | G-061 | decoy | 1 | yes | |
@@ -62,12 +62,22 @@ force, so no position in the history admits it, and over the slice the standing 
 at every cutoff. `EXCLUDED` removes 196 of 11,492 units, and 82 addresses are excluded in *every*
 state.
 
-- **For admitting them to history questions:** a history question asks what was *considered*, not
-  only what was in force. A withdrawn proposal is exactly the record of a road not taken, and on the
-  snapshot `admit_history` already lets a history question see them. That is how G-051 and G-052
-  reach ranks 1–2 there.
-- **Against:** it changes what the series means by "in force" for the slice, where the filter is
-  what makes a retrieved address the right revision by construction. A withdrawn unit has no
-  standing at any position, so admitting it is a different definition, not a different ranking.
+**The shipped line has already half-made this call.** `admit_history` ranks every unit in
+`EXCLUDED = {"withdrawn", "superseded", "rejected"}`, so on the snapshot path `G9` and `GA` *do* let
+a history question see withdrawn records. They see them as a separate, fused list the ranking may
+decline, not by unfiltering the search. **G-052 is answered because of it:** its withdrawn
+proposal's `NFR-001` is at rank 2. G-051's rank-12 hit is its spec's `#changelog`, which is current.
+So the handover's "no position admits them" holds for the slice path only.
+
+- **For keeping it:** a history question asks what was *considered*, not only what was in force. A
+  withdrawn proposal is exactly the record of a road not taken, and the arm is already rejectable:
+  the decoys stay at rank 1.
+- **Against:** it makes "in force" mean different things on the two paths. On the slice, the
+  filter is what makes a retrieved address the right revision by construction, and a withdrawn unit
+  has no standing at any position. Admitting it there is a different definition, not a different
+  ranking. And on the snapshot the choice was made by the shape of a list, not on purpose.
+
+**If the answer is no**, `admit_history` should rank only `superseded` and `rejected`, and history
+falls from 4/7 to 3/7 (G-052 out). That isn't measured; it would need a run.
 
 This is Brian's decision, and it is not made here.
