@@ -67,6 +67,7 @@ class Config:
     history_keeps_superseded: bool = False  # Episode 6: ...and let the redirect leave it in place
     history_pin: int = 0  # Episode 6: let a reader choose among the units the filter hides
     reader_pin: int = 0  # Episode 6: let a chooser pick from the top of the ranking and pin it
+    context_scope: bool = False  # Episode 6: a why-question's collection is the archive's #context
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -207,6 +208,10 @@ class Pipeline:
             left_behind = self.excluded_ranking(q, qv, cfg, depth)
             if left_behind:
                 lists.append(left_behind)
+        if cfg.context_scope:
+            why = self.context_ranking(q, qv, cfg, depth)
+            if why:
+                lists.append(why)
         fused = rrf(lists) if len(lists) > 1 else lists[0]
 
         pinned_keys, pinned = [], []
@@ -373,6 +378,48 @@ class Pipeline:
         lowered = q.lower()
         return any(re.search(r"\b" + marker.replace(" ", r"\s+") + r"\b", lowered)
                    for marker in self.HISTORY_MARKERS)
+
+    #: A question shaped like "why does this exist". Poor precision on purpose: it fires on 19
+    #: questions across the three sets and only 4 of them want a `#context`, which is why what
+    #: follows is a fused list the ranking may ignore rather than anything that commits.
+    WHY = (r"\bwhy\b", r"what problem", r"what led", r"what prompted")
+
+    def _why_asked(self, q: str) -> bool:
+        lowered = q.lower()
+        return any(re.search(pattern, lowered) for pattern in self.WHY)
+
+    def context_ranking(self, q, qv, cfg, depth):
+        """The archive's `#context` sections, ranked among themselves.
+
+        All five of the main set's `intent` questions expect a `#context` unit — 5 of 5, and not by
+        accident: spectastic's schema puts the problem a spec exists to solve in `#context`, so a
+        question asking *why* something exists is asking for that section by name without naming it.
+        The same holds for `intent`, `risks` and `changelog` in other strata, which is the section
+        seam the plan has carried since the typed-expansion work: expansion anchors only on element
+        ids, and the sections are where a good deal of the meaning lives.
+
+        Measured over the 129 in-force `#context` units, the expected one ranks **first** for
+        G-077, G-079, G-080 and G-081 and sixth for G-078. G-080 is the 5090 main line's only miss
+        and G-081 the laptop's, and neither has any other structural signal — no id, no named spec,
+        no typed edge. A collection of 129 is what gives them one.
+
+        Fused, never pinned. The trigger is a `why` and most `why` questions want something else
+        entirely, so this has to be a suggestion the ranking can decline.
+        """
+        if cfg.items != "units" or not self._why_asked(q):
+            return []
+        sections = [n for n, it in enumerate(self.u.items)
+                    if it.anchor == "context" and self._admits(it, cfg)]
+        if not sections:
+            return []
+        lexical = self._scope_bm25(sections).search(q, depth=len(sections))
+        ranked = [(sections[n], sc) for n, sc in lexical]
+        if qv is not None and self.u.vectors is not None:
+            sims = self.u.vectors[sections] @ qv
+            dense = [(sections[i], float(sims[i]))
+                     for i in sorted(range(len(sections)), key=lambda i: -sims[i])]
+            ranked = rrf([ranked, dense])
+        return ranked[:depth]
 
     def excluded_ranking(self, q, qv, cfg, depth):
         """The units the standing filter hides, ranked among themselves and offered to the fusion.

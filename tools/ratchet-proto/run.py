@@ -113,6 +113,17 @@ def configs() -> list[Config]:
                lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
                admit_history=True, history_keeps_superseded=True, history_pin=20,
                needs=("dense", "rerank"), **ep4),
+        # Episode 6's keepers: every arm that passed its ratchet, and none that did not.
+        # Rejected and absent: route_scope (main set 33 -> 31), scope_pin (5090 main 46 -> 45),
+        # history_pin (costs the decoy G-061), reader_pin (inert).
+        Config("G9", "Episode 6: the arms that survived their ratchet", ids=True, lifecycle=True,
+               dense=True, rerank=True, redirect="replace", expand=True, scope_rrf=True,
+               doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               needs=("dense", "rerank"), **ep4),
+        Config("GA", "G9 + a why-question may see the archive's #context sections", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               context_scope=True, needs=("dense", "rerank"), **ep4),
         # ablations
         Config("A", "naive 800-token chunks, dense only", items="chunks", bm25=False, dense=True, needs=("dense",)),
         Config("B", "naive 800-token chunks, BM25 only", items="chunks"),
