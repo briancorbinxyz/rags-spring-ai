@@ -66,6 +66,7 @@ class Config:
     admit_history: bool = False  # Episode 6: let a history question see what the filter hides
     history_keeps_superseded: bool = False  # Episode 6: ...and let the redirect leave it in place
     history_pin: int = 0  # Episode 6: let a reader choose among the units the filter hides
+    reader_pin: int = 0  # Episode 6: let a chooser pick from the top of the ranking and pin it
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -223,6 +224,17 @@ class Pipeline:
                     pinned.append(n)
         pinned_set = set(pinned)
         rest = [(n, s) for n, s in fused if n not in pinned_set]
+        if cfg.reader_pin:
+            # The plainest form of the pin: a chooser reads the top of the ranking the pipeline
+            # already produced and its picks go above it. It earns its place only where the
+            # collection has been narrowed to something worth reading whole — a `what-changed`
+            # question searching just the units that moved in its window is 109 to 441 of them —
+            # and the selectivity rule in `_picks` still refuses an enumeration.
+            for n in self._picks(q, rest[:cfg.reader_pin]):
+                if n not in pinned:
+                    pinned.append(n)
+            pinned_set = set(pinned)
+            rest = [(n, sc) for n, sc in rest if n not in pinned_set]
 
         extra = self.siblings(rest, pinned_set, cfg) if cfg.siblings else []
         if cfg.scope:

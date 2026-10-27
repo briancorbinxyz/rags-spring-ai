@@ -68,6 +68,9 @@ def configs() -> list[Config]:
         Config("TF", "7 + the named document, reranked everywhere", ids=True, lifecycle=True,
                dense=True, rerank=True, scope_rrf=True, doc_scope=True,
                needs=("dense", "rerank"), **units),
+        Config("TW", "what-changed: the units that moved, read by a chooser", ids=True,
+               lifecycle=True, dense=True, rerank=True, scope_rrf=True, doc_scope=True,
+               reader_pin=20, needs=("dense", "rerank"), **units),
         Config("TG", "variant: the reader given the named scope's own top 20, then fused", ids=True,
                lifecycle=True, dense=True, scope_rrf=True, doc_scope=True, scope_rerank=20,
                needs=("dense", "rerank"), **units),
@@ -78,6 +81,37 @@ def configs() -> list[Config]:
                lifecycle=True, dense=True, rerank=True, scope_rrf=True, doc_scope=True,
                scope_pin=20, needs=("dense", "rerank"), **units),
     ]
+
+
+def moment(history, question: dict):
+    """The position a question is asked at: its cutoff, or the end of its window.
+
+    A `what-changed` question names two points rather than one, and the end is the right slice to
+    search: that is where the address exists under the name the question uses, and the archive holds
+    every state it passed through on the way, so the change can be read off the interval afterwards.
+    Measured over the five: the corpus holds **every declared version** of the address inside the
+    window — G-067's `before` is absent, and is declared absent, because the requirement did not
+    exist yet.
+    """
+    return history.at(question["cutoff"] if question.get("cutoff") else question["window"]["to"])
+
+
+def changes_in(corpus, history, question: dict, address: str) -> tuple:
+    """How many of a `what-changed` question's declared states the corpus holds in its window."""
+    window = question.get("window")
+    if not window:
+        return 0, 0
+    lo, hi = history.at(window["from"]).position, history.at(window["to"]).position
+    states = [s for s in corpus.history_of(address) if s.from_pos < hi and s.to_pos > lo]
+    declared = question.get("versions") or []
+    held = 0
+    for version in declared:
+        at = history.of(version["commit"]).position
+        if version.get("absent"):
+            held += not any(s.covers(at) for s in states)
+        else:
+            held += any(s.covers(at) for s in states)
+    return held, len(declared)
 
 
 def abstains(question: dict, ranked: list) -> bool:
@@ -107,6 +141,8 @@ def main() -> int:
     ap.add_argument("--cache", default=str(HERE / "cache"))
     ap.add_argument("--cl100k-file", default=None)
     ap.add_argument("--only", default="")
+    ap.add_argument("--changed-only", action="store_true",
+                    help="a what-changed question searches only the units that moved in its window")
     ap.add_argument("--out", default=str(HERE / "results/time-slice"))
     args = ap.parse_args()
 
@@ -119,9 +155,9 @@ def main() -> int:
 
     questions = [json.loads(l) for l in Path(args.golden).read_text(encoding="utf-8").splitlines()
                  if l.strip()]
-    cutoffs = [q for q in questions if q.get("cutoff")]
+    cutoffs = [q for q in questions if q.get("cutoff") or q.get("window")]
     if not cutoffs:
-        raise SystemExit(f"{args.golden} holds no question with a cutoff")
+        raise SystemExit(f"{args.golden} holds no question with a cutoff or a window")
 
     cache = Path(args.cache)
     commit = next(iter({q["commit"] for q in questions}))
@@ -156,8 +192,12 @@ def main() -> int:
             continue
         started, hits, out = time.time(), 0, []
         for q in cutoffs:
-            at = history.at(q["cutoff"]).position
-            items, pipe = timeline.at(at)
+            at = moment(history, q).position
+            restrict = None
+            if args.changed_only and q.get("window"):
+                lo = history.at(q["window"]["from"]).position
+                restrict = timeline.changed_between(lo, at)
+            items, pipe = timeline.at(at, restrict)
             final, top1, pinned = pipe.run(cfg, q["question"], qvec.get(q["id"]))
             ranked = [items[n].address for n in final]
             scored = S.rank_list([items[n] for n in final], q, S.unit_hit,
@@ -167,7 +207,10 @@ def main() -> int:
             out.append({"config": cfg.key, "label": cfg.label,
                         "embedder": args.embedder, "reranker": args.reranker,
                         "id": scored.qid, "stratum": scored.stratum,
-                        "cutoff": q["cutoff"], "position": at, "slice_units": len(items),
+                        "cutoff": q.get("cutoff") or q["window"]["to"], "position": at,
+                        "window": q.get("window"), "slice_units": len(items),
+                        "states_held": changes_in(corpus, history, q, q["expected"][0])
+                        if q.get("window") and q["expected"] else None,
                         "expected": scored.expected, "ranks": scored.ranks,
                         "partial_ranks": scored.partial_ranks,
                         "stale_ranks": scored.stale_ranks, "first_hit": scored.first,
