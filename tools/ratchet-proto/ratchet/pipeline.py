@@ -68,7 +68,11 @@ class Config:
     history_pin: int = 0  # Episode 6: let a reader choose among the units the filter hides
     reader_pin: int = 0  # Episode 6: let a chooser pick from the top of the ranking and pin it
     context_scope: bool = False  # Episode 6: a why-question's collection is the archive's #context
-    section_scope: int = 0  # Episode 6: the best few of every section kind, ordered by a chooser
+    #: Measured and rejected; kept so the result can be reproduced. Through the whole pipeline it
+    #: moves G-080 from 21st to **23rd** and costs 92s against 2s. The reader ranked the answer
+    #: first of its own pool of 62 and the fusion put it 23rd, which is the dilution lesson for the
+    #: fifth time. See `section_ranking`.
+    section_scope: int = 0
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
@@ -401,6 +405,15 @@ class Pipeline:
         of each kind it ranked G-080's `#context` **first of 62**, where RRF had it 9th and the
         combined collection 41st. It is not a cure — G-058's `#risks` came 6th — but it needs no
         trigger, and a trigger per section kind was the thing worth avoiding.
+
+        **And it is rejected, on two counts.** Through the whole pipeline it moves G-080 from 21st
+        to **23rd**: the reader had the answer first of its own pool and the fusion put it 23rd,
+        which is the same dilution that killed `T9`, `TG`, `TH` and `reader_pin`. And it costs **92
+        seconds for one question** against 2 — about an hour for a 53-question configuration,
+        against a minute for the whole `E5-2` line. Either count would be enough.
+
+        Kept rather than deleted because the contrast is the useful part: `context_scope` is two
+        small index builds, no model call at all, and it won two questions.
 
         Its **order** joins the fusion, and its picks are not pinned. For G-080 it chose 27 of 62,
         which the selectivity rule in `_picks` accepts by a hair and which would be a catastrophic
