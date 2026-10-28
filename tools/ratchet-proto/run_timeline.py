@@ -190,6 +190,12 @@ def main() -> int:
     ap.add_argument("--out", default=str(HERE / "results/time-slice"))
     args = ap.parse_args()
 
+    if args.window_rule != "began" and not args.changed_only:
+        # Silently ignoring it cost a 5090 night on 28 Oct: the run looked like a `moved` run,
+        # named its output one, and had never read the flag.
+        raise SystemExit("--window-rule is only read with --changed-only, so this run would have "
+                         "ignored it; add --changed-only or drop --window-rule")
+
     root = Path(args.spectastic).resolve()
     if not (root / "specs").is_dir():
         raise SystemExit(f"no spectastic checkout at {root}")
