@@ -130,6 +130,38 @@ def rank_list(items: list, q: dict, hit_fn, passage_tokens, top1_score=None, pin
                    [it.address for it in items[:10]], ctx, top1_score, pinned)
 
 
+def groundless(rows: list, depth: int = 4) -> tuple:
+    """Questions whose top `depth` holds nothing it was entitled to serve, and how sure it was.
+
+    `Hit@4` is reported over the answerable questions, so the ones written to test refusal are not
+    in its denominator and the headline cannot express them. This counts them.
+
+    A question is **groundless** when the top `depth` holds no expected passage: there is no ground
+    under anything a reader could say from it. For an answerable question that is an ordinary miss.
+    For an unanswerable one it is *always* true, because there is nothing it could correctly serve —
+    the only way out is to decline, and nothing here declines. No threshold appears in that
+    definition, which is why it can be recomputed over runs already stored.
+
+    The third number is the one that decides whether declining is even buildable: how many
+    groundless answers score **above the median grounded one**. If that is near zero the score
+    separates and a refusal line exists; if it is not, the system cannot be made to decline by
+    thresholding what it already computes.
+
+    Returns (groundless, missed, unanswerable, confident, total).
+    """
+    unanswerable = [r for r in rows if not r.expected]
+    grounded = [r for r in rows if r.expected and r.first and r.first <= depth]
+    missed = [r for r in rows if r.expected and not (r.first and r.first <= depth)]
+    without_ground = missed + unanswerable
+    kept = sorted(r.top1_score for r in grounded if r.top1_score is not None)
+    confident = 0
+    if kept:
+        middle = kept[len(kept) // 2]
+        confident = sum(1 for r in without_ground
+                        if r.top1_score is not None and r.top1_score > middle)
+    return len(without_ground), len(missed), len(unanswerable), confident, len(rows)
+
+
 @dataclass
 class Agg:
     n: int = 0

@@ -147,5 +147,32 @@ class Ratchet(unittest.TestCase):
         self.assertEqual(6, tot.n)
 
 
+def scored(qid, rank, top1, expected=("a",)):
+    return S.QResult(qid, "single-fact", list(expected), [rank], [rank], [], [], 0, top1)
+
+
+class Groundless(unittest.TestCase):
+    """The metric `Hit@4` cannot express: a top four with nothing it was entitled to serve."""
+
+    def test_an_answerable_miss_and_every_unanswerable_question_count(self):
+        rows = [scored("a", 1, 0.9), scored("a2", 9, 0.8),
+                S.QResult("u", "unanswerable", [], [], [], [], [], 0, 0.7)]
+        groundless, missed, unanswerable, _confident, total = S.groundless(rows)
+        self.assertEqual((2, 1, 1, 3), (groundless, missed, unanswerable, total))
+
+    def test_depth_is_the_cut(self):
+        self.assertEqual(0, S.groundless([scored("a", 4, 0.9)])[0])
+        self.assertEqual(1, S.groundless([scored("a", 5, 0.9)])[0])
+
+    def test_confidence_counts_only_above_the_median_grounded_answer(self):
+        rows = [scored("g1", 1, 0.2), scored("g2", 1, 0.5), scored("g3", 1, 0.9),
+                scored("b1", 9, 0.6), scored("b2", 9, 0.1)]
+        self.assertEqual(1, S.groundless(rows)[3])
+
+    def test_no_grounded_answer_leaves_confidence_unclaimed(self):
+        """With no median there is nothing to compare against, so it reports 0 rather than guess."""
+        self.assertEqual(0, S.groundless([scored("b", 9, 0.99)])[3])
+
+
 if __name__ == "__main__":
     unittest.main()
