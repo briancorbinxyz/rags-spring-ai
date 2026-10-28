@@ -128,6 +128,44 @@ def configs() -> list[Config]:
                lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
                scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
                context_scope=True, needs=("dense", "rerank"), **ep4),
+        Config("GN", "GA + a spec named by the archive's own slug", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               context_scope=True, declared_names=True, needs=("dense", "rerank"), **ep4),
+        Config("GI", "GA + the section kinds an intent model names, two of each", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               context_scope=True, intent_admit=2, needs=("dense", "rerank"), **ep4),
+        Config("GJ", "GI at the depth the measurement itself uses, four of each kind", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               context_scope=True, intent_admit=4, needs=("dense", "rerank"), **ep4),
+        # The pre-registered test: pin a candidate its own section kind ranks inside depth 4.
+        Config("GK", "GA + pinned when its own kind ranks it inside depth 4", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               context_scope=True, intent_admit=4, intent_pin=True, needs=("dense", "rerank"), **ep4),
+        # Exploratory, reported for the shape of the curve and not as a candidate to adopt.
+        Config("GL", "variant: pinned when its own kind ranks it first", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               context_scope=True, intent_admit=1, intent_pin=True, needs=("dense", "rerank"), **ep4),
+        Config("GM", "variant: pinned when its own kind ranks it in the first two", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               context_scope=True, intent_admit=2, intent_pin=True, needs=("dense", "rerank"), **ep4),
+        Config("GS", "GA + a document kind resolves to a name the collection holds", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, admit_history=True, history_keeps_superseded=True,
+               context_scope=True, kind_in_slice=True, needs=("dense", "rerank"), **ep4),
+        # Isolating G9: the same arms with the lexical history trigger switched off.
+        Config("G9h", "variant: G9 without admitting the units the filter hides", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               scope_rrf=True, doc_scope=True, needs=("dense", "rerank"), **ep4),
+        Config("G9s", "variant: G9 without the named-scope arms", ids=True,
+               lifecycle=True, dense=True, rerank=True, redirect="replace", expand=True,
+               admit_history=True, history_keeps_superseded=True,
+               needs=("dense", "rerank"), **ep4),
         # ablations
         Config("A", "naive 800-token chunks, dense only", items="chunks", bm25=False, dense=True, needs=("dense",)),
         Config("B", "naive 800-token chunks, BM25 only", items="chunks"),
@@ -237,6 +275,10 @@ def main():
     ap.add_argument("--cl100k-file", default=None, help="local cl100k_base.tiktoken (offline)")
     ap.add_argument("--cache", default=str(HERE / "cache"))
     ap.add_argument("--ep3-run", default=str(REPO / "results/episode-3/episode-3-qwen3_8b-duo-k4.jsonl"))
+    ap.add_argument("--intent", default=None,
+                    help="JSON of question id -> the section kinds an intent model named, as "
+                         "intent_recall.py writes it. Read once; a configuration without "
+                         "intent_admit never looks at it")
     ap.add_argument("--only", default="", help="comma-separated config keys")
     ap.add_argument("--out", default=str(HERE / "results/run"), help="output path without extension")
     ap.add_argument("--score-heldout-at-episode-end", action="store_true", help=argparse.SUPPRESS)
@@ -280,7 +322,11 @@ def main():
     print(f"scope reader: {scope_msg}", file=sys.stderr)
 
     # --- indexes ----------------------------------------------------------------------------
-    idx = {k: I.IdIndex(v.units) for k, v in corp.items()}
+    named_kinds = json.loads(Path(args.intent).read_text()) if args.intent else {}
+    intent = {q["question"]: set(named_kinds[q["id"]])
+              for q in golden if q["id"] in named_kinds}
+    names = I.declared_names(root)
+    idx = {k: I.IdIndex(v.units, names) for k, v in corp.items()}
     graph = P.Graph(cp, idx["ep4"])
     bm = {}
 
@@ -330,7 +376,7 @@ def main():
         uix = P.Index(units, bm25_for(cfg.corpus, cfg.dash_tokens, units), uvec if cfg.corpus == "ep4" else None)
         cix = P.Index(chunks, bm25_for("chunks", False, chunks), cvec) if chunks is not None else None
         g = graph if cfg.corpus == "ep4" else None
-        pipe = P.Pipeline(uix, cix, idx[cfg.corpus], g, rr, scope_rr)
+        pipe = P.Pipeline(uix, cix, idx[cfg.corpus], g, rr, scope_rr, intent=intent)
         hit_fn = S.unit_hit if cfg.items == "units" else scorer.hit
         out = []
         for qi, q in enumerate(golden):
@@ -339,7 +385,10 @@ def main():
             out.append(S.rank_list([items[n] for n in final], q, hit_fn, tokens, top1, npinned))
         results[cfg.key] = out
         tot, _ = S.aggregate(out)
-        print(f"{cfg.key:6s} Hit@4 {tot.h4}/{tot.n}  all@4 {tot.all4}  MRR {tot.mrr:.3f}  stale@4 {tot.stale4}  {label}", file=sys.stderr)
+        unground, miss, una, confident, every = S.groundless(out)
+        print(f"{cfg.key:6s} Hit@4 {tot.h4}/{tot.n}  all@4 {tot.all4}  MRR {tot.mrr:.3f}  stale@4 {tot.stale4}  "
+              f"groundless@4 {unground}/{every} ({miss} missed, {una} unanswerable, {confident} confident)  {label}",
+              file=sys.stderr)
 
     # --- Episode 3 replay and corpus checks --------------------------------------------------
     calib = {}

@@ -46,8 +46,9 @@ class Timeline:
     collection, and a slice *is* a collection.
     """
 
-    def __init__(self, corpus, reranker=None, embedder=None, scope_reranker=None):
+    def __init__(self, corpus, reranker=None, embedder=None, scope_reranker=None, names=None):
         self.corpus = corpus
+        self.names = names
         self.reranker = reranker
         self.scope_reranker = scope_reranker
         self.embedder = embedder
@@ -74,13 +75,44 @@ class Timeline:
                 items = [replace(it, n=i) for i, it in
                          enumerate(it for it in items if it.address in restrict)]
             index = P.Index(items, B.BM25(items), self._vectors(items))
-            self._slices[key] = (items, P.Pipeline(index, None, I.IdIndex(items), None,
-                                                   self.reranker, self.scope_reranker))
+            self._slices[key] = (items, P.Pipeline(index, None, I.IdIndex(items, self.names),
+                                                   None, self.reranker, self.scope_reranker))
         return self._slices[key]
 
     def changed_between(self, lo: int, hi: int) -> frozenset:
         """The addresses whose text moved inside `(lo, hi]` — what "what changed" literally means."""
         return frozenset(s.address for s in self.corpus.states if lo < s.from_pos <= hi)
+
+    def moved_in(self, lo: int, hi: int) -> frozenset:
+        """The addresses a `what-changed` question is asking about, which is a narrower thing.
+
+        `changed_between` answers "what began a state inside the window", and that admits the
+        proposal which *narrates* a change: it is created inside the window, states the change in
+        prose, and so outranks the requirement it changed. Measured over the five windows, that
+        class is four to ten times the size of the set which actually moved — 3,598 against 517 on
+        G-070 — which is the step's whole defect in one pair of numbers.
+
+        What the question asks about is something the window *did something to*, and that is one
+        predicate: **a state boundary strictly inside the window**, on an address still in force at
+        the end. Partition on presence at the window's start and it covers both shapes the questions
+        take — a requirement that survived the window and was rewritten, and one born inside the
+        window and rewritten again before it closed, which is what "rewritten more than once on 14
+        August" means. No text is compared, deliberately: a requirement changed and changed back
+        reads the same at both ends and is still a change.
+
+        What it does not cover is a **repeal** — in force at the start, gone by the end — which
+        satisfies neither shape, so this is a substitution detector. That is worth saying plainly
+        because the set holds no repeal question, and so nothing here would tell us.
+        """
+        at_start = {state.address for state in self.corpus.at(lo)}
+        at_end = {state.address for state in self.corpus.at(hi)}
+        boundaries: dict[str, set] = {}
+        for state in self.corpus.states:
+            if lo < state.from_pos <= hi:
+                boundaries.setdefault(state.address, set()).add(state.from_pos)
+        return frozenset(address for address, starts in boundaries.items()
+                         if address in at_end
+                         and (address in at_start or len(starts) > 1))
 
     def _vectors(self, items):
         if self.embedder is None:

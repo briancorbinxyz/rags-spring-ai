@@ -17,8 +17,10 @@ the units with that id in that spec, which the pipeline pins above everything el
 
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
+from pathlib import Path
 
 ID_TOKEN = re.compile(r"(?<![\w-])(?P<prefix>[A-Z]+-)*[A-Z]+-?\d+(?![\w-])")
 SPEC = re.compile(r"\b(?P<spec_word>spec|specs|slice)\s+(?P<in_prose>\d{3,})\b|(?<![\w-])(?P<in_slug>\d{3,})-[a-z]", re.IGNORECASE)
@@ -35,8 +37,45 @@ def spec_of(key: str) -> str:
     return key.split("/")[1].split("-")[0]
 
 
-def parse(question: str, anchors: set) -> tuple[list, list]:
-    """(element ids, spec numbers) named in a question. ``anchors`` is the corpus's id set."""
+def declared_names(root) -> dict:
+    """The archive's own names for its specs: `specs/042-profile-enforcement/` declares both.
+
+    A question rarely says "spec 042". It says "profile enforcement", and the folder name is the
+    archive stating that those are the same thing — so this inventory is read, never guessed, and
+    costs no labelling.
+
+    One alias is dropped, and by declaration rather than by judgement: `spectastic.json` carries
+    `"project": "spectastic/spectastic"`, and the project's own name is not a name for one spec.
+    Measured, it would fire on about twenty questions and be right on one, because every question
+    about the archive mentions the archive.
+
+    What is deliberately *not* dropped is the generic slug. `001-cli` declares "cli", which occurs
+    in 112 of the specs' own text, and `108-success-criteria` declares a phrase occurring in 117;
+    those are vocabulary, not names, and measured they are where every wrong answer came from. The
+    archive can separate them — the aliases that worked occur in 0 to 2 specs, the ones that failed
+    in 11 to 117 — but turning that into a filter needs a cutoff, and ten questions cannot choose
+    one. So the resolver stays inclusive and what it finds is **fused, never committed**: a wrong
+    name costs ranking positions, not the answer.
+    """
+    root = Path(root)
+    project = json.loads((root / "spectastic.json").read_text(encoding="utf-8"))["project"]
+    own_name = project.rsplit("/", 1)[-1]
+    names = {}
+    for directory in sorted((root / "specs").iterdir()):
+        number, _, slug = directory.name.partition("-")
+        alias = slug.replace("-", " ")
+        if directory.is_dir() and slug and alias != own_name:
+            names[alias] = number
+    return names
+
+
+def parse(question: str, anchors: set, names: dict | None = None) -> tuple[list, list]:
+    """(element ids, spec numbers) named in a question. ``anchors`` is the corpus's id set.
+
+    ``names`` is the optional declared-alias inventory from :func:`declared_names`. It is read only
+    when the question named no spec the literal way, so a question saying "spec 042" is parsed
+    exactly as it was before this existed.
+    """
     ids = []
     for m in ID_TOKEN.finditer(question):
         t = m.group(0)
@@ -47,11 +86,20 @@ def parse(question: str, anchors: set) -> tuple[list, list]:
         s = m["in_prose"] or m["in_slug"]  # "spec 040" in prose, or the "040-slug" form
         if s not in specs:
             specs.append(s)
+    if not specs and names:
+        lowered = question.lower()
+        for alias in sorted(names, key=len, reverse=True):  # "core plan" before "plan"
+            if re.search(rf"\b{re.escape(alias)}\b", lowered):
+                specs.append(names[alias])
+                break
     return ids, specs
 
 
 class IdIndex:
-    def __init__(self, units: list):
+    def __init__(self, units: list, names: dict | None = None):
+        #: The archive's declared aliases, from :func:`declared_names`. Empty unless a run supplies
+        #: them, so every configuration measured before this existed parses exactly as it did.
+        self.names = names or {}
         self.units = units
         self.by_anchor = defaultdict(list)  # anchor -> unit keys in corpus order
         self.first_item = {}  # unit key -> item positions (all parts)

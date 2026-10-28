@@ -58,6 +58,7 @@ class Config:
     scope: bool = False  # Episode 6: the named spec's own units, when it named no id
     scope_rrf: bool = False  # Episode 6: rank inside the named spec and fuse, rather than admit
     rerank_rrf: bool = False  # Episode 6: the reranker as a vote fused with the ranking, not a replacement
+    declared_names: bool = False  # Episode 6: resolve a spec named by the archive's own slug
     doc_scope: bool = False  # Episode 6: narrow scope_rrf to the document kind the question named
     doc_scope_default: bool = False  # ...and treat a spec named with no document kind as its spec.html
     route_scope: bool = False  # Episode 6: rerank only when the question named no haystack
@@ -67,6 +68,9 @@ class Config:
     history_keeps_superseded: bool = False  # Episode 6: ...and let the redirect leave it in place
     history_pin: int = 0  # Episode 6: let a reader choose among the units the filter hides
     reader_pin: int = 0  # Episode 6: let a chooser pick from the top of the ranking and pin it
+    intent_admit: int = 0  # Episode 6: how many of each section kind an intent model names
+    intent_pin: bool = False  # Episode 6: and those candidates go above the ranking
+    kind_in_slice: bool = False  # Episode 6: a document kind resolves to a name the slice holds
     context_scope: bool = False  # Episode 6: a why-question's collection is the archive's #context
     #: Measured and rejected; kept so the result can be reproduced. Through the whole pipeline it
     #: moves G-080 from 21st to **23rd** and costs 92s against 2s. The reader ranked the answer
@@ -142,7 +146,7 @@ class Graph:
 
 class Pipeline:
     def __init__(self, units: Index, chunks: Index | None, idindex, graph: Graph, reranker=None,
-                 scope_reranker=None):
+                 scope_reranker=None, intent=None):
         """`scope_reranker` reads the narrow, question-named case; `reranker` reads the open one.
 
         They are different jobs and the measurements said so twice. A listwise reader discriminates
@@ -154,6 +158,13 @@ class Pipeline:
         So the narrow reader gets the window the question itself narrowed, and the cross-encoder
         keeps the open ranking. One reranker for both was the wrong shape, not the wrong model.
         """
+        #: question text -> the section kinds an intent model said could hold the answer. The
+        #: model is a fixed function of the question, pinned at temperature 0 and seed 42, so its
+        #: answers are computed once and read from here: the run stays deterministic and a model
+        #: that is down costs nothing but the arm.
+        self.intent = intent or {}
+        self._kind_index: dict[str, object] = {}
+        self._has_file: set | None = None
         self.u = units
         self.c = chunks
         self.idx = idindex
@@ -217,6 +228,10 @@ class Pipeline:
             why = self.context_ranking(q, qv, cfg, depth)
             if why:
                 lists.append(why)
+        if cfg.intent_admit:
+            admitted = self.intent_ranking(q, cfg, depth)
+            if admitted:
+                lists.append(admitted)
         if cfg.section_scope:
             sections = self.section_ranking(q, qv, cfg)
             if sections:
@@ -234,6 +249,14 @@ class Pipeline:
                     pinned.append(n)
         if cfg.history_pin and self._history_asked(q):
             for n in self.history_picks(q, qv, cfg):
+                if n not in pinned:
+                    pinned.append(n)
+        if cfg.intent_pin and cfg.intent_admit:
+            # A candidate is pinned when its *own section kind* ranks it inside the depth the
+            # measurement uses — the kind is a collection, so this is the collection's own
+            # judgement of its own members, and `intent_admit` is that depth. The model only chose
+            # which kinds were asked; it has no say in which member is confident.
+            for n, _ in self.intent_ranking(q, cfg, depth):
                 if n not in pinned:
                     pinned.append(n)
         pinned_set = set(pinned)
@@ -316,7 +339,8 @@ class Pipeline:
         """
         if cfg.items != "units":
             return []
-        ids, specs = I.parse(q, self.idx.anchors)
+        ids, specs = I.parse(q, self.idx.anchors,
+                             self.idx.names if cfg.declared_names else None)
         if len(specs) != 1 or ids:
             return []
         seen = set(pinned_set) | set(already)
@@ -351,7 +375,8 @@ class Pipeline:
         """
         if cfg.items != "units" or qv is None or self.u.vectors is None:
             return []
-        ids, specs = I.parse(q, self.idx.anchors)
+        ids, specs = I.parse(q, self.idx.anchors,
+                             self.idx.names if cfg.declared_names else None)
         if len(specs) != 1 or ids:
             return []
         inside = [n for n, it in enumerate(self.u.items)
@@ -493,6 +518,56 @@ class Pipeline:
                      for i in sorted(range(len(sections)), key=lambda i: -sims[i])]
             ranked = rrf([ranked, dense])
         return ranked[:depth]
+
+    def intent_ranking(self, q, cfg, depth):
+        """The best few of each section kind an intent model named, offered to the fusion.
+
+        Every earlier attempt at the section seam asked a *chooser* for one kind, and all of them
+        land near chance: RRF over 31 kinds puts the answer about 9th, a reader 6th at 92 seconds a
+        question, the `WHY` list is 21% precise, and each kind's own score margin picks the right
+        kind 2 times in 18 against a 4% floor. The shape was the problem. Choosing is a precision
+        job and nothing here is precise.
+
+        Admitting is a recall job, and a recall job may be wrong cheaply. The per-kind collections
+        are already sharp — `#risks` holds G-058's answer first of 415 — so the model only has to
+        make sure the right kind's best candidates are *in the pool*, and the fusion and the
+        reranker decide from there. Measured over the 18 questions whose evidence is a named
+        section, the kind-recall of the named set is 4/18 for today's `WHY` list, 7/18 for a
+        repaired list of the same shape, and 11/18 for `qwen3:8b` naming a mean of 5.2 kinds.
+
+        Admitting all 25 kinds has perfect recall and was already rejected, so recall alone is not
+        the mechanism: what matters is recall *per candidate admitted*. This arm offers
+        `intent_admit` from each named kind, round-robin, so no score is ever compared across two
+        collections with different statistics — the kinds take turns, which is a rank and not a
+        number.
+        """
+        named = self.intent.get(q) or ()
+        if cfg.items != "units" or not named:
+            return []
+        per_kind = []
+        for kind in sorted(named):
+            if kind not in self._kind_index:
+                members = [n for n, it in enumerate(self.u.items) if it.anchor == kind]
+                # Renumbered, as `_scope_bm25` does: a kind is a collection, so the index it gets
+                # is its own and `search` answers in its own numbering.
+                local = [replace(self.u.items[n], n=i) for i, n in enumerate(members)]
+                self._kind_index[kind] = (members, B.BM25(local) if members else None)
+            members, index = self._kind_index[kind]
+            if not index:
+                continue
+            best = index.search(q, depth=cfg.intent_admit)
+            per_kind.append([members[n] for n, _ in best])
+        out, rank = [], 0
+        while any(per_kind):                      # round-robin: each kind takes a turn
+            for picks in per_kind:
+                if picks:
+                    n = picks.pop(0)
+                    if not self._admits(self.u.items[n], cfg):
+                        continue
+                    if n not in [m for m, _ in out]:
+                        out.append((n, 1.0 / (rank + 1)))
+                        rank += 1
+        return out[:depth]
 
     def excluded_ranking(self, q, qv, cfg, depth):
         """The units the standing filter hides, ranked among themselves and offered to the fusion.
@@ -639,13 +714,27 @@ class Pipeline:
 
     #: The documents a spectastic spec is made of, and how a question refers to each. The archive
     #: has a fixed, small set of these, so naming them is adapter knowledge rather than a guess.
+    #: The documents a spectastic spec is made of, how a question refers to each, and the
+    #: filenames that document has *gone by* — newest name first.
+    #:
+    #: The last part is the correction. The archive's set of documents is not fixed over time:
+    #: `plan.html` became `design.html` on 30 July 2026, across 321 files in one commit. A table of
+    #: constants cannot say that, and measured over the three question sets the two rows it forced
+    #: are the only two that have never once been right — `plan` fires three times and wants
+    #: `plan.html` never, because no such page exists today, while the one question that does want
+    #: it (G-072, asking as of 1 July) asks for it by the name it has *now*.
+    #:
+    #: So a kind resolves against the collection rather than against a constant: the first name it
+    #: has gone by that is actually present. In a current corpus "plan" and "design" both reach
+    #: `design.html`; in a slice taken before the rename both reach `plan.html`. No rename detector
+    #: is needed and none is used — git's is a similarity heuristic with a threshold, and 42 of its
+    #: 178 renames here depend on where that threshold is set. The slice is a fact.
     DOC_KINDS = (
-        (("task list", "tasks", "task"), "tasks.html"),
-        (("design",), "design.html"),
-        (("verification", "verify"), "verify.html"),
-        (("triage log", "triage"), "triage-log.html"),
-        (("plan",), "plan.html"),
-        (("specification", "spec"), "spec.html"),
+        (("task list", "tasks", "task"), ("tasks.html",)),
+        (("design", "plan"), ("design.html", "plan.html")),
+        (("verification", "verify"), ("verify.html",)),
+        (("triage log", "triage"), ("triage-log.html",)),
+        (("specification", "spec"), ("spec.html",)),
     )
 
     def _named_kind(self, q: str, cfg) -> str | None:
@@ -661,13 +750,28 @@ class Pipeline:
         knowing it would help G-063, and nine questions cannot tell a sound prior from a fitted one.
         """
         lowered = q.lower()
-        for words, filename in self.DOC_KINDS:
+        for words, names in self.DOC_KINDS:
             for word in words:
                 if word == "spec" or word == "specification":
                     continue  # "spec 078" is the scope, not the document
                 if word in lowered:
-                    return filename
-        return "spec.html" if cfg.doc_scope_default else None
+                    return self._present(names, cfg)
+        return self._present(("spec.html",), cfg) if cfg.doc_scope_default else None
+
+    def _present(self, names, cfg):
+        """The first name a document has gone by that this collection actually holds.
+
+        Without `kind_in_slice` the newest name is returned whether or not it is there, which is
+        what every configuration measured before this did, so their numbers are unchanged.
+        """
+        if not cfg.kind_in_slice:
+            return names[0]
+        if self._has_file is None:
+            self._has_file = {it.source.rsplit("/", 1)[-1] for it in self.u.items}
+        for name in names:
+            if name in self._has_file:
+                return name
+        return names[0]
 
     def _admits(self, it, cfg):
         return not cfg.lifecycle or it.lifecycle not in EXCLUDED

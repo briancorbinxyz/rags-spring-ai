@@ -34,6 +34,7 @@ REPO = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 
 from ratchet import embed as E  # noqa: E402
+from ratchet import idlookup as I  # noqa: E402
 from ratchet import rerank as R  # noqa: E402
 from ratchet import revisions as V  # noqa: E402
 from ratchet import score as S  # noqa: E402
@@ -66,6 +67,12 @@ def configs() -> list[Config]:
         Config("TD", "6 + the named document, reranked only when nothing was named", ids=True,
                lifecycle=True, dense=True, rerank=True, scope_rrf=True, doc_scope=True,
                route_scope=True, needs=("dense", "rerank"), **units),
+        Config("TN", "TD + a spec named by the archive's own slug", ids=True, lifecycle=True,
+               dense=True, rerank=True, scope_rrf=True, doc_scope=True, route_scope=True,
+               declared_names=True, **units),
+        Config("TS", "TD + a document kind resolves to a name the slice holds", ids=True,
+               lifecycle=True, dense=True, rerank=True, scope_rrf=True, doc_scope=True,
+               route_scope=True, kind_in_slice=True, **units),
         Config("TE", "variant: TD reading a bare spec as its spec.html", ids=True, lifecycle=True,
                dense=True, rerank=True, scope_rrf=True, doc_scope=True, doc_scope_default=True,
                route_scope=True, needs=("dense", "rerank"), **units),
@@ -172,6 +179,12 @@ def main() -> int:
     ap.add_argument("--cache", default=str(HERE / "cache"))
     ap.add_argument("--cl100k-file", default=None)
     ap.add_argument("--only", default="")
+    ap.add_argument("--window-rule", default="began", choices=("began", "moved"),
+                    help="which addresses a window restricts to. `began` is Episode 6's first "
+                         "answer, every address that began a state inside the window. `moved` is "
+                         "the correction: a state boundary inside the window on an address still "
+                         "in force at its end, which excludes the proposal that only narrates the "
+                         "change. Only read when --changed-only is given")
     ap.add_argument("--changed-only", action="store_true",
                     help="a what-changed question searches only the units that moved in its window")
     ap.add_argument("--out", default=str(HERE / "results/time-slice"))
@@ -207,7 +220,8 @@ def main() -> int:
     scope_rr, scope_msg = R.make(args.scope_reranker, args.llamacpp_rerank_url, cache)
     print(f"scope reader: {scope_msg}", file=sys.stderr)
 
-    timeline = TL.Timeline(corpus, reranker=rr, embedder=emb, scope_reranker=scope_rr)
+    timeline = TL.Timeline(corpus, reranker=rr, embedder=emb, scope_reranker=scope_rr,
+                           names=I.declared_names(root))
     qvec = {q["id"]: emb.embed_queries([q["question"]])[0] for q in cutoffs} if emb else {}
 
     only = set(filter(None, args.only.split(",")))
@@ -227,7 +241,10 @@ def main() -> int:
             restrict = None
             if args.changed_only and q.get("window"):
                 lo = history.at(q["window"]["from"]).position
-                restrict = timeline.changed_between(lo, at)
+                restrict = (timeline.moved_in(lo, at) if args.window_rule == "moved"
+                            else timeline.changed_between(lo, at))
+                if not restrict:
+                    restrict = None  # nothing moved: ask the whole slice rather than nothing
             items, pipe = timeline.at(at, restrict)
             final, top1, pinned = pipe.run(cfg, q["question"], qvec.get(q["id"]))
             ranked = [items[n].address for n in final]
