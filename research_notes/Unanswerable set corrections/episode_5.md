@@ -411,7 +411,34 @@ restatement at line 388, so it does not need a section of its own, but the metri
   about a candidate can change any score. So "267 do not answer the question they were returned for"
   is a statement about answerable questions only, and should say so.
 
-## A new discrepancy found while settling G6 — needs a decision before Episode 5 publishes
+## RESOLVED 29 Oct — the round-3 tally, and how the file caught it
+
+The discrepancy below is settled, and the article is corrected. **54 decisions were made, not 272.**
+
+The deciding evidence is `qrels.txt`: every decision becomes a line there, a *no* included — which
+Episode 3 states outright, "a 0 is a judgment too". All 192 *no*s from rounds 1 and 2 are present
+as 0-lines, and all 46 from round 3. Had 267 *no* decisions been made, qrels would carry 267 of
+them. It gained exactly 54 lines, 291 → 345, in the same commit (`ac6e6ba`) that added the file.
+
+What is true, and what each claim rests on:
+
+| claim | status |
+|---|---|
+| the pool spanned **40 questions** | **reproduced exactly** — `build_audit.py --all` against the pre-round-3 qrels (`git show 2b093ab:…/qrels.txt`) over the three 5090 runs reports 40 |
+| the pool held **272** candidates | **not reproducible.** Closest is 263 (configs `X1,H1,E5-1`); 262 with other triples. It shifts with which configs are passed, so the article should quote no pool size |
+| **54** judged, over 7 questions | the file, and qrels' 54 new lines |
+| the 7 are `G-007`, `G-014`, `G-076`–`G-081` | the file — and they are exactly the questions the freeze changed: the six added, plus G-007 which was reworded and G-014 which was among the six fixed |
+| 1 whole, **7** *partly*, 46 *no* | the file. The article said 4 *partly*; G-076 alone has four and G-080 supplies the other three, which is the likely origin of the error |
+| `Judged@4` 0.73 / 0.55 etc. | untouched — computed from the 345-line qrels, so consistent with 54 |
+
+**Commit `ac6e6ba`'s message carries the wrong tally too.** It is pushed, so it stays; the article
+is the thing that gets corrected.
+
+The lesson worth keeping: the prose was a hand tally and the evidence file was generated. When they
+disagree, the generated artefact wins — and here a third artefact, qrels, was able to adjudicate
+because it records refusals as well as acceptances.
+
+## The original statement of the discrepancy, 28 Oct
 
 **Episode 5's round-3 figures do not reconcile with its own evidence file.** The article (line 27)
 says "272 unjudged pairs over 40 questions … One accepted (`031-init-tools/spec.html#scenarios`,
