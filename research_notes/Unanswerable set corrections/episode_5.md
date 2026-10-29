@@ -397,9 +397,37 @@ restatement at line 388, so it does not need a section of its own, but the metri
   stages share the credit, and the second one is size-dependent.
 - **G4 — resolved.** **None** of `G-045`–`G-050` has anything pinned, so all six do get a reranker
   score and a threshold applies to them cleanly. The refusal branch has no bypass to worry about.
-- **G5 — still open.** No measurement of the counter under the two redirect rules. Edit 25 cannot be
-  written as a claim.
-- **G6 — still open.** Whether round 3's pool touched the six is not stated.
+- **G5 — resolved, and the identity holds.** Measured under both rules at both tiers:
+  `E5-1` and `E5-1b` are **identical** on groundless@4 (9/53 on the Qwen3 pair, 18/53 on nomic) and
+  on the confident count, as are `X1`/`X1b` and `H1`/`H1b`. The *only* cell that moves anywhere is
+  `stale@4`, which is 0 under the dropping redirect and 1 under the keeping one — which is the
+  epilogue's whole point. So edit 25 **can** be written as a claim: the new counter is unchanged by
+  the redirect change, exactly as `Hit@4` and `all-evidence@4` are.
+- **G6 — resolved. No audit round has ever judged a candidate for any of the six.** Checked in both
+  committed files: `results/episode-4/golden-audit-2026-10.jsonl` (226 decisions over 26 questions)
+  and `results/episode-5/golden-audit-round3.jsonl` (54 over 7). Neither contains a single row for
+  `G-045`–`G-050`. That is consistent with Episode 4's documented pooling rule — "passages that could
+  not change any score were not judged" — and for a question with no expected passage, no decision
+  about a candidate can change any score. So "267 do not answer the question they were returned for"
+  is a statement about answerable questions only, and should say so.
+
+## A new discrepancy found while settling G6 — needs a decision before Episode 5 publishes
+
+**Episode 5's round-3 figures do not reconcile with its own evidence file.** The article (line 27)
+says "272 unjudged pairs over 40 questions … One accepted (`031-init-tools/spec.html#scenarios`,
+G-076, whole), four *partly*, 267 *no*." The committed file holds **54 decisions over 7 questions**
+— `G-007`, `G-014`, `G-076`, `G-078`, `G-079`, `G-080`, `G-081` — being **1 whole, 7 partly, 46 no**.
+
+The `whole` matches. Nothing else does: 7 partly against 4, 46 no against 267, 7 questions against 40.
+
+For contrast, Episode 4's numbers reconcile exactly: 226 rows, 12 whole + 2 standin + 20 partly +
+192 no, and 211 of them from round 1 — every figure the article prints.
+
+The likeliest reading is that 272 over 40 was the **pool presented** and the file holds only the
+decisions that could move a score, but the article presents the 272/4/267 split as decisions made,
+and the partly count disagrees even on that reading. **Do not paste either number over the other.**
+Either the full round-3 decision file is missing from the repository, or the article's split needs
+re-deriving from whatever produced it. Nothing is published, so this is a fix rather than an erratum.
 
 Also useful, and it removes most of the uncertainty the table edits worried about: with six
 unanswerable questions and nothing declining, **groundless@4 over 53 is just `53 − Hit@4`**. Every
