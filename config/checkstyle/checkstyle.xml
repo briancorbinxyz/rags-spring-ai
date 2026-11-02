@@ -25,5 +25,21 @@
     <module name="ParameterNumber">
       <property name="max" value="4"/>
     </module>
+
+    <!-- How many branches a method has, and how many paths through it. Checkstyle ships both,
+         so this needed no new tool. 10 is the conventional limit and the code is under it: the
+         one method over was Supersession.prose at 13, and it was split rather than excused.
+
+         BooleanExpressionComplexity was tried and rejected. Its only finding was the five-clause
+         guard in Supersession.replaces, and a named predicate spelling out five conditions is
+         what you refactor complexity *into*. A rule that pushes you to break one up makes the
+         code worse. -->
+    <module name="CyclomaticComplexity">
+      <property name="max" value="10"/>
+    </module>
+    <module name="NPathComplexity">
+      <property name="max" value="200"/>
+    </module>
+
   </module>
 </module>

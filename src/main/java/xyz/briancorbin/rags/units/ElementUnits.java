@@ -28,7 +28,7 @@ public final class ElementUnits {
   private final Standings standings;
 
   /// @param standings how the archive's own standing labels are read back, handed in because only
-  ///     the archive knows what they mean
+  ///   the archive knows what they mean
   public ElementUnits(List<Document> units, Standings standings) {
     this.units = List.copyOf(units);
     this.standings = standings;

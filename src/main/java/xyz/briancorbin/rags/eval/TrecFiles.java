@@ -17,12 +17,10 @@ import xyz.briancorbin.rags.eval.GoldenSet.Question;
 
 /// The golden set as a TREC test collection, so our numbers can be checked with information
 /// retrieval's own scorers (`trec_eval`, `ir_measures`, `ranx`) instead of ours.
-///
 /// - **qrels**: one judgment per line, `question 0 passage relevance`. Relevance 1 is an expected
 ///   passage or one the blind audit accepted; 0 is a passage someone judged and found wanting: a
 ///   stale record, or an audit decision of "partly" or "doesn't answer it". Unanswerable questions
 ///   have no relevant passage, so they have no lines.
-///
 /// - **run**: one result per line, `question Q0 passage rank score run-name`. A long unit is split
 ///   into parts, so a ranking can name a passage twice; the scorers keep one entry per passage, so
 ///   only the first is written.

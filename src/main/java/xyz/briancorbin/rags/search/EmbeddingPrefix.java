@@ -7,10 +7,8 @@ import java.util.Locale;
 /// An embedding model that was trained on prefixed text expects them, and without them it still
 /// returns numbers, just worse ones, with nothing to warn you. The two on the laptop tier want
 /// different things:
-///
 /// - {@link #NOMIC}: `search_document:` in front of a passage and `search_query:` in front of a
 ///   question, the same strings {@link PrefixedEmbeddingModel} sends.
-///
 /// - {@link #QWEN3}: passages bare, and a question behind the task sentence from the
 ///   Qwen3-Embedding model card's own example. The card asks for a task sentence per use case;
 ///   keeping the card's default is what stops it being tuned on the golden set.

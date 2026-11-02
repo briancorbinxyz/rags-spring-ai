@@ -32,9 +32,10 @@ import xyz.briancorbin.rags.units.StandingFilter;
 /// pulls a further one in. Cutting to {@value #DEPTH} is {@link TopDocuments}'s job, after any
 /// reranking, so a reranker sees the same candidates however many units were pinned.
 ///
-/// Spring AI 2.0.1 has no fusion of its own. Its `ConcatenationDocumentJoiner` is not it: that one
-/// re-sorts the joined lists by {@link Document#getScore()} descending, which compares scores from
-/// different scales and throws on a pinned unit, whose score is null.
+/// Spring AI 2.0.1 has no fusion of its own, and its `ConcatenationDocumentJoiner` is not it. That
+/// one re-sorts by {@link Document#getScore()} descending, comparing scores from different scales,
+/// and reads a null score as `0.0` — so a pinned unit, which carries none deliberately, sinks to
+/// the bottom. See {@link AsRetrieved}, which is what the advisor joins with instead.
 public final class ElementRetriever implements DocumentRetriever {
 
   /// The results a step returns, and so the most candidates anything after it can need.

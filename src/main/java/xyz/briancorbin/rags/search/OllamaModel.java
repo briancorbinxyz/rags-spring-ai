@@ -37,17 +37,56 @@ public final class OllamaModel {
     }
   }
 
+  /// The version of the Ollama serving the models, or empty if it is not answering.
+  ///
+  /// The model digest says which weights were used; this says which build of the runtime chose the
+  /// tokens from them. Sampling, quantisation handling and the default options have all changed
+  /// between Ollama releases, so a run that records only the digest has recorded half of what it
+  /// would need to be repeated.
+  public static Optional<String> version(String baseUrl) {
+    try {
+      HttpResponse<String> response = get(baseUrl, "/api/version");
+      if (response.statusCode() != 200) {
+        return Optional.empty();
+      }
+      return versionIn(response.body());
+    } catch (IOException | RuntimeException e) {
+      return Optional.empty();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return Optional.empty();
+    }
+  }
+
+  /// The version Ollama reports, read out of its `/api/version` body. Separate from the call so
+  /// that the parse can be tested against a real response without a server to answer it.
+  static Optional<String> versionIn(String body) {
+    var parsed = JsonMapper.shared().readValue(body, new TypeReference<Map<String, Object>>() {});
+    return Optional.ofNullable(parsed.get("version"))
+        .map(String::valueOf)
+        .filter(version -> !version.isBlank());
+  }
+
   private static HttpResponse<String> tags(String baseUrl)
       throws IOException, InterruptedException {
+    return get(baseUrl, "/api/tags");
+  }
+
+  /// One GET, with the client closed afterwards.
+  ///
+  /// The close is the point. An `HttpClient` runs a **non-daemon** selector thread from the moment
+  /// it is built, and holds it until it is closed or collected, so a program that builds one and
+  /// walks away keeps the JVM alive after its work is done — with nothing left running to say why.
+  private static HttpResponse<String> get(String baseUrl, String path)
+      throws IOException, InterruptedException {
     var request =
-        HttpRequest.newBuilder(URI.create(baseUrl.replaceAll("/+$", "") + "/api/tags"))
+        HttpRequest.newBuilder(URI.create(baseUrl.replaceAll("/+$", "") + path))
             .timeout(Duration.ofSeconds(10))
             .GET()
             .build();
-    return HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(3))
-        .build()
-        .send(request, HttpResponse.BodyHandlers.ofString());
+    try (var http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build()) {
+      return http.send(request, HttpResponse.BodyHandlers.ofString());
+    }
   }
 
   /// The digest Ollama lists for `model`, matched on either the name or the model field.

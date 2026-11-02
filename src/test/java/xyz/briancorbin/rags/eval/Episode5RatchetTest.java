@@ -1,12 +1,9 @@
 package xyz.briancorbin.rags.eval;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,7 +14,6 @@ import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
 import org.springframework.core.io.ClassPathResource;
-import tools.jackson.databind.json.JsonMapper;
 import xyz.briancorbin.rags.eval.Ratchet.Tally;
 import xyz.briancorbin.rags.eval.RetrievalRun.Step;
 import xyz.briancorbin.rags.search.CachingEmbedder;
@@ -59,6 +55,11 @@ import xyz.briancorbin.rags.units.StandingFilter;
 class Episode5RatchetTest {
 
   static final String MODEL = "nomic-embed-text:v1.5";
+
+  /// The reranker these numbers were measured with, by name and by the commit of its model
+  /// repository. A tag is not a version, and Hugging Face lets a name move.
+  static final String RERANKER =
+      "cross-encoder/ms-marco-MiniLM-L-6-v2@233902d25c440f23af6f7d6e94d2946bac0bee0a";
 
   /// The build of the model the published numbers were measured with.
   static final String DIGEST = "0a109f422b47";
@@ -130,17 +131,24 @@ class Episode5RatchetTest {
 
   @Test
   void rerankingIsWorseThanFusingOutright() {
-    assumeTrue(
+    RatchetInputs.present(
         CrossEncoderReranker.modelAt(RERANK_URL).isPresent(),
         "no reranker at " + RERANK_URL + ": start tools/rerank-service/serve.py for step 6");
     assertEquals(
-        "cross-encoder/ms-marco-MiniLM-L-6-v2", CrossEncoderReranker.modelAt(RERANK_URL).get());
+        RERANKER,
+        CrossEncoderReranker.modelAt(RERANK_URL).orElseThrow(),
+        "the reranker is not the one these numbers were measured with");
 
     Tally six = tally(plusCrossEncoderReranking());
 
     assertThatStepSixIsWhatTheArticlePrints(six);
     assertEquals(
-        List.of("Hit@4 36→32", "all-evidence@4 33→29", "single-fact 9→7", "paraphrase 6→3"),
+        List.of(
+            "Hit@4 36→32",
+            "all-evidence@4 33→29",
+            "single-fact 9→7",
+            "paraphrase 6→3",
+            "unsupported@4 17→21"),
         Ratchet.failures(five, six),
         "step 6 is worse than step 5 outright");
   }
@@ -149,10 +157,10 @@ class Episode5RatchetTest {
 
   private static Path frozenCheckout() {
     Path checkout = Path.of(System.getProperty("spectastic.path", "../spectastic"));
-    assumeTrue(
+    RatchetInputs.present(
         Files.isDirectory(checkout.resolve("specs")),
         "no spectastic checkout at " + checkout.toAbsolutePath());
-    assumeTrue(
+    RatchetInputs.present(
         SpecCorpus.commitOf(checkout).equals(RatchetTest.COMMIT),
         "the golden set is frozen at " + RatchetTest.COMMIT);
     return checkout;
@@ -162,10 +170,10 @@ class Episode5RatchetTest {
   private static String measuredModel() {
     String url = System.getProperty("ollama.url", OllamaModel.DEFAULT_URL);
     Optional<String> digest = OllamaModel.digest(url, MODEL);
-    assumeTrue(
+    RatchetInputs.present(
         digest.isPresent(),
         "Ollama at " + url + " has no " + MODEL + " (ollama pull " + MODEL + ")");
-    assumeTrue(
+    RatchetInputs.present(
         digest.get().startsWith(DIGEST),
         "a different build of %s: %s, not %s. The numbers are a new baseline."
             .formatted(MODEL, digest.get(), DIGEST));
@@ -196,8 +204,13 @@ class Episode5RatchetTest {
         .filter(StandingFilter.of(Lifecycle.IN_FORCE));
   }
 
+  /// Episode 4's step 4, built the way `RatchetTest` builds it — the depth cut included. Leaving
+  /// `cut` out passed the ratchet and still broke parity: the identifier lookup pins above the
+  /// ranking, so a question naming an id got 51 results where the prototype's 50 were cut. Only
+  /// G-028 did, and the first 50 agreed, so no tally moved and nothing failed.
   private static Step episode4sLastStep() {
-    return new Step("step-4", "+ supersession redirect", inForce().build(), redirect);
+    return new Step(
+        "step-4", "+ supersession redirect", inForce().build(), PostProcessors.of(cut, redirect));
   }
 
   private static Step plusDenseSearchFused() {
@@ -217,9 +230,9 @@ class Episode5RatchetTest {
   private static Tally tally(Step step) {
     var results = RetrievalRun.run(step, questions);
     RetrievalRun.write(step, results, RUNS);
-    parity(step, results, RUNS);
+    Parity.assertMatchesThePrototype(step, results, RUNS);
     Tally tally = Tally.of(results);
-    assertTrue(tally.questions() == 47, "47 answerable questions, not " + tally.questions());
+    assertEquals(47, tally.questions(), "the answerable questions of the frozen set");
     return tally;
   }
 
@@ -257,26 +270,5 @@ class Episode5RatchetTest {
             "stale", 7,
             "intent", 2),
         six.hitsByStratum());
-  }
-
-  /// Every question's whole ranking, one line each, for the diff against the prototype.
-  ///
-  /// The run file can't serve: TREC keeps one line per passage, and a split unit's parts share an
-  /// address, so a ranking that names a unit twice comes out one line shorter. Parity is about the
-  /// items, duplicates and all, so the items are written as they are.
-  private static void parity(Step step, List<RetrievalRun.Result> results, Path out) {
-    var lines = new ArrayList<String>();
-    for (RetrievalRun.Result r : results) {
-      lines.add(
-          JsonMapper.shared()
-              .writeValueAsString(
-                  Map.of("step", step.name(), "id", r.question().id(), "ranked", r.ranked())));
-    }
-    try {
-      Files.createDirectories(out);
-      Files.write(out.resolve("parity-" + step.name() + ".jsonl"), lines);
-    } catch (java.io.IOException e) {
-      throw new java.io.UncheckedIOException(e);
-    }
   }
 }

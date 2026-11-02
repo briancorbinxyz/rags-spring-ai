@@ -13,6 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.postretrieval.document.DocumentPostProcessor;
@@ -39,6 +41,8 @@ import xyz.briancorbin.rags.units.Units;
 /// prototype's, which is what the parity check needs.
 public final class CrossEncoderReranker implements DocumentPostProcessor {
 
+  private static final Logger log = LoggerFactory.getLogger(CrossEncoderReranker.class);
+
   /// Where `tools/rerank-service/serve.py` listens by default.
   public static final String DEFAULT_URL = "http://127.0.0.1:8099";
 
@@ -62,21 +66,38 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
     if (head.isEmpty()) {
       return documents;
     }
-    List<Double> scores = scores(query.text(), head.stream().map(Units::passage).toList());
+    List<Double> scores;
+    try {
+      scores = scores(query.text(), head.stream().map(Units::passage).toList());
+    } catch (RuntimeException e) {
+      // Episode 2's lesson, applied where it was first dropped: an outage should cost the
+      // improvement, not the answer. The fused order is what this stage was handed, and it is a
+      // perfectly good ranking — it is simply the one from before the reranker had an opinion.
+      // Loud, because a run that quietly stops reranking is a run whose numbers mean something
+      // else.
+      log.warn("Reranking skipped, serving the fused order: {}", e.getMessage());
+      return documents;
+    }
 
+    return reordered(pinned, head, scores, rest.subList(top, rest.size()));
+  }
+
+  /// The pinned units, then the rescored candidates best first, then whatever was past the depth
+  /// the reranker reads. Equal scores keep the order the fusion gave them.
+  private static List<Document> reordered(
+      List<Document> pinned, List<Document> head, List<Double> scores, List<Document> tail) {
     var order = new ArrayList<Integer>();
     for (int i = 0; i < head.size(); i++) {
       order.add(i);
     }
-    // Best first; equal scores keep the order the fusion gave them.
     order.sort(Comparator.comparingDouble(position -> -scores.get(position)));
 
-    var out = new ArrayList<Document>(documents.size());
+    var out = new ArrayList<Document>(pinned.size() + head.size() + tail.size());
     out.addAll(pinned);
     for (int i : order) {
       out.add(ElementUnits.scored(head.get(i), scores.get(i)));
     }
-    out.addAll(rest.subList(top, rest.size()));
+    out.addAll(tail);
     return List.copyOf(out);
   }
 
@@ -104,7 +125,9 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
     body.put("query", question);
     body.put("passages", passages);
     return HttpRequest.newBuilder(endpoint)
-        .timeout(Duration.ofMinutes(10))
+        // Seconds, not minutes. Fifty passages through a cross-encoder is a second or two; ten
+        // minutes is not patience, it is a hang nobody will wait out.
+        .timeout(Duration.ofSeconds(30))
         .header("Content-Type", "application/json")
         .POST(HttpRequest.BodyPublishers.ofString(JsonMapper.shared().writeValueAsString(body)))
         .build();
@@ -133,7 +156,11 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
       var parsed =
           JsonMapper.shared()
               .readValue(response.body(), new TypeReference<Map<String, Object>>() {});
-      return Optional.ofNullable((String) parsed.get("model"));
+      // Name and revision together, because a name alone is not a version: the service pins a
+      // commit of the model repository and reports it, so a run can record what it scored with.
+      String name = (String) parsed.get("model");
+      Object revision = parsed.get("revision");
+      return Optional.ofNullable(name).map(it -> revision == null ? it : it + "@" + revision);
     } catch (IOException | RuntimeException e) {
       return Optional.empty();
     } catch (InterruptedException e) {
@@ -149,9 +176,11 @@ public final class CrossEncoderReranker implements DocumentPostProcessor {
             .timeout(Duration.ofSeconds(5))
             .GET()
             .build();
-    return HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(3))
-        .build()
-        .send(request, HttpResponse.BodyHandlers.ofString());
+    // Closed, unlike the instance client above, which lives as long as the reranker does: an
+    // unclosed HttpClient holds a non-daemon thread, and this one is built for a single question
+    // about the service and then abandoned.
+    try (var probe = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build()) {
+      return probe.send(request, HttpResponse.BodyHandlers.ofString());
+    }
   }
 }

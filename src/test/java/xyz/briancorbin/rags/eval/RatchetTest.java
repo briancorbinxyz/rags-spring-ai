@@ -2,7 +2,6 @@ package xyz.briancorbin.rags.eval;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,10 +48,10 @@ class RatchetTest {
   @BeforeAll
   static void theArchiveIsReadAndIndexedOnce() {
     Path checkout = Path.of(System.getProperty("spectastic.path", "../spectastic"));
-    assumeTrue(
+    RatchetInputs.present(
         Files.isDirectory(checkout.resolve("specs")),
         "no spectastic checkout at " + checkout.toAbsolutePath());
-    assumeTrue(
+    RatchetInputs.present(
         SpecCorpus.commitOf(checkout).equals(COMMIT), "the golden set is frozen at " + COMMIT);
 
     questions = BlindAudit.audited(GoldenSet.read(new ClassPathResource("golden/questions.jsonl")));
@@ -88,14 +87,44 @@ class RatchetTest {
 
   @Test
   void aStepFailsIfItGoesBackwardsOnAnyRule() {
-    var before = new Tally(47, 32, 26, 1, Map.of("identifier", 8, "paraphrase", 2));
-    var sideways = new Tally(47, 32, 26, 0, Map.of("identifier", 7, "paraphrase", 3));
-    var backwards = new Tally(47, 31, 25, 2, Map.of("identifier", 6, "paraphrase", 3));
+    var before = aStepScoring(32, 26, 1, Map.of("identifier", 8, "paraphrase", 2));
+    var sideways = aStepScoring(32, 26, 0, Map.of("identifier", 7, "paraphrase", 3));
+    var backwards = aStepScoring(31, 25, 2, Map.of("identifier", 6, "paraphrase", 3));
 
     assertEquals(List.of(), Ratchet.failures(before, sideways));
     assertEquals(
-        List.of("Hit@4 32→31", "all-evidence@4 26→25", "identifier 8→6", "stale@4 1→2"),
+        List.of(
+            "Hit@4 32→31",
+            "all-evidence@4 26→25",
+            "identifier 8→6",
+            "stale@4 1→2",
+            "unsupported@4 21→22"),
         Ratchet.failures(before, backwards));
+  }
+
+  @Test
+  void aStepFailsIfItServesMoreQuestionsItHasNothingFor() {
+    var before = aStepScoring(32, 26, 0, Map.of());
+    var louder = new Tally(47, 32, 26, 0, new Tally.Outcomes(53, 25, 0, 0), Map.of());
+
+    assertEquals(List.of("unsupported@4 21→25"), Ratchet.failures(before, louder));
+  }
+
+  @Test
+  void aStepFailsIfItDeclinesAQuestionThatHasAnAnswer() {
+    var before = aStepScoring(32, 26, 0, Map.of());
+    var overEager = new Tally(47, 32, 26, 0, new Tally.Outcomes(53, 20, 1, 1), Map.of());
+
+    assertEquals(List.of("declined 1 answerable question(s)"), Ratchet.failures(before, overEager));
+  }
+
+  /// A tally for a step that declines nothing, which is every step in this series: with no
+  /// declines, every question that isn't a hit was served a top four it had nothing for, so
+  /// `unsupported` is the rest of the 53.
+  private static Tally aStepScoring(
+      int hits, int allEvidence, int stale, Map<String, Integer> hitsByStratum) {
+    return new Tally(
+        47, hits, allEvidence, stale, new Tally.Outcomes(53, 53 - hits, 0, 0), hitsByStratum);
   }
 
   // --- given -----------------------------------------------------------------------------------

@@ -17,13 +17,10 @@ import xyz.briancorbin.rags.spectastic.SpectasticReader.Unit;
 /// The paper trail: which current element replaced each out-of-date one.
 ///
 /// spectastic says it three ways, and all three are read:
-///
 /// - a change proposal's `<spec-delta target="FR-003">`: an archived or withdrawn copy of a
 ///   requirement points at the requirement it changed;
-///
 /// - an element marked superseded in place, with a `<spec-status value="superseded">` inside it,
 ///   followed by a link to its successor;
-///
 /// - prose: "superseded by" just before a link.
 ///
 /// A whole page can be superseded too (`<spec-status value="superseded">` on the page, "superseded
@@ -64,9 +61,7 @@ public final class Supersession implements Successors {
   /// "Superseded by" in the words just before a link.
   private void prose(Page page, Set<String> sources, Map<String, Unit> units) {
     String source = page.source();
-    boolean pageSuperseded =
-        page.html().select("spec-meta spec-status").stream()
-            .anyMatch(status -> "superseded".equals(status.attr("value")));
+    boolean pageReplaced = pageReplaced(page);
     for (Element link : page.body().getAllElements()) {
       Target target = linkTarget(link, source, sources);
       if (target == null || !saysSupersededBy(link)) {
@@ -74,15 +69,30 @@ public final class Supersession implements Successors {
       }
       String from = unitAround(source, link, units);
       String to = units.containsKey(target.address()) ? target.address() : null;
-      if (from == null ? to == null && target.page().equals(source) : from.equals(to)) {
-        continue; // a link to itself
+      if (pointsAtItself(from, to, target, source)) {
+        continue;
       }
       if (from != null && to != null && units.get(from).lifecycle() != Lifecycle.CURRENT) {
         successors.putIfAbsent(from, to);
-      } else if (pageSuperseded && !source.contains("/changes/")) {
+      } else if (pageReplaced) {
         pageSuccessors.put(source, target.page());
       }
     }
+  }
+
+  /// Whether the page itself has been replaced: its own status says so, and it is not a change
+  /// record. A change record that says "superseded by" is describing the replacement, not
+  /// undergoing one.
+  private static boolean pageReplaced(Page page) {
+    return !page.source().contains("/changes/")
+        && page.html().select("spec-meta spec-status").stream()
+            .anyMatch(status -> "superseded".equals(status.attr("value")));
+  }
+
+  /// A link that goes nowhere: a unit pointing at itself, or a page with no unit around the link
+  /// pointing at its own address. Either way it supersedes nothing.
+  private static boolean pointsAtItself(String from, String to, Target target, String source) {
+    return from == null ? to == null && target.page().equals(source) : from.equals(to);
   }
 
   /// Where a link points inside the archive: the page, and the address its fragment names.

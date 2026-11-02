@@ -16,7 +16,6 @@ import xyz.briancorbin.rags.units.Standing;
 ///
 /// "What does FR-001 in spec 045 require?" names a part of the archive and a scope to look for it
 /// in. `FR-001` alone is in over a hundred specs, so:
-///
 /// - an id with a scope names that id in that scope, on every page of it;
 /// - an id with no scope names something only if exactly one scope has it.
 ///

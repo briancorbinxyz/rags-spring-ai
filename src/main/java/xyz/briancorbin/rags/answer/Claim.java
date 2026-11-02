@@ -10,7 +10,7 @@ import java.util.List;
 ///
 /// @param text one short statement, literal and checkable
 /// @param sources what the statement rests on: a passage copied word for word from the archive, or
-///     the label of one ("Q2") that the program has already traced to its address
+///   the label of one ("Q2") that the program has already traced to its address
 public record Claim(String text, List<String> sources) {
 
   public Claim {

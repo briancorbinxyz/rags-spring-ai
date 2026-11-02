@@ -6,7 +6,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     // Episode 5: one set of conventions, enforced. Google style, 2 spaces, 100 columns --
     // the code is quoted in the articles, so an unformatted excerpt is a published defect.
-    id("com.diffplug.spotless") version "8.8.0"
+    id("com.diffplug.spotless") version "8.10.4"
     id("net.ltgt.errorprone") version "4.1.0"
     checkstyle
 }
@@ -62,8 +62,27 @@ tasks.withType<JavaCompile>().configureEach {
         ),
     )
     options.errorprone {
-        // Error Prone's defaults, plus three it ships switched off that match how this code is read.
-        enable("ImmutableSetForContains", "ConstantPatternCompile", "IdentifierName")
+        // Error Prone's defaults, plus the ones it ships switched off that match how this code is
+        // read. Each was turned on, run against the whole tree, and kept only when what it found
+        // was worth fixing. Two were tried and rejected, which is worth recording:
+        //
+        // `PreferredInterfaceType` wanted `IdentifierLookup.lookup` to return `List` rather than
+        // `SequencedCollection`, and the narrower type is the point -- these addresses are ordered,
+        // not indexed.
+        //
+        // `UnnecessarilyFullyQualified` found one accident in `CitationChecker` and five
+        // deliberate uses in `GoldenRun.hash`, where a fully qualified name makes a method
+        // self-contained for a reader who is seeing it quoted in an article without its imports.
+        // A check that fights that is not worth the suppressions it would need.
+        enable(
+            "ImmutableSetForContains",
+            "ConstantPatternCompile",
+            "IdentifierName",
+            "StatementSwitchToExpressionSwitch",
+            "MissingDefault",
+            "RedundantOverride",
+            "UnnecessaryStaticImport",
+        )
     }
 }
 
@@ -78,7 +97,7 @@ checkstyle {
 spotless {
     java {
         target("src/**/*.java")
-        googleJavaFormat("1.35.0") // Google style: 2-space indent, 100 columns
+        googleJavaFormat("1.36.1") // Google style: 2-space indent, 100 columns
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
@@ -99,6 +118,33 @@ tasks.withType<Test> {
     }
     // sqlite-jdbc loads its native library; say so, rather than be warned about it.
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+// ENG-04, SAI-15: `./gradlew test` is kind to a reader with no archive and skips the ratchet.
+// This task is not kind: it demands the checkout, the pinned model and the reranker, and fails if
+// any is missing. Episode 4 sells the ratchet as a regression test, and a regression test that
+// turns green when its inputs are gone is a false guarantee -- anyone copying it into CI got no
+// protection. Both audiences are served, by two tasks rather than one lenient one.
+tasks.register<Test>("ratchetTest") {
+    description = "Runs the ratchet and fails, rather than skips, when its inputs are missing."
+    group = "verification"
+    testClassesDirs = sourceSets["test"].output.classesDirs
+    classpath = sourceSets["test"].runtimeClasspath
+    useJUnitPlatform()
+    // Everything that needs the frozen checkout, the pinned models or the reranker, and so must
+    // fail rather than skip when a measurement cannot be made. Named one by one rather than by a
+    // wildcard, so adding a measurement is a decision and not an accident of spelling.
+    filter {
+        includeTestsMatching("*RatchetTest")
+        includeTestsMatching("*SplitPartHitsTest")
+        includeTestsMatching("*StepLatencyTest")
+    }
+    systemProperty("ratchet.required", "true")
+    for (name in listOf("spectastic.path", "vectors.cache", "ollama.url", "rerank.url")) {
+        System.getProperty(name)?.let { systemProperty(name, it) }
+    }
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+    outputs.upToDateWhen { false }
 }
 
 // Lets `--args='--archive.run=ask'` read follow-up questions from the terminal.

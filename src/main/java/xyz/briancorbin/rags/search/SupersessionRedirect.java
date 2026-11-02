@@ -50,25 +50,29 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
   }
 
   /// The current address for `address`: itself, or where its paper trail ends.
+  ///
+  /// A `superseded_by` can point at an address the archive no longer has — a page renamed, a record
+  /// deleted — and a trail that leads nowhere is not a reason to lose the result that started it.
+  /// So a dangling link ends the walk and the last address we did have is the answer.
   private String follow(String question, String address) {
     String at = address;
     for (int hop = 0; hop < HOPS; hop++) {
-      var marks = keywords.units().parts(at).getFirst().getMetadata();
+      List<Document> parts = keywords.units().parts(at);
+      if (parts.isEmpty()) {
+        return at;
+      }
+      var marks = parts.getFirst().getMetadata();
       Object next = marks.get(Units.SUPERSEDED_BY);
       Object page = marks.get(Units.PAGE_SUPERSEDED_BY);
       if (next != null) {
         at = next.toString();
       } else if (page != null) {
-        String sameId = page + "#" + marks.get(Units.ANCHOR);
-        if (!keywords.units().parts(sameId).isEmpty()) {
-          at = sameId;
-        } else {
-          Optional<Document> best = bestOnPage(question, page.toString());
-          if (best.isEmpty()) {
-            break;
-          }
-          at = Units.address(best.get());
+        String onward =
+            acrossTo(question, page.toString(), String.valueOf(marks.get(Units.ANCHOR)));
+        if (onward == null) {
+          break;
         }
+        at = onward;
       } else {
         break;
       }
@@ -104,5 +108,16 @@ public final class SupersessionRedirect implements DocumentPostProcessor {
     var copy = ElementUnits.scored(successor, successor.getScore());
     copy.getMetadata().put("redirected_from", from);
     return copy;
+  }
+
+  /// Where a page-level supersession lands: the same id on the replacing page when it has one, and
+  /// otherwise the best that page can offer this question. Null when it can offer nothing, which
+  /// ends the walk rather than redirecting into the dark.
+  private String acrossTo(String question, String page, String anchor) {
+    String sameId = page + "#" + anchor;
+    if (!keywords.units().parts(sameId).isEmpty()) {
+      return sameId;
+    }
+    return bestOnPage(question, page).map(Units::address).orElse(null);
   }
 }

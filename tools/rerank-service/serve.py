@@ -11,7 +11,7 @@ which is what makes the Java-against-prototype parity check mean anything.
     tools/rerank-service/serve.py                       # 127.0.0.1:8099, MiniLM
     MODEL=... PORT=... tools/rerank-service/serve.py
 
-    GET  /health   -> {"model": ..., "max_length": 512}
+    GET  /health   -> {"model": ..., "revision": ..., "max_length": 512}
     POST /rerank   {"query": str, "passages": [str]} -> {"model": ..., "scores": [float]}
 
 Scores are the model's own scale: higher is more relevant, and they are not comparable with BM25,
@@ -24,6 +24,10 @@ import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MODEL = os.environ.get("MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+#: The exact commit of the model repository. A tag is not a version: Hugging Face lets a name
+#: point somewhere new, and the day it does, step 6's numbers change with nothing in this repo
+#: having moved. Reported by /health so a run can record what it actually scored with.
+REVISION = os.environ.get("REVISION", "233902d25c440f23af6f7d6e94d2946bac0bee0a")
 PORT = int(os.environ.get("PORT", "8099"))
 HOST = os.environ.get("HOST", "127.0.0.1")
 MAX_LENGTH = int(os.environ.get("MAX_LENGTH", "512"))
@@ -34,8 +38,8 @@ try:
 except ImportError:
     sys.exit("sentence-transformers is not installed: pip install sentence-transformers")
 
-print(f"loading {MODEL} (max_length={MAX_LENGTH})", file=sys.stderr)
-model = CrossEncoder(MODEL, max_length=MAX_LENGTH)
+print(f"loading {MODEL}@{REVISION[:12]} (max_length={MAX_LENGTH})", file=sys.stderr)
+model = CrossEncoder(MODEL, max_length=MAX_LENGTH, revision=REVISION)
 cache: dict = {}  # (question, passage) -> score, as the prototype's reranker caches too
 
 
@@ -61,7 +65,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.rstrip("/") == "/health":
-            self._send(200, {"model": MODEL, "max_length": MAX_LENGTH})
+            self._send(200, {"model": MODEL, "revision": REVISION, "max_length": MAX_LENGTH})
         else:
             self._send(404, {"error": "try /health or POST /rerank"})
 

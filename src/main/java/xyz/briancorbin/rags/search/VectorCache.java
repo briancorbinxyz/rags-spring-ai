@@ -43,6 +43,9 @@ public final class VectorCache implements AutoCloseable {
     }
     try {
       db = DriverManager.getConnection("jdbc:sqlite:" + file);
+      // Without this every put is its own transaction and commit() has nothing left to do, which
+      // is slower and makes the method a lie.
+      db.setAutoCommit(false);
       try (var create = db.createStatement()) {
         create.execute("create table if not exists v (h text primary key, dim int, vec blob)");
       }

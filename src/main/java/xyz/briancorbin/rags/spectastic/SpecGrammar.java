@@ -6,10 +6,8 @@ import java.util.regex.Pattern;
 import xyz.briancorbin.rags.search.IdentifierGrammar;
 
 /// Spectastic's names, and nothing else in the search knows them.
-///
 /// - an **id** is anything shaped like one — `FR-012`, `NFR-001`, `T-100`, `REQ-TOOL-001`, `US5`.
 ///   Ids are written in capitals, so this is case-sensitive: "d-001" in prose is not an id;
-///
 /// - a **scope** is a spec: "spec 040", "Spec 058's" or "slice 040" in any case, or a slug like
 ///   `040-run-budget`. Three digits throughout the archive today, but the number is read as
 ///   written, so a thousandth spec needs nothing changed here.

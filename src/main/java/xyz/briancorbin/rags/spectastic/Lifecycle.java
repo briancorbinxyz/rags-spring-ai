@@ -8,11 +8,9 @@ import org.jsoup.nodes.Element;
 import xyz.briancorbin.rags.units.Standing;
 
 /// Where a record is in its life, read from the marks spectastic puts on it.
-///
 /// - {@link #CURRENT}: what the archive says today;
 /// - {@link #HISTORY}: an applied change under `changes/archive/`, the proposal that made the
 ///   current text what it is;
-///
 /// - {@link #WITHDRAWN}, {@link #SUPERSEDED}, {@link #REJECTED}: out of date, and kept out of the
 ///   search.
 ///

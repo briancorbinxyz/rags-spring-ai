@@ -29,7 +29,7 @@ public final class GoldenSet {
   ///
   /// @param address the accepted element address
   /// @param forTarget `question` when it answers the whole question, or the one expected address it
-  ///     can stand in for
+  ///   can stand in for
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record Accept(String address, @JsonProperty("for") String forTarget) {
 
@@ -44,11 +44,11 @@ public final class GoldenSet {
   /// @param question what a reader would ask
   /// @param stratum which kind of question it is, one of {@link #STRATA}
   /// @param expected the element addresses that answer it, `file#element-id`; empty for an
-  ///     unanswerable question
+  ///   unanswerable question
   ///
   /// @param accept passages the audit accepted as answering it too
   /// @param stale for a stale question, the withdrawn or superseded elements that would answer it
-  ///     wrongly
+  ///   wrongly
   ///
   /// @param answer a one-line reference answer
   /// @param commit the spectastic commit the question was checked against
@@ -62,6 +62,7 @@ public final class GoldenSet {
       List<Accept> accept,
       List<String> stale,
       String answer,
+      String core,
       String commit,
       String status) {
 
@@ -70,6 +71,9 @@ public final class GoldenSet {
       accept = accept == null ? List.of() : List.copyOf(accept);
       stale = stale == null ? List.of() : List.copyOf(stale);
       status = status == null ? "candidate" : status;
+      // The golden set gives the least a correct answer must contain; a few rows leave it out, and
+      // then the reference answer is all a judge has to go on.
+      core = core == null || core.isBlank() ? answer : core.strip();
     }
 
     public boolean answerable() {

@@ -25,7 +25,8 @@ final class RunSummary {
   private static String provenance(Setup setup) {
     return """
         Commit %s · chat %s · embeddings %s · %d files, %d chunks · ingest %.1f min · \
-        largest chunk %d tokens%n%n"""
+        largest chunk %d tokens%n\
+        Sampling: seed %d, top_p %s, top_k %d, keep_alive %s · Ollama %s%n%n"""
         .formatted(
             setup.corpus().commit().substring(0, 7),
             setup.chatModel(),
@@ -33,7 +34,12 @@ final class RunSummary {
             setup.corpus().files(),
             setup.corpus().chunks(),
             setup.corpus().ingestMillis() / 60000.0,
-            setup.corpus().largestChunkTokens());
+            setup.corpus().largestChunkTokens(),
+            setup.sampling().seed(),
+            setup.sampling().topP(),
+            setup.sampling().topK(),
+            setup.sampling().keepAlive(),
+            setup.sampling().ollamaVersion().orElse("not reported"));
   }
 
   /// One row per stratum that has questions, then the whole set.

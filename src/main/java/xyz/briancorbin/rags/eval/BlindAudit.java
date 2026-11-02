@@ -17,15 +17,15 @@ import xyz.briancorbin.rags.eval.GoldenSet.Question;
 
 /// What a person decided about passages the search returned that nobody had judged.
 ///
-/// Dense retrieval surfaces passages the golden set never listed, and an unjudged passage counts
-/// as wrong, so each episode puts them in front of a reader in Episode 4's blind format. A round
-/// is a file of its own: a later one is added by naming it, never by rewriting a round that has
-/// shipped, and never by editing the frozen questions.
+/// Dense retrieval surfaces passages the golden set never listed, and an unjudged passage counts as
+/// wrong, so each episode puts them in front of a reader in Episode 4's blind format. A round is a
+/// file of its own: a later one is added by naming it, never by rewriting a round that has shipped,
+/// and never by editing the frozen questions.
 ///
-/// That freeze is why this class exists. Episode 4's round ran before the golden set was frozen,
-/// so its acceptances are in `questions.jsonl` itself; every round since lands afterwards and
-/// cannot be written back. {@link #fold} is where the two meet, so a question is scored against
-/// what it was born with *and* what the audit has accepted since.
+/// That freeze is why this class exists. Episode 4's round ran before the golden set was frozen, so
+/// its acceptances are in `questions.jsonl` itself; every round since lands afterwards and cannot
+/// be written back. {@link #fold} is where the two meet, so a question is scored against what it
+/// was born with *and* what the audit has accepted since.
 public final class BlindAudit {
 
   /// The rounds this archive ships, oldest first. Episode 4's is named here as well as living in
@@ -51,8 +51,8 @@ public final class BlindAudit {
       return "whole".equals(decision) || "standin".equals(decision);
     }
 
-    /// The same ruling in the golden set's own words. A decision with no target answered the
-    /// whole question, which is what `for: question` means there.
+    /// The same ruling in the golden set's own words. A decision with no target answered the whole
+    /// question, which is what `for: question` means there.
     Accept asAccept() {
       return new Accept(candidate, forTarget == null ? "question" : forTarget);
     }
@@ -103,6 +103,7 @@ public final class BlindAudit {
             accepts,
             question.stale(),
             question.answer(),
+            question.core(),
             question.commit(),
             question.status());
   }

@@ -15,7 +15,7 @@ class TrecFilesTest {
 
   private static Question q(
       String id, String stratum, List<String> expected, List<Accept> accept, List<String> stale) {
-    return new Question(id, "?", stratum, expected, accept, stale, "", "c64d41c", "accepted");
+    return new Question(id, "?", stratum, expected, accept, stale, "", "", "c64d41c", "accepted");
   }
 
   @Test

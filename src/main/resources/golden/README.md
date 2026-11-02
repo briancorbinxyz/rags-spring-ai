@@ -81,22 +81,26 @@ The prototype's runs, on the `episode-4-prototype` branch, give the same numbers
 ## Time set
 
 `questions-time.jsonl` asks about the past, so an answer is a version, not only an address. Each
-question names the commit and date of the version that answers it (`version`), and as-of and
-as-known questions name the cutoff (`cutoff`), what-changed questions the window (`window`) and
-the versions inside it (`versions`).
+question names the commit and date of the version that answers it (`version`), and as-recorded
+questions name the cutoff (`cutoff`), what-changed questions the window (`window`) and the
+versions inside it (`versions`).
 
 | Stratum | Questions | Tests |
 |---|---|---|
 | history | 7 | Asks about a withdrawn, superseded, retired or rejected record on purpose |
 | history-decoy | 3 | Sounds historical ("no longer", "originally") but the answer is current |
-| as-of | 5 | What an element said on a date, including one tag-versus-date paraphrase pair |
+| as-recorded | 9 | What the archive held at a date: what an element said then (5, including one tag-versus-date paraphrase pair), and what had been recorded by then, before a later correction (4) |
 | what-changed | 5 | The versions of an element inside a window, in order |
-| as-known | 4 | What the archive said at the time, before a later correction |
 
-With 4 or 5 questions a stratum, one question is a fifth of it: compare these per question, not
+With 5 questions a stratum, one question is a fifth of it: compare these per question, not
 as rates. They were checked against the full spectastic history (every address exists at its
 commit, every quote is verbatim, every date is the committer date in UTC) and have never been run
 against a retriever.
+
+`as-of` and `as-known` were one stratum from 29 October. Both asked when the archive *knew*
+something — one axis, two names — and Episode 6 already reported them on a single row, so no
+number moved when they were merged. The corpus keeps transaction time only, which is why there is
+no stratum for what was true in the world as against what had been written down.
 
 ## Conventions
 

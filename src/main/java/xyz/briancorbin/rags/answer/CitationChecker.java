@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.SequencedSet;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /// Checks that each of Answerer's claims cites quotations Answerer was actually given.
 ///
@@ -51,7 +52,7 @@ public final class CitationChecker implements FactChecker<List<Quote>> {
   private static String labels(List<Quote> cited) {
     return cited.stream()
         .map(quote -> quote.label() + " (" + quote.address() + ")")
-        .collect(java.util.stream.Collectors.joining(", "));
+        .collect(Collectors.joining(", "));
   }
 
   /// True when the reply says the answer is not in the archive and backs no claim with a quote.

@@ -58,7 +58,7 @@ public final class SpecCorpus {
   /// Where the archive is and where its store goes.
   ///
   /// @param expectedCommit the commit the published numbers were measured at, so a different one is
-  ///     warned about rather than quietly compared
+  ///   warned about rather than quietly compared
   public record Checkout(Path checkout, String expectedCommit, Path storeDir) {}
 
   /// The embedding model, and the name the store file is keyed by so a swap is a new store.

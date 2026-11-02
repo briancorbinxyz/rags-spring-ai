@@ -12,8 +12,7 @@ import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvi
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.vectorstore.SearchRequest;
-import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import xyz.briancorbin.rags.answer.FactChecker.Verdict;
 
 /// One question, one hand-off: Quoter searches the archive and quotes it, the program traces the
@@ -144,7 +143,7 @@ public final class Archive {
   private final ChatClient quoter;
   private final ChatClient answerer;
   private final ChatClient directAnswerer;
-  private final VectorStore store;
+  private final Passages passages;
   private final QuoteResolver resolver;
   private final CitationChecker citations;
   private final Mode mode;
@@ -157,11 +156,11 @@ public final class Archive {
   /// What the program checks for itself, rather than taking a model's word for it.
   public record Checks(QuoteResolver quotations, CitationChecker citations) {}
 
-  public Archive(Roles roles, Checks checks, VectorStore store) {
+  public Archive(Roles roles, Checks checks, Passages passages) {
     this.quoter = roles.quoter();
     this.answerer = roles.answerer();
     this.directAnswerer = roles.directAnswerer();
-    this.store = store;
+    this.passages = passages;
     this.resolver = checks.quotations();
     this.citations = checks.citations();
     this.mode = roles.mode();
@@ -267,12 +266,7 @@ public final class Archive {
               .responseEntity(
                   Commentary.class, spec -> spec.useProviderStructuredOutput().validateSchema());
       ChatResponse chat = response.response();
-      List<Document> retrieved =
-          chat == null
-              ? List.of()
-              : Objects.requireNonNullElse(
-                  chat.getMetadata().<List<Document>>get(QuestionAnswerAdvisor.RETRIEVED_DOCUMENTS),
-                  List.of());
+      List<Document> retrieved = chat == null ? List.of() : whatTheAdvisorFound(chat);
       Integer tokens = chat == null ? null : chat.getMetadata().getUsage().getPromptTokens();
       return new Reply(Optional.ofNullable(response.entity()), retrieved, tokens, since(start));
     } catch (RuntimeException e) {
@@ -281,10 +275,24 @@ public final class Archive {
     }
   }
 
-  /// The advisor's own search, run directly. Used only when a chat call failed before the advisor
-  /// could report what it found, so a model failure is not counted as a retrieval miss.
+  /// What the advisor found, from wherever it reported it. {@link QuestionAnswerAdvisor} puts the
+  /// passages under `qa_retrieved_documents` and {@link RetrievalAugmentationAdvisor} under
+  /// `rag_document_context`, and Beta runs behind whichever one the search is configured with, so
+  /// both are read. Getting this wrong costs every quotation: {@link QuoteResolver} can only trace
+  /// a quote to a passage it was told about.
+  private static List<Document> whatTheAdvisorFound(ChatResponse chat) {
+    List<Document> chunks = chat.getMetadata().get(QuestionAnswerAdvisor.RETRIEVED_DOCUMENTS);
+    if (chunks != null) {
+      return chunks;
+    }
+    List<Document> units = chat.getMetadata().get(RetrievalAugmentationAdvisor.DOCUMENT_CONTEXT);
+    return Objects.requireNonNullElse(units, List.of());
+  }
+
+  /// The search, run directly. Used only when a chat call failed before the advisor could report
+  /// what it found, so a model failure is not counted as a retrieval miss.
   private List<Document> search(String question) {
-    return store.similaritySearch(SearchRequest.builder().query(question).build());
+    return passages.forQuestion(question);
   }
 
   private static void say(String who, Commentary c) {
