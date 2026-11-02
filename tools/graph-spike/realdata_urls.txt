@@ -1,0 +1,9 @@
+# Public newsroom pages, fetched once, rate-limited, no crawling.
+# Purpose: check that the extract-then-query mechanism behaves the same way on
+# real prose. NOT used to assert any real supply relationship.
+https://nvidianews.nvidia.com/news/nvidia-and-oracle-expand-nvidia-vera-rubin-to-multi-gigawatt-scale-and-bring-nvidia-vera-cpu-to-oracle-cloud-infrastructure
+https://nvidianews.nvidia.com/news/nvidia-and-meta-to-expand-collaboration-on-muse-and-muse-family-of-models-amid-robust-growth
+https://nvidianews.nvidia.com/news/nvidia-sets-conference-call-for-third-quarter-financial-results-6928873
+https://news.skhynix.com/
+https://www.micron.com/about/newsroom
+https://ir.amd.com/news-events/press-releases

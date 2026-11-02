@@ -1,0 +1,44 @@
+{
+ "question": "Which four of the world's five top GPU producers does Kestrel Memory Works supply memory to, and which one is excluded?",
+ "supplier_a": "Kestrel Memory Works",
+ "top5_gpu_producers": [
+  "Tessara Graphics Corporation",
+  "Nyxvolt Systems Inc.",
+  "Orbitine Compute AB",
+  "Halcyon Microsystems",
+  "Veradyne Silicon N.V."
+ ],
+ "supplied": [
+  "Tessara Graphics Corporation",
+  "Nyxvolt Systems Inc.",
+  "Orbitine Compute AB",
+  "Halcyon Microsystems"
+ ],
+ "excluded": "Veradyne Silicon N.V.",
+ "evidence_strength": {
+  "Tessara Graphics Corporation": "explicit joint press release (TSG-2026-031)",
+  "Orbitine Compute AB": "named supplier of record in a long statutory filing (ORB-SCD-2026)",
+  "Nyxvolt Systems Inc.": "3-document chain, never jointly stated (KMW-2026-009 + NVS-2026-022 + NVS-JOB-4471)",
+  "Halcyon Microsystems": "alias in earnings transcript (KMW-CALL-Q3) + joint conference session (GMS-2026-AGENDA)",
+  "Veradyne Silicon N.V.": "none; only decoys"
+ },
+ "decoys": [
+  "LIT-2026-0041",
+  "LIT-2026-0088",
+  "OMSC-2026-07",
+  "SAE-2026-02",
+  "NXL-2026-005"
+ ],
+ "near_duplicate_names": {
+  "Nyxvolt Labs": "unrelated AI software firm, not the GPU producer",
+  "Halcyon Micro": "informal alias of Halcyon Microsystems, same company",
+  "Kestrel Analytics Group": "market research firm, unrelated to Kestrel Memory Works"
+ },
+ "non_gpu_kestrel_customers": [
+  "Cobalt Ridge Networking",
+  "Peregrine Automotive Electronics",
+  "Thornbury Aerospace Systems"
+ ],
+ "aggregate_claim_doc": "KMW-2026-014",
+ "seed": 20261029
+}

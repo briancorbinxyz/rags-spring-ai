@@ -1,0 +1,5 @@
+# Regenerable from a fixed seed: bash run_all.sh
+corpus*/
+# Third-party newsroom pages; re-fetch from realdata_urls.txt rather than republish them.
+realdata_downloads/
+out/

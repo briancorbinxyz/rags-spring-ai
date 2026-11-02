@@ -1,0 +1,362 @@
+{
+ "KMW-2026-014": [
+  "aggregate_claim"
+ ],
+ "KAG-RANK-2026": [
+  "universe"
+ ],
+ "TSG-2026-031": [
+  "evidence:Tessara:explicit"
+ ],
+ "VRD-2026-077": [
+  "evidence:Veradyne:explicit_UNSAT_VARIANT"
+ ],
+ "ORB-SCD-2026": [
+  "evidence:Orbitine:official_record"
+ ],
+ "KMW-2026-009": [
+  "evidence:Nyxvolt:hint_qual"
+ ],
+ "NVS-2026-022": [
+  "evidence:Nyxvolt:hint_platform"
+ ],
+ "NVS-JOB-4471": [
+  "evidence:Nyxvolt:hint_job"
+ ],
+ "KMW-CALL-Q3": [
+  "evidence:Halcyon:hint_alias"
+ ],
+ "GMS-2026-AGENDA": [
+  "evidence:Halcyon:hint_conference"
+ ],
+ "LIT-2026-0041": [
+  "decoy:Veradyne:litigation"
+ ],
+ "LIT-2026-0088": [
+  "decoy:Veradyne:litigation2"
+ ],
+ "OMSC-2026-07": [
+  "decoy:Veradyne:standards"
+ ],
+ "SAE-2026-02": [
+  "decoy:Veradyne:industry_body"
+ ],
+ "NXL-2026-005": [
+  "decoy:over_merge_nyxvolt_labs"
+ ],
+ "SUP-001": [
+  "competing_supply"
+ ],
+ "SUP-002": [
+  "competing_supply"
+ ],
+ "SUP-003": [
+  "competing_supply"
+ ],
+ "SUP-004": [
+  "competing_supply"
+ ],
+ "SUP-005": [
+  "competing_supply"
+ ],
+ "SUP-006": [
+  "competing_supply"
+ ],
+ "KMW-NGC-001": [
+  "kestrel_non_gpu"
+ ],
+ "KMW-NGC-002": [
+  "kestrel_non_gpu"
+ ],
+ "KMW-NGC-003": [
+  "kestrel_non_gpu"
+ ],
+ "SCD-001": [
+  "sibling_filing"
+ ],
+ "SCD-002": [
+  "sibling_filing"
+ ],
+ "SCD-003": [
+  "sibling_filing"
+ ],
+ "SCD-004": [
+  "sibling_filing"
+ ],
+ "SCD-005": [
+  "sibling_filing"
+ ],
+ "SCD-006": [
+  "sibling_filing"
+ ],
+ "NOISE-001": [
+  "noise"
+ ],
+ "NOISE-002": [
+  "noise"
+ ],
+ "NOISE-003": [
+  "noise"
+ ],
+ "NOISE-004": [
+  "noise"
+ ],
+ "NOISE-005": [
+  "noise"
+ ],
+ "NOISE-006": [
+  "noise"
+ ],
+ "NOISE-007": [
+  "noise"
+ ],
+ "NOISE-008": [
+  "noise"
+ ],
+ "NOISE-009": [
+  "noise"
+ ],
+ "NOISE-010": [
+  "noise"
+ ],
+ "NOISE-011": [
+  "noise"
+ ],
+ "NOISE-012": [
+  "noise"
+ ],
+ "NOISE-013": [
+  "noise"
+ ],
+ "NOISE-014": [
+  "noise"
+ ],
+ "NOISE-015": [
+  "noise"
+ ],
+ "NOISE-016": [
+  "noise"
+ ],
+ "NOISE-017": [
+  "noise"
+ ],
+ "NOISE-018": [
+  "noise"
+ ],
+ "NOISE-019": [
+  "noise"
+ ],
+ "NOISE-020": [
+  "noise"
+ ],
+ "NOISE-021": [
+  "noise"
+ ],
+ "NOISE-022": [
+  "noise"
+ ],
+ "NOISE-023": [
+  "noise"
+ ],
+ "NOISE-024": [
+  "noise"
+ ],
+ "NOISE-025": [
+  "noise"
+ ],
+ "NOISE-026": [
+  "noise"
+ ],
+ "NOISE-027": [
+  "noise"
+ ],
+ "NOISE-028": [
+  "noise"
+ ],
+ "NOISE-029": [
+  "noise"
+ ],
+ "NOISE-030": [
+  "noise"
+ ],
+ "NOISE-031": [
+  "noise"
+ ],
+ "NOISE-032": [
+  "noise"
+ ],
+ "NOISE-033": [
+  "noise"
+ ],
+ "NOISE-034": [
+  "noise"
+ ],
+ "NOISE-035": [
+  "noise"
+ ],
+ "NOISE-036": [
+  "noise"
+ ],
+ "NOISE-037": [
+  "noise"
+ ],
+ "NOISE-038": [
+  "noise"
+ ],
+ "NOISE-039": [
+  "noise"
+ ],
+ "NOISE-040": [
+  "noise"
+ ],
+ "NOISE-041": [
+  "noise"
+ ],
+ "NOISE-042": [
+  "noise"
+ ],
+ "NOISE-043": [
+  "noise"
+ ],
+ "NOISE-044": [
+  "noise"
+ ],
+ "NOISE-045": [
+  "noise"
+ ],
+ "NOISE-046": [
+  "noise"
+ ],
+ "NOISE-047": [
+  "noise"
+ ],
+ "NOISE-048": [
+  "noise"
+ ],
+ "NOISE-049": [
+  "noise"
+ ],
+ "NOISE-050": [
+  "noise"
+ ],
+ "NOISE-051": [
+  "noise"
+ ],
+ "NOISE-052": [
+  "noise"
+ ],
+ "NOISE-053": [
+  "noise"
+ ],
+ "NOISE-054": [
+  "noise"
+ ],
+ "NOISE-055": [
+  "noise"
+ ],
+ "NOISE-056": [
+  "noise"
+ ],
+ "NOISE-057": [
+  "noise"
+ ],
+ "NOISE-058": [
+  "noise"
+ ],
+ "NOISE-059": [
+  "noise"
+ ],
+ "NOISE-060": [
+  "noise"
+ ],
+ "NOISE-061": [
+  "noise"
+ ],
+ "NOISE-062": [
+  "noise"
+ ],
+ "NOISE-063": [
+  "noise"
+ ],
+ "NOISE-064": [
+  "noise"
+ ],
+ "NOISE-065": [
+  "noise"
+ ],
+ "NOISE-066": [
+  "noise"
+ ],
+ "NOISE-067": [
+  "noise"
+ ],
+ "NOISE-068": [
+  "noise"
+ ],
+ "NOISE-069": [
+  "noise"
+ ],
+ "NOISE-070": [
+  "noise"
+ ],
+ "NOISE-071": [
+  "noise"
+ ],
+ "NOISE-072": [
+  "noise"
+ ],
+ "NOISE-073": [
+  "noise"
+ ],
+ "NOISE-074": [
+  "noise"
+ ],
+ "NOISE-075": [
+  "noise"
+ ],
+ "NOISE-076": [
+  "noise"
+ ],
+ "NOISE-077": [
+  "noise"
+ ],
+ "NOISE-078": [
+  "noise"
+ ],
+ "NOISE-079": [
+  "noise"
+ ],
+ "NOISE-080": [
+  "noise"
+ ],
+ "NOISE-081": [
+  "noise"
+ ],
+ "NOISE-082": [
+  "noise"
+ ],
+ "NOISE-083": [
+  "noise"
+ ],
+ "NOISE-084": [
+  "noise"
+ ],
+ "NOISE-085": [
+  "noise"
+ ],
+ "NOISE-086": [
+  "noise"
+ ],
+ "NOISE-087": [
+  "noise"
+ ],
+ "NOISE-088": [
+  "noise"
+ ],
+ "NOISE-089": [
+  "noise"
+ ],
+ "NOISE-090": [
+  "noise"
+ ]
+}
