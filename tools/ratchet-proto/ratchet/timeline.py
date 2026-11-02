@@ -81,7 +81,7 @@ class Timeline:
 
     def changed_between(self, lo: int, hi: int) -> frozenset:
         """The addresses whose text moved inside `(lo, hi]` — what "what changed" literally means."""
-        return frozenset(s.address for s in self.corpus.states if lo < s.from_pos <= hi)
+        return frozenset(s.address for s in self.corpus.states if lo < s.recorded_from <= hi)
 
     def moved_in(self, lo: int, hi: int) -> frozenset:
         """The addresses a `what-changed` question is asking about, which is a narrower thing.
@@ -108,8 +108,8 @@ class Timeline:
         at_end = {state.address for state in self.corpus.at(hi)}
         boundaries: dict[str, set] = {}
         for state in self.corpus.states:
-            if lo < state.from_pos <= hi:
-                boundaries.setdefault(state.address, set()).add(state.from_pos)
+            if lo < state.recorded_from <= hi:
+                boundaries.setdefault(state.address, set()).add(state.recorded_from)
         return frozenset(address for address, starts in boundaries.items()
                          if address in at_end
                          and (address in at_start or len(starts) > 1))

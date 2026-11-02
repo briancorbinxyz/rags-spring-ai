@@ -82,6 +82,18 @@ def configs() -> list[Config]:
         # hybrid line without the reranker, Episode 5 steps folded in (added after the first Mac run)
         Config("H1", "S3 + redirect + dense RRF (no reranker)", ids=True, lifecycle=True, dense=True,
                redirect="replace", needs=("dense",), **ep4),
+        # P4-7: SPLADE as the lexical half, on the laptop's best dense line and on its BM25 line.
+        Config("H1sp", "H1 with SPLADE in place of BM25's candidate list", ids=True, lifecycle=True, dense=True,
+               redirect="replace", sparse="replace", needs=("dense", "sparse"), **ep4),
+        Config("H1sa", "H1 + SPLADE fused as a third list", ids=True, lifecycle=True, dense=True,
+               redirect="replace", sparse="add", needs=("dense", "sparse"), **ep4),
+        Config("X1sp", "X1 with SPLADE in place of BM25's candidate list (no dense)", ids=True, lifecycle=True,
+               redirect="replace", sparse="replace", needs=("sparse",), **ep4),
+        # P4-7: the reranker as a vote fused with H1's order (Episode 6's rerank_rrf), beside E5-1's
+        # replacement, so a reranker is not judged on one shape alone.
+        Config("E5-1v", "E5-1 with the reranker fused as a vote rather than replacing the order", ids=True,
+               lifecycle=True, dense=True, rerank=True, rerank_rrf=True, redirect="replace",
+               needs=("dense", "rerank"), **ep4),
         Config("H2", "H1 + anchored typed expansion (no reranker)", ids=True, lifecycle=True, dense=True,
                redirect="replace", expand=True, needs=("dense",), **ep4),
         Config("H1b", "variant: H1 with the keeping redirect", ids=True, lifecycle=True, dense=True,
@@ -257,6 +269,29 @@ def fmt_pct(a, n):
     return f"{a}/{n} ({100 * a / n:.0f}%)" if n else "–"
 
 
+def write_parity(args, results):
+    """Every question's whole ranking, one JSON line each, for the diff against the Java.
+
+    The TREC run file cannot serve this. TREC keeps one line per passage, and a split unit's parts
+    share an address, so a ranking that names a unit twice comes out one line shorter than it is.
+    Parity is about the items, duplicates and all, so the items go down as they are — in the same
+    shape Episode5RatchetTest writes, so the two files diff directly.
+    """
+    steps = dict(pair.split("=", 1) for pair in args.parity_steps.split(",") if "=" in pair)
+    out = Path(args.parity_out)
+    out.mkdir(parents=True, exist_ok=True)
+    for key, step in steps.items():
+        if key not in results:
+            print(f"parity: no results for {key}, so no {step} file", file=sys.stderr)
+            continue
+        path = out / f"parity-{step}.jsonl"
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
+            for r in results[key]:
+                f.write(json.dumps({"step": step, "id": r.qid, "ranked": r.ranked},
+                                   sort_keys=True) + "\n")
+        print(f"parity: wrote {path} ({len(results[key])} questions, {key} as {step})", file=sys.stderr)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--spectastic", default=str(REPO.parent / "spectastic"), help="spectastic checkout (default ../spectastic)")
@@ -281,6 +316,20 @@ def main():
                          "intent_admit never looks at it")
     ap.add_argument("--only", default="", help="comma-separated config keys")
     ap.add_argument("--out", default=str(HERE / "results/run"), help="output path without extension")
+    ap.add_argument("--hyde", default=None,
+                    help="chat model to write a hypothetical answer per question, embedded in place of "
+                         "the question (HyDE). Needs no new model: pass the series' pinned chat model. "
+                         "Only affects the dense half; BM25 still searches the question's own words.")
+    ap.add_argument("--splade", action="store_true",
+                    help="encode the units with SPLADE (ratchet/splade.py, pinned model) for the *sp/*sa "
+                         "configurations; vectors cached under --splade-cache")
+    ap.add_argument("--splade-cache", default=None, help="directory for the SPLADE passage vectors (default --cache)")
+    ap.add_argument("--parity-out", default=None,
+                    help="directory for parity-<step>.jsonl: every question's whole ranking, for the "
+                         "item-by-item diff against the Java (Episode5RatchetTest). --parity-steps maps "
+                         "a configuration key onto the Java's step name.")
+    ap.add_argument("--parity-steps", default="X1=step-4,H1=step-5,E5-1=step-6",
+                    help="comma-separated <config key>=<java step name>")
     ap.add_argument("--score-heldout-at-episode-end", action="store_true", help=argparse.SUPPRESS)
     args = ap.parse_args()
 
@@ -343,7 +392,26 @@ def main():
         uvec = emb.embed_docs([it.passage() for it in cp.units])
         if chunks is not None:
             cvec = emb.embed_docs([it.passage() for it in chunks])
-        qvec = emb.embed_queries(qtexts)
+        if args.hyde:
+            from ratchet import hyde as H
+            writer = H.Hyde(args.hyde, args.ollama_url, Path(args.cache) / "hyde.sqlite")
+            hypothetical = writer.passages(qtexts)
+            writer.close()
+            print(f"HyDE: {len(hypothetical)} hypothetical passages via {args.hyde} "
+                  f"(prompt {writer.prompt_id}), embedded in place of the questions", file=sys.stderr)
+            qvec = emb.embed_queries(hypothetical)
+        else:
+            qvec = emb.embed_queries(qtexts)
+
+    sparse = None
+    if args.splade:
+        from ratchet import splade as SP
+        assert all(it.n == i for i, it in enumerate(cp.units)), "SPLADE rows are list positions"
+        enc_sp = SP.Splade()
+        sparse = enc_sp.index([it.passage() for it in cp.units], Path(args.splade_cache or args.cache))
+        print(f"SPLADE: {enc_sp.model_id} on {enc_sp.device}, max {enc_sp.max_length} tokens; "
+              f"{enc_sp.truncated} of {len(cp.units)} passages longer than that (read to the limit)",
+              file=sys.stderr)
 
     def tokens(it):
         return T.count(it.passage())
@@ -357,6 +425,9 @@ def main():
         cfg_run = cfg
         if "dense" in cfg.needs and emb is None:
             skipped[cfg.key] = (cfg.label, "no embedder")
+            continue
+        if "sparse" in cfg.needs and sparse is None:
+            skipped[cfg.key] = (cfg.label, "no SPLADE index (--splade)")
             continue
         if cfg.items == "chunks" and chunks is None:
             skipped[cfg.key] = (cfg.label, "no cl100k tokenizer for the naive splitter")
@@ -373,7 +444,8 @@ def main():
         labels[cfg.key] = label
         kinds[cfg.key] = cfg.items
         units = corp[cfg.corpus].units
-        uix = P.Index(units, bm25_for(cfg.corpus, cfg.dash_tokens, units), uvec if cfg.corpus == "ep4" else None)
+        uix = P.Index(units, bm25_for(cfg.corpus, cfg.dash_tokens, units), uvec if cfg.corpus == "ep4" else None,
+                      sparse if cfg.corpus == "ep4" else None)
         cix = P.Index(chunks, bm25_for("chunks", False, chunks), cvec) if chunks is not None else None
         g = graph if cfg.corpus == "ep4" else None
         pipe = P.Pipeline(uix, cix, idx[cfg.corpus], g, rr, scope_rr, intent=intent)
@@ -458,6 +530,8 @@ def main():
             for r in res:
                 if r.qid in answerable:
                     f.writelines(l + "\n" for l in trec.run_lines(r.qid, r.top, key))
+    if args.parity_out:
+        write_parity(args, results)
     md = report(args, cp, corp, chunks, emb, rr_msg, results, labels, kinds, skipped, calib, warn, time.time() - t0)
     outp.with_suffix(".md").write_text(md, encoding="utf-8", newline="\n")
     print(f"wrote {outp.with_suffix('.md')} and {outp.with_suffix('.jsonl')}", file=sys.stderr)

@@ -72,6 +72,10 @@ class QResult:
     top1_score: float | None
     pinned: int = 0
     extra: dict = field(default_factory=dict)
+    #: Every item's address, in order, duplicates kept — the whole ranking rather than the first
+    #: ten. Only --parity-out reads it, for the item-by-item diff against the Java; it is last
+    #: and defaulted so that nothing constructing a QResult positionally has to change.
+    ranked: list = field(default_factory=list)
 
     @property
     def first(self):
@@ -127,7 +131,8 @@ def rank_list(items: list, q: dict, hit_fn, passage_tokens, top1_score=None, pin
         stales.append(s)
     ctx = sum(passage_tokens(it) for it in items[:4])
     return QResult(q["id"], q["stratum"], list(q.get("expected") or []), ranks, partials, stales,
-                   [it.address for it in items[:10]], ctx, top1_score, pinned)
+                   [it.address for it in items[:10]], ctx, top1_score, pinned,
+                   ranked=[it.address for it in items])
 
 
 def groundless(rows: list, depth: int = 4) -> tuple:

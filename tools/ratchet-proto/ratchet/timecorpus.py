@@ -2,19 +2,19 @@
 
 The corpus `corpus.build` produces is one snapshot: what the archive says now. A time question asks
 what it said then, so this builds the other thing — one row per *state* of a unit, carrying the
-half-open interval `[from_pos, to_pos)` of first-parent positions over which that text was current.
-Filtering to a point in time is then `from_pos <= at < to_pos`, and the snapshot corpus is the
+half-open interval `[recorded_from, recorded_to)` of first-parent positions over which that text was current.
+Filtering to a point in time is then `recorded_from <= at < recorded_to`, and the snapshot corpus is the
 special case `at = the last position`.
 
-It is much smaller than it sounds. Walking this archive gives **14,225 distinct unit-states against
-10,540 units in the snapshot — 1.3x** — because 89% of addresses never change their text once. The
-cost of keeping all of history at this granularity is a third more rows, not the 555x a
+It is much smaller than it sounds. Walking this archive gives **15,616 distinct unit-states against
+10,540 units in the snapshot — 1.48x** — because most addresses never change their text once. The
+cost of keeping all of history at this granularity is half as many rows again, not the 555x a
 revision-per-index reading suggests.
 
 Three decisions worth stating, each from a measurement rather than a preference:
 
 **Intervals are half-open, and the end is a sentinel rather than NULL.** `LIVE` is a position past
-any real one, so `from_pos <= at < to_pos` needs no special case for the current state and no
+any real one, so `recorded_from <= at < recorded_to` needs no special case for the current state and no
 `COALESCE` in an index. The golden set's cutoffs are stated as `23:59:59Z`, which a half-open
 interval handles without anyone having to decide what "as of the end of the day" includes.
 
@@ -58,15 +58,15 @@ class State:
     text: str
     part: int
     parts: int
-    from_pos: int
-    to_pos: int = LIVE
+    recorded_from: int
+    recorded_to: int = LIVE
 
     @property
     def live(self) -> bool:
-        return self.to_pos == LIVE
+        return self.recorded_to == LIVE
 
     def covers(self, at: int) -> bool:
-        return self.from_pos <= at < self.to_pos
+        return self.recorded_from <= at < self.recorded_to
 
     def passage(self) -> str:
         return f"{self.path}\n{self.text}" if self.path else self.text
@@ -83,7 +83,7 @@ class TimeCorpus:
         return [s for s in self.states if s.covers(position)]
 
     def history_of(self, address: str) -> list[State]:
-        return sorted((s for s in self.states if s.address == address), key=lambda s: s.from_pos)
+        return sorted((s for s in self.states if s.address == address), key=lambda s: s.recorded_from)
 
 
 def _git(root: Path, *args: str) -> str:
@@ -167,15 +167,15 @@ def build(root: Path, progress=None) -> TimeCorpus:
 
     for address, unit in live.items():
         corpus.states.extend(_emit(address, unit, opened[address], LIVE))
-    corpus.states.sort(key=lambda s: (s.address, s.from_pos, s.part))
+    corpus.states.sort(key=lambda s: (s.address, s.recorded_from, s.part))
     return corpus
 
 
-def _emit(address: str, unit: tuple, from_pos: int, to_pos: int) -> list[State]:
+def _emit(address: str, unit: tuple, recorded_from: int, recorded_to: int) -> list[State]:
     lc, title, hpath, heading, chunks = unit
     source, _, anchor = address.partition("#")
     return [State(address, source, anchor, C.spec_of(source), lc, title, hpath, heading, chunk,
-                  i + 1, len(chunks), from_pos, to_pos)
+                  i + 1, len(chunks), recorded_from, recorded_to)
             for i, chunk in enumerate(chunks)]
 
 
@@ -194,7 +194,7 @@ def save(corpus: TimeCorpus, path: Path) -> None:
     Path(path).write_text(json.dumps({
         "root": corpus.root, "positions": corpus.positions,
         "states": [[s.address, s.source, s.anchor, s.spec, s.lifecycle, s.title, s.path,
-                    s.heading, s.text, s.part, s.parts, s.from_pos, s.to_pos]
+                    s.heading, s.text, s.part, s.parts, s.recorded_from, s.recorded_to]
                    for s in corpus.states]}), encoding="utf-8")
 
 

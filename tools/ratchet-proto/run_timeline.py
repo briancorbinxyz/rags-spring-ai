@@ -119,7 +119,7 @@ def changes_in(corpus, history, question: dict, address: str) -> tuple:
     if not window:
         return 0, 0
     lo, hi = history.at(window["from"]).position, history.at(window["to"]).position
-    states = [s for s in corpus.history_of(address) if s.from_pos < hi and s.to_pos > lo]
+    states = [s for s in corpus.history_of(address) if s.recorded_from < hi and s.recorded_to > lo]
     declared = question.get("versions") or []
     held = 0
     for version in declared:
@@ -141,8 +141,8 @@ def chain(corpus, history, question: dict, address: str) -> list:
     """
     window = question["window"]
     lo, hi = history.at(window["from"]).position, history.at(window["to"]).position
-    states = [s for s in corpus.history_of(address) if s.from_pos <= hi and s.to_pos > lo]
-    starts = sorted({s.from_pos for s in states})
+    states = [s for s in corpus.history_of(address) if s.recorded_from <= hi and s.recorded_to > lo]
+    starts = sorted({s.recorded_from for s in states})
     return ([None] if not any(s.covers(lo) for s in states) else []) + starts
 
 

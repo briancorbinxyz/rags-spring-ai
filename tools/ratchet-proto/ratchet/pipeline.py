@@ -80,7 +80,11 @@ class Config:
     corpus: str = "ep4"  # ep4 | legacy (earlier prototype's units: no heading path, no parts)
     dash_tokens: bool = False  # FTS5 tokenchars '-' (earlier prototype)
     linker: str = "ep4"  # ep4 | prior
-    needs: tuple = ()  # "dense", "rerank"
+    needs: tuple = ()  # "dense", "rerank", "sparse"
+    #: P4-7: a learned sparse list (SPLADE). "replace" puts it where BM25's first-stage list was;
+    #: "add" fuses it as one more list. BM25 still does everything else it does (best part,
+    #: scoped rankings), so only the candidate list changes.
+    sparse: str | None = None
 
 
 def rrf(lists: list, k: int = RRF_K, weights=None) -> list:
@@ -97,10 +101,11 @@ def rrf(lists: list, k: int = RRF_K, weights=None) -> list:
 class Index:
     """Everything one item set (units or chunks) needs: BM25, vectors, keys."""
 
-    def __init__(self, items, bm25, vectors=None):
+    def __init__(self, items, bm25, vectors=None, sparse=None):
         self.items = items
         self.bm25 = bm25
         self.vectors = vectors
+        self.sparse = sparse
         self.live = np.array([it.lifecycle not in EXCLUDED for it in items])
 
     def dense(self, qv, lifecycle: bool, depth: int) -> list:
@@ -213,7 +218,10 @@ class Pipeline:
         depth = DEPTH_FUSED if (cfg.bm25 and cfg.dense) else DEPTH_SINGLE
         lists = []
         if cfg.bm25:
-            lists.append(ix.bm25.search(q, allow=allow, depth=depth))
+            lexical = ix.sparse if cfg.sparse == "replace" else ix.bm25
+            lists.append(lexical.search(q, allow=allow, depth=depth))
+            if cfg.sparse == "add":
+                lists.append(ix.sparse.search(q, allow=allow, depth=depth))
         if cfg.dense:
             lists.append(ix.dense(qv, cfg.lifecycle, depth))
         if cfg.scope_rrf:

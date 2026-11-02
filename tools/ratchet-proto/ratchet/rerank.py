@@ -16,6 +16,11 @@ import sys
 
 from . import llamacpp as L
 
+#: The commit of cross-encoder/ms-marco-MiniLM-L-6-v2 every reranked number in the series was
+#: scored with. The same value is pinned in tools/rerank-service/serve.py, which is what lets the
+#: Java and this agree item for item.
+REVISION = "233902d25c440f23af6f7d6e94d2946bac0bee0a"
+
 
 class Reranker:
     #: Scores every passage on its own scale; it does not choose a subset. See `selects` below.
@@ -25,7 +30,13 @@ class Reranker:
         from sentence_transformers import CrossEncoder
 
         self.name = name
-        self.model = CrossEncoder(name, max_length=max_length)
+        # The exact commit of the model repository, the same one tools/rerank-service/serve.py
+        # pins. Hugging Face lets a name point somewhere new; the day it does, the reranked steps
+        # change with nothing in this repo having moved — and the Java-against-prototype parity
+        # check would fail with no cause visible on either side.
+        self.revision = REVISION
+        self.model_id = f"{name}@{REVISION[:12]}"
+        self.model = CrossEncoder(name, max_length=max_length, revision=REVISION)
         self.cache = {}
 
     def scores(self, query: str, passages: list) -> list:
@@ -33,6 +44,83 @@ class Reranker:
         if todo:
             out = self.model.predict([(query, p) for p in todo], batch_size=32, show_progress_bar=False)
             for p, s in zip(todo, out):
+                self.cache[(query, p)] = float(s)
+        return [self.cache[(query, p)] for p in passages]
+
+
+class Qwen3Reranker:
+    """Qwen3-Reranker through transformers: P(yes) for "does this document meet the query".
+
+    The 5090 runs Qwen3-Reranker-8B through llama-server, which scores a GGUF's rerank template as
+    softmax(yes, no)[yes]. The laptop has no llama-server, so this is the model card's own recipe
+    for the same score: the same system line, the same default instruction, the same yes/no read
+    off the last position. Only the size differs, which is the point of P4-6 / P4-7: is it the
+    *family* that finds what MiniLM and bge cannot, or the eight billion parameters?
+
+    Pinned to a commit, as MiniLM is. A query + passage longer than ``max_length`` is refused, not
+    truncated, as the llama.cpp path refuses one.
+    """
+
+    selects = False
+    REVISIONS = {"Qwen/Qwen3-Reranker-0.6B": "e61197ed45024b0ed8a2d74b80b4d909f1255473"}
+    INSTRUCTION = "Given a web search query, retrieve relevant passages that answer the query"
+    PREFIX = ("<|im_start|>system\nJudge whether the Document meets the requirements based on the Query "
+              "and the Instruct provided. Note that the answer can only be \"yes\" or \"no\".<|im_end|>\n"
+              "<|im_start|>user\n")
+    SUFFIX = "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
+    SANITY = ("What is the capital of France?",
+              ["Paris is the capital and largest city of France.", "Bananas are a good source of potassium."])
+    batch = 8
+
+    def __init__(self, name: str, max_length: int = 8192, device: str | None = None):
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        self.torch = torch
+        self.name = f"qwen3-hf:{name}"
+        self.revision = self.REVISIONS[name]
+        self.model_id = f"{name}@{self.revision[:12]}"
+        self.max_length = max_length
+        self.device = device or ("mps" if torch.backends.mps.is_available() else "cpu")
+        self.tok = AutoTokenizer.from_pretrained(name, revision=self.revision, padding_side="left")
+        self.model = AutoModelForCausalLM.from_pretrained(name, revision=self.revision,
+                                                          dtype=torch.float32).to(self.device).eval()
+        self.yes = self.tok.convert_tokens_to_ids("yes")
+        self.no = self.tok.convert_tokens_to_ids("no")
+        self.prefix = self.tok.encode(self.PREFIX, add_special_tokens=False)
+        self.suffix = self.tok.encode(self.SUFFIX, add_special_tokens=False)
+        self.cache = {}
+        self.longest = 0
+        good, bad = self._score(*self.SANITY)
+        if not good > bad:
+            raise SystemExit(f"{name} fails the sanity pair ({good:.4g} <= {bad:.4g}); refusing to rerank with it")
+        self.sanity = (good, bad)
+
+    def _score(self, query: str, docs: list) -> list:
+        torch = self.torch
+        out = []
+        for i in range(0, len(docs), self.batch):
+            ids = []
+            for d in docs[i:i + self.batch]:
+                body = self.tok.encode(f"<Instruct>: {self.INSTRUCTION}\n<Query>: {query}\n<Document>: {d}",
+                                       add_special_tokens=False)
+                seq = self.prefix + body + self.suffix
+                if len(seq) > self.max_length:
+                    raise SystemExit(f"a query + passage is {len(seq)} tokens, over {self.max_length}: refused, "
+                                     f"never truncated")
+                self.longest = max(self.longest, len(seq))
+                ids.append(seq)
+            enc = self.tok.pad({"input_ids": ids}, padding=True, return_tensors="pt").to(self.device)
+            with torch.inference_mode():
+                last = self.model(**enc).logits[:, -1, :]
+                pair = torch.stack([last[:, self.no], last[:, self.yes]], dim=1).float()
+                out += torch.softmax(pair, dim=1)[:, 1].cpu().tolist()
+        return out
+
+    def scores(self, query: str, passages: list) -> list:
+        todo = list(dict.fromkeys(p for p in passages if (query, p) not in self.cache))
+        if todo:
+            for p, s in zip(todo, self._score(query, todo)):
                 self.cache[(query, p)] = float(s)
         return [self.cache[(query, p)] for p in passages]
 
@@ -237,6 +325,11 @@ def make(name: str | None, llamacpp_url: str = "http://127.0.0.1:8091", cache_di
     if name.startswith("ollama:"):
         rr = OllamaJudgeReranker(name[len("ollama:"):])
         return rr, f"reranker {rr.name}: an instruction-following judge, pointwise, one call per passage"
+    if name.startswith("qwen3-hf:"):
+        rr = Qwen3Reranker(name[len("qwen3-hf:"):])
+        return rr, (f"reranker {rr.model_id} via transformers on {rr.device}, P(yes) as softmax(no, yes); "
+                    f"sanity pair {rr.sanity[0]:.4g} > {rr.sanity[1]:.4g}; refused over {rr.max_length} tokens, "
+                    f"never truncated")
     if name.startswith("llamacpp:"):
         rr = LlamaCppReranker(name[len("llamacpp:"):], llamacpp_url, cache_dir)
         return rr, (f"{rr.provenance}; sanity pair {rr.sanity[0]:.4g} > {rr.sanity[1]:.4g}; "
