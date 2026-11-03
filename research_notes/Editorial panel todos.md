@@ -70,8 +70,9 @@ Text and number corrections. No measurement, no decisions.
 - [x] P1-9. Episode 4 l.592: a `[!todo]` placeholder is sitting in the body text. **Folded into
   P2-8** — it is a real content slot for the held-out set, not a stray marker, so deleting it would
   lose planned content. P2-8 fills it properly.
-- [~] P1-10. Episode 1 l.20/22: the live front door — "it's theft" should be "its", and the opening
-  50-word sentence reads unedited. Reader's fix: open with l.24, cut l.22.
+- [x] P1-10. Episode 1 l.20/22: the live front door — "it's theft" should be "its", and the opening
+  50-word sentence reads unedited. Reader's fix: open with l.24, cut l.22. **1 Nov: Brian chose to keep the order — the long sentence tightened (its/encroachment fixed), the AI-bot sentence cut, "So I've had enough!" kept.**
+
 - [x] P1-11. Episode 2's description is copied verbatim from Episode 1 (l.9) and is live. **The
   frontmatter was fixed on 29 Oct and the visible `>[!Abstract]` callout was not** — it still
   carried Episode 1's sentence until 30 Oct. Both now say what Episode 2 is about.
@@ -206,7 +207,9 @@ Mostly blocked on the section 0 decisions.
   models". Currently confounded: family, training date, prompting and architecture all differ, and
   bge-reranker at 568M fails. (RAG-07)
 - [~] P4-7. Laptop alternatives before concluding hardware is needed: HyDE or query rewriting,
-  SPLADE or doc2query, the 0.6B reranker. (RAG-I5)
+  SPLADE or doc2query, the 0.6B reranker. (RAG-I5) *HyDE measured and loses (30 Oct). SPLADE and
+  the 0.6B reranker pulled, wired and tested, not yet measured: the first run tripped the swap
+  guard (1 Nov work log).*
 - [~] P4-8. Treat the reader's window as a variable: K = 4, 6, 8, scored on answers. 11 of 13
   held-out questions need two passages. (RAG-I6)
 - [ ] P4-9. A long-context baseline: one run putting a whole spec's pages in the prompt for questions
@@ -230,7 +233,7 @@ an either/or.
 - [x] P5-2. Bring Alpha and Beta back, once per episode. Mentions run 0, 37, 23, 5, 2, 0. (RDR-06)
 - [~] P5-3. A sentence above every table saying what to look at. Cap at ~4 tables per post; Episode 6
   has 13. (RDR-09)
-- [~] P5-4. Distinct titles — Episodes 3 and 4 are both "Knowledge Base". (RDR-11, RDR-I5)
+- [x] P5-4. Distinct titles — Episodes 3 and 4 are both "Knowledge Base". (RDR-11, RDR-I5) **1 Nov: Brian chose *Beating the Baseline* for Episode 3; note renamed and links updated. Episode 4 keeps its title; its parts are already distinct.**
 - [~] P5-5. A Trek epigraph on every episode, each called back once, and one Rule per episode.
   Episode 3's is Mon Mothma, from *Andor*. Episode 6 has no Rule. (RDR-17)
 - [x] P5-6. A "Ship's glossary" box of 3–5 terms per episode, plus a running Rules ledger. Drop terms
@@ -2093,3 +2096,88 @@ machine.
 answers were generated and lost with the process, since the report is only written at the end. The
 run needs a machine with memory to spare, which on current evidence this is not while a desktop is
 loaded. Next attempt waits for Brian, and this time the waiting is not negotiable by me.
+
+**1 Nov — P4-7: the two models are pulled and wired in, and the first run tripped the swap guard
+before it measured anything.**
+
+Brian freed the disk (63 GB free at the start), so the two remaining laptop alternatives could
+finally be tried: SPLADE in the lexical half, and `Qwen3-Reranker-0.6B` in the reranker's seat. The
+plan was the HyDE plan: the same 47 questions, the same pinned corpus (spectastic `c64d41c`), the
+same nomic embedder, the same H1 line, the same metrics.
+
+**What was pulled, pinned to a commit, and where it lives** (1.6 GB together, in the shared
+Hugging Face cache):
+
+| model | revision | weights blob |
+|---|---|---|
+| `naver/splade-cocondenser-ensembledistil` (110M) | `49cf4c7b0db5` | `~/.cache/huggingface/hub/blobs/71/71a4258…` (438 MB) |
+| `Qwen/Qwen3-Reranker-0.6B` | `e61197ed4502` | `~/.cache/huggingface/hub/blobs/58/5823af5…` (1.19 GB) |
+
+Not `splade-v3`: it is gated on the hub. The cocondenser-ensembledistil SPLADE is the strongest
+ungated one at BERT-base size. Removing either is `rm -rf` of its `models--…` directory plus the blob
+named above (this cache shares blobs, so the `models--` directory alone is a few megabytes).
+
+**How they went in.** SPLADE as `ratchet/splade.py`: a `SparseIndex` with BM25's exact `search`
+contract (allow before the depth cut, ties on item number, only items sharing a term come back),
+and one new `Config.sparse` field in the pipeline that swaps BM25's *candidate list* only — BM25
+still picks the best part of a pinned unit and still ranks the scoped arms. Three rows: **H1sp**
+(SPLADE in place of BM25 on H1), **H1sa** (SPLADE as a third RRF list) and **X1sp** (SPLADE on the
+BM25-only line, to read SPLADE against BM25 with no embedder). The reranker as
+`--reranker qwen3-hf:Qwen/Qwen3-Reranker-0.6B`: the model card's own recipe, P(yes) as
+softmax(no, yes) off the last position, which is the score llama-server gives the 8B on the 5090;
+refused, never truncated, over 8,192 tokens; a sanity pair at load. It runs as **E5-1** (H1 + rerank
+top 50, the shape every reranker in the series was judged on) and **E5-1v** (the reranker fused as a
+vote, Episode 6's `rerank_rrf`), so it is not judged on one shape alone. 75 prototype tests pass,
+four of them new for `SparseIndex`.
+
+Before any of that ran, **H1 was re-run in the rebuilt tree and reproduced exactly**: 36/47,
+all-evidence@4 33, MRR 0.688 (and X1 32/47, 26, 0.630). So the baseline the new rows would be read
+against is this tree's, not a number copied from 30 Oct.
+
+**The table, as far as it got:**
+
+| | Hit@4 | all-evidence@4 | MRR |
+|---|---|---|---|
+| H1, question embedded | **36/47** | 33 | **0.688** |
+| H1, HyDE passage embedded (30 Oct) | 33/47 | 33 | 0.607 |
+| H1, SPLADE in place of BM25 | not measured | | |
+| H1 + SPLADE as a third list | not measured | | |
+| H1 + `Qwen3-Reranker-0.6B` (E5-1 / E5-1v) | not measured | | |
+
+**Why not measured.** The run was wrapped in a guard that stops it if swap grows more than 3 GB or
+free disk falls under 30 GB. Encoding the 10,540 units with SPLADE grew swap from **11.0 GB to
+14.1 GB** before the first 256 passages were done, and the guard killed it. Nothing was half-written:
+the passage vectors are only saved when complete. Swap stayed at 13.8 GB afterwards and free disk
+went from 61 GB to 57 GB, which is the swap file, not anything I wrote.
+
+**The cause is mine, not the workload's.** `_encode` materialised the whole `(batch, seq, vocab)`
+logits tensor — 8 × 512 × 30,522 floats is 500 MB — and `relu`, `log1p` and the mask each made
+another, on MPS, whose allocator keeps what it has had. Running the vocabulary head over 64
+positions at a time with a running max gives the same numbers in a few tens of megabytes; that
+change is in the code. **It has not been run**, because the standing rule after 31 Oct is that a run
+which grows swap that far stops and is reported, and a fix of my own does not license the next run.
+Same reason the reranker, a separate run with a 2.4 GB model, was not started either.
+
+**Why `[~]` still.** HyDE is measured and loses; SPLADE and the 0.6B reranker are wired, pinned
+and tested but unmeasured. **What would close it:** Brian's go-ahead for two runs under the same
+guard — the SPLADE rows (`--splade --only X1,H1,X1sp,H1sp,H1sa`), then the reranker
+(`--reranker qwen3-hf:Qwen/Qwen3-Reranker-0.6B --only H1,E5-1,E5-1v`). The 0.6B reranker row also
+closes P4-6's first half, which was settled on 30 Oct by its second.
+
+**For Episode 5a, nothing changes yet.** The argument is *the laptop failed, and the cheap rescues
+were tried*. Today one of three rescues is tried. The article must not say all three were until the
+table has numbers in it.
+
+**Two surprises, the first worth more than the run.**
+
+1. **The prototype's source is not on `episode-5`.** `tools/ratchet-proto/` there holds a `cache/`,
+   a venv and stale `__pycache__`, and no `.py` at all; the source lives on `episode-4-prototype`
+   (`dd4108d`). **And `ratchet/hyde.py` was never committed anywhere.** It, the `--hyde` flag in
+   `run.py`, the MiniLM revision pin in `rerank.py` and the `--parity-out` writer existed only in a
+   previous session's scratch worktree under `/private/tmp`, which macOS has already been pruning:
+   the worktree's `.git` and every file not touched recently are gone. The 30 Oct HyDE result was
+   one cleanup away from having no code behind it. All of it, with today's code, is now one patch in
+   the working tree — `tools/ratchet-proto/p4-7-laptop-alternatives.patch`, against `dd4108d`,
+   untracked and uncommitted — and it applies cleanly. It should go onto `episode-4-prototype`.
+2. **The prototype's tests need `src/test/resources/fixtures`** from the same commit; without it two
+   fail. With it, 71 pass before today's change and 75 after.

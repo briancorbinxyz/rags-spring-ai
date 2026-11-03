@@ -1,6 +1,6 @@
-# Unanswerable set corrections — Episode 3, Knowledge Base
+# Unanswerable set corrections — Episode 3, Beating the Baseline
 
-Audited file: `/Users/briancorbin/Documents/Brain/Library/03 Resources/RAGs to Riches with Spring AI, Episode 3, Knowledge Base.md`
+Audited file: `/Users/briancorbin/Documents/Brain/Library/03 Resources/RAGs to Riches with Spring AI, Episode 3, Beating the Baseline.md`
 (520 lines, ~5,500 words, read in full, not edited). Figures for `EP3` taken from
 `/Users/briancorbin/Code/rags/rags-spring-ai/research_notes/Refusal as a first-class metric/groundless_at_4.md`.
 
